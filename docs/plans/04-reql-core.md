@@ -12,15 +12,15 @@ Package: `internal/reql`
 
 ### Task 1: Datum encoding and MAKE_ARRAY
 
-- [ ] Test: string "foo" -> `"foo"` (raw JSON)
-- [ ] Test: number 42 -> `42`
-- [ ] Test: bool true -> `true`
-- [ ] Test: nil -> `null`
-- [ ] Implement: datum pass-through in term serialization
-- [ ] Test: Go slice `[10,20,30]` -> `[2,[10,20,30]]`
-- [ ] Test: empty slice -> `[2,[]]`
-- [ ] Test: nested array -> properly wrapped
-- [ ] Implement: `Array(items ...interface{}) Term`
+- [x] Test: string "foo" -> `"foo"` (raw JSON)
+- [x] Test: number 42 -> `42`
+- [x] Test: bool true -> `true`
+- [x] Test: nil -> `null`
+- [x] Implement: datum pass-through in term serialization
+- [x] Test: Go slice `[10,20,30]` -> `[2,[10,20,30]]`
+- [x] Test: empty slice -> `[2,[]]`
+- [x] Test: nested array -> properly wrapped
+- [x] Implement: `Array(items ...interface{}) Term`
 
 ### Task 2: Core term builder
 
