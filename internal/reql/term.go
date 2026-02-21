@@ -93,6 +93,120 @@ func (t Term) Replace(doc interface{}) Term {
 	return Term{termType: proto.TermReplace, args: []Term{t, d}}
 }
 
+// OptArgs is a map of optional arguments passed as the last element to terms like GetAll.
+type OptArgs map[string]interface{}
+
+// Get creates a GET term ([16, [table, key]]).
+func (t Term) Get(key interface{}) Term {
+	var k Term
+	if kt, ok := key.(Term); ok {
+		k = kt
+	} else {
+		k = Datum(key)
+	}
+	return Term{termType: proto.TermGet, args: []Term{t, k}}
+}
+
+// GetAll creates a GETALL term ([78, [table, keys...], opts?]).
+// The last argument may be an OptArgs to specify options (e.g. {"index": "field"}).
+func (t Term) GetAll(args ...interface{}) Term {
+	var keys []interface{}
+	var opts map[string]interface{}
+
+	if len(args) > 0 {
+		if o, ok := args[len(args)-1].(OptArgs); ok {
+			opts = map[string]interface{}(o)
+			keys = args[:len(args)-1]
+		} else {
+			keys = args
+		}
+	}
+
+	termArgs := []Term{t}
+	for _, k := range keys {
+		if kt, ok := k.(Term); ok {
+			termArgs = append(termArgs, kt)
+		} else {
+			termArgs = append(termArgs, Datum(k))
+		}
+	}
+	return Term{termType: proto.TermGetAll, args: termArgs, opts: opts}
+}
+
+// Between creates a BETWEEN term ([182, [term, lower, upper]]).
+func (t Term) Between(lower, upper interface{}) Term {
+	var lo, hi Term
+	if lt, ok := lower.(Term); ok {
+		lo = lt
+	} else {
+		lo = Datum(lower)
+	}
+	if ht, ok := upper.(Term); ok {
+		hi = ht
+	} else {
+		hi = Datum(upper)
+	}
+	return Term{termType: proto.TermBetween, args: []Term{t, lo, hi}}
+}
+
+// Asc creates an ASC term ([73, [field]]) for use with OrderBy.
+func Asc(field string) Term {
+	return Term{termType: proto.TermAsc, args: []Term{Datum(field)}}
+}
+
+// Desc creates a DESC term ([74, [field]]) for use with OrderBy.
+func Desc(field string) Term {
+	return Term{termType: proto.TermDesc, args: []Term{Datum(field)}}
+}
+
+// OrderBy creates an ORDERBY term ([41, [term, fields...]]).
+func (t Term) OrderBy(fields ...interface{}) Term {
+	args := []Term{t}
+	for _, f := range fields {
+		if ft, ok := f.(Term); ok {
+			args = append(args, ft)
+		} else {
+			args = append(args, Datum(f))
+		}
+	}
+	return Term{termType: proto.TermOrderBy, args: args}
+}
+
+// Limit creates a LIMIT term ([71, [term, n]]).
+func (t Term) Limit(n int) Term {
+	return Term{termType: proto.TermLimit, args: []Term{t, Datum(n)}}
+}
+
+// Skip creates a SKIP term ([70, [term, n]]).
+func (t Term) Skip(n int) Term {
+	return Term{termType: proto.TermSkip, args: []Term{t, Datum(n)}}
+}
+
+// Count creates a COUNT term ([43, [term]]).
+func (t Term) Count() Term {
+	return Term{termType: proto.TermCount, args: []Term{t}}
+}
+
+// Pluck creates a PLUCK term ([33, [term, fields...]]).
+func (t Term) Pluck(fields ...string) Term {
+	args := make([]Term, 1, 1+len(fields))
+	args[0] = t
+	for _, f := range fields {
+		args = append(args, Datum(f))
+	}
+	return Term{termType: proto.TermPluck, args: args}
+}
+
+// Without creates a WITHOUT term ([34, [term, fields...]]).
+func (t Term) Without(fields ...string) Term {
+	args := make([]Term, 1, 1+len(fields))
+	args[0] = t
+	for _, f := range fields {
+		args = append(args, Datum(f))
+	}
+	return Term{termType: proto.TermWithout, args: args}
+}
+
 // MarshalJSON serializes the term to ReQL wire format.
 // Datum terms serialize as their raw value; compound terms as [type, [args...], opts?].
 func (t Term) MarshalJSON() ([]byte, error) {

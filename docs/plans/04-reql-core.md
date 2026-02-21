@@ -39,16 +39,16 @@ Package: `internal/reql`
 
 ### Task 4: Read operations
 
-- [ ] Test: `.Get(key)` -> `[16,[<table_term>,<key>]]`
-- [ ] Test: `.GetAll(keys..., index)` -> correct term with optional index arg
-- [ ] Test: `.Between(lower, upper)` -> `[182,[<term>,<lower>,<upper>]]`
-- [ ] Test: `.OrderBy(field)` -> `[41,[<term>,<field>]]` with ASC/DESC
-- [ ] Test: `.Limit(n)` -> `[71,[<term>,<n>]]`
-- [ ] Test: `.Skip(n)` -> `[70,[<term>,<n>]]`
-- [ ] Test: `.Count()` -> `[43,[<term>]]`
-- [ ] Test: `.Pluck(fields...)` -> `[33,[<term>,<fields>...]]`
-- [ ] Test: `.Without(fields...)` -> `[34,[<term>,<fields>...]]`
-- [ ] Implement: all read operation methods
+- [x] Test: `.Get(key)` -> `[16,[<table_term>,<key>]]`
+- [x] Test: `.GetAll(keys..., index)` -> correct term with optional index arg
+- [x] Test: `.Between(lower, upper)` -> `[182,[<term>,<lower>,<upper>]]`
+- [x] Test: `.OrderBy(field)` -> `[41,[<term>,<field>]]` with ASC/DESC
+- [x] Test: `.Limit(n)` -> `[71,[<term>,<n>]]`
+- [x] Test: `.Skip(n)` -> `[70,[<term>,<n>]]`
+- [x] Test: `.Count()` -> `[43,[<term>]]`
+- [x] Test: `.Pluck(fields...)` -> `[33,[<term>,<fields>...]]`
+- [x] Test: `.Without(fields...)` -> `[34,[<term>,<fields>...]]`
+- [x] Implement: all read operation methods
 
 ### Task 5: Comparison, logic operators and arithmetic
 

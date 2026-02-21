@@ -84,6 +84,41 @@ func TestWriteOperations(t *testing.T) {
 	}
 }
 
+func TestReadOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"get", table.Get("alice"), `[16,[[15,[[14,["test"]],"users"]],"alice"]]`},
+		{"getall", table.GetAll("alice", "bob"), `[78,[[15,[[14,["test"]],"users"]],"alice","bob"]]`},
+		{"getall_index", table.GetAll("alice", OptArgs{"index": "name"}), `[78,[[15,[[14,["test"]],"users"]],"alice"],{"index":"name"}]`},
+		{"between", table.Between(10, 20), `[182,[[15,[[14,["test"]],"users"]],10,20]]`},
+		{"orderby_field", table.OrderBy("name"), `[41,[[15,[[14,["test"]],"users"]],"name"]]`},
+		{"orderby_asc", table.OrderBy(Asc("name")), `[41,[[15,[[14,["test"]],"users"]],[73,["name"]]]]`},
+		{"orderby_desc", table.OrderBy(Desc("age")), `[41,[[15,[[14,["test"]],"users"]],[74,["age"]]]]`},
+		{"limit", table.Limit(10), `[71,[[15,[[14,["test"]],"users"]],10]]`},
+		{"skip", table.Skip(5), `[70,[[15,[[14,["test"]],"users"]],5]]`},
+		{"count", table.Count(), `[43,[[15,[[14,["test"]],"users"]]]]`},
+		{"pluck", table.Pluck("name", "age"), `[33,[[15,[[14,["test"]],"users"]],"name","age"]]`},
+		{"without", table.Without("password"), `[34,[[15,[[14,["test"]],"users"]],"password"]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
