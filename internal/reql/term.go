@@ -33,6 +33,28 @@ func Array(items ...interface{}) Term {
 	return Term{termType: proto.TermMakeArray, args: args}
 }
 
+// DB creates a DB term ([14, [name]]).
+func DB(name string) Term {
+	return Term{termType: proto.TermDB, args: []Term{Datum(name)}}
+}
+
+// Table creates a TABLE term chained on a DB term ([15, [db, name]]).
+func (t Term) Table(name string) Term {
+	return Term{termType: proto.TermTable, args: []Term{t, Datum(name)}}
+}
+
+// Filter creates a FILTER term ([39, [seq, predicate]]).
+// predicate can be a Term or any value that marshals to a JSON document.
+func (t Term) Filter(predicate interface{}) Term {
+	var pred Term
+	if pt, ok := predicate.(Term); ok {
+		pred = pt
+	} else {
+		pred = Datum(predicate)
+	}
+	return Term{termType: proto.TermFilter, args: []Term{t, pred}}
+}
+
 // MarshalJSON serializes the term to ReQL wire format.
 // Datum terms serialize as their raw value; compound terms as [type, [args...], opts?].
 func (t Term) MarshalJSON() ([]byte, error) {

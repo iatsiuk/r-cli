@@ -24,10 +24,10 @@ Package: `internal/reql`
 
 ### Task 2: Core term builder
 
-- [ ] Test: `DB("test")` -> `[14,["test"]]`
-- [ ] Test: `DB("test").Table("users")` -> `[15,[[14,["test"]],"users"]]`
-- [ ] Test: chained `.Filter({...})` -> correct nested structure
-- [ ] Implement: `Term` struct with chainable methods, `MarshalJSON()`
+- [x] Test: `DB("test")` -> `[14,["test"]]`
+- [x] Test: `DB("test").Table("users")` -> `[15,[[14,["test"]],"users"]]`
+- [x] Test: chained `.Filter({...})` -> correct nested structure
+- [x] Implement: `Term` struct with chainable methods, `MarshalJSON()`
 
 ### Task 3: Write operations
 
