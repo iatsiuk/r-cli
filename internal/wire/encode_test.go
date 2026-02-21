@@ -39,7 +39,10 @@ func TestEncode(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := Encode(tc.token, tc.payload)
+			got, err := Encode(tc.token, tc.payload)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
 			if len(got) != 12+len(tc.payload) {
 				t.Fatalf("len=%d, want %d", len(got), 12+len(tc.payload))
@@ -124,7 +127,10 @@ func TestEncodeDecodeRoundtrip(t *testing.T) {
 
 	token := uint64(42)
 	payload := []byte(`[1,"foo",{}]`)
-	frame := Encode(token, payload)
+	frame, err := Encode(token, payload)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	var hdr [12]byte
 	copy(hdr[:], frame[:12])

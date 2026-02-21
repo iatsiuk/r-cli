@@ -14,9 +14,9 @@ const (
 	ResponseRuntimeError    ResponseType = 18
 )
 
-// IsError reports whether the response type represents an error condition.
+// IsError reports whether the response type represents an error condition (types >= 16).
 func (r ResponseType) IsError() bool {
-	return r == ResponseClientError || r == ResponseCompileError || r == ResponseRuntimeError
+	return r >= ResponseClientError
 }
 
 // ErrorType identifies the kind of runtime error from the server.

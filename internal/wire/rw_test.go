@@ -30,7 +30,10 @@ func TestReadResponse(t *testing.T) {
 
 	token := uint64(42)
 	payload := []byte(`[1,"foo",{}]`)
-	frame := Encode(token, payload)
+	frame, err := Encode(token, payload)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	t.Run("basic read from bytes.Reader", func(t *testing.T) {
 		t.Parallel()
@@ -97,7 +100,10 @@ func TestWriteQuery(t *testing.T) {
 		if err := WriteQuery(&buf, token, payload); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		want := Encode(token, payload)
+		want, err := Encode(token, payload)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if !bytes.Equal(buf.Bytes(), want) {
 			t.Errorf("got %x, want %x", buf.Bytes(), want)
 		}
