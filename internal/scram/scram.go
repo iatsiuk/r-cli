@@ -104,9 +104,13 @@ func ClientFinalMessage(combinedNonce string, proof []byte) string {
 	return "c=biws,r=" + combinedNonce + ",p=" + base64.StdEncoding.EncodeToString(proof)
 }
 
-// VerifyServerFinal parses the server-final-message "v=<base64sig>" and checks
+// VerifyServerFinal parses the server-final-message "v=<base64sig>" or "e=<error>" and checks
 // the signature against expectedSig using constant-time comparison.
 func VerifyServerFinal(msg string, expectedSig []byte) error {
+	const errPrefix = "e="
+	if strings.HasPrefix(msg, errPrefix) {
+		return fmt.Errorf("scram: server authentication error: %s", msg[len(errPrefix):])
+	}
 	const prefix = "v="
 	if !strings.HasPrefix(msg, prefix) {
 		return fmt.Errorf("scram: invalid server-final-message %q", msg)
@@ -173,13 +177,20 @@ func (c *Conversation) ServerFinal(msg string) error {
 
 // ParseServerFirst parses a SCRAM server-first-message and validates the nonce prefix.
 func ParseServerFirst(msg, clientNonce string) (*ServerFirst, error) {
+	if clientNonce == "" {
+		return nil, fmt.Errorf("scram: empty client nonce")
+	}
 	fields, err := parseServerFields(msg)
 	if err != nil {
 		return nil, err
 	}
+	return buildServerFirst(fields, clientNonce)
+}
 
-	if clientNonce == "" {
-		return nil, fmt.Errorf("scram: empty client nonce")
+// buildServerFirst validates the parsed fields and constructs a ServerFirst.
+func buildServerFirst(fields map[string]string, clientNonce string) (*ServerFirst, error) {
+	if _, ok := fields["m"]; ok {
+		return nil, fmt.Errorf("scram: unsupported mandatory extension")
 	}
 
 	nonce, ok := fields["r"]
@@ -190,6 +201,20 @@ func ParseServerFirst(msg, clientNonce string) (*ServerFirst, error) {
 		return nil, fmt.Errorf("scram: server nonce does not start with client nonce")
 	}
 
+	salt, err := decodeSalt(fields)
+	if err != nil {
+		return nil, err
+	}
+
+	iter, err := decodeIter(fields)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ServerFirst{Nonce: nonce, Salt: salt, Iterations: iter}, nil
+}
+
+func decodeSalt(fields map[string]string) ([]byte, error) {
 	saltB64, ok := fields["s"]
 	if !ok {
 		return nil, fmt.Errorf("scram: missing salt field")
@@ -198,19 +223,17 @@ func ParseServerFirst(msg, clientNonce string) (*ServerFirst, error) {
 	if err != nil {
 		return nil, fmt.Errorf("scram: invalid salt: %w", err)
 	}
+	return salt, nil
+}
 
+func decodeIter(fields map[string]string) (int, error) {
 	iterStr, ok := fields["i"]
 	if !ok {
-		return nil, fmt.Errorf("scram: missing iteration count field")
+		return 0, fmt.Errorf("scram: missing iteration count field")
 	}
 	iter, err := strconv.Atoi(iterStr)
 	if err != nil || iter < 1 {
-		return nil, fmt.Errorf("scram: invalid iteration count %q", iterStr)
+		return 0, fmt.Errorf("scram: invalid iteration count %q", iterStr)
 	}
-
-	return &ServerFirst{
-		Nonce:      nonce,
-		Salt:       salt,
-		Iterations: iter,
-	}, nil
+	return iter, nil
 }

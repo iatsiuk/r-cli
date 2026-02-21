@@ -179,6 +179,11 @@ func TestParseServerFirstMalformed(t *testing.T) {
 			msg:         "r=noncecombined,s=QSXCR+Q6sek8bf92,i=4096",
 			clientNonce: "",
 		},
+		{
+			name:        "mandatory extension present",
+			msg:         "m=mandatory,r=noncecombined,s=QSXCR+Q6sek8bf92,i=4096",
+			clientNonce: "nonce",
+		},
 	}
 
 	for _, tc := range tests {
@@ -355,6 +360,7 @@ func TestVerifyServerFinalInvalid(t *testing.T) {
 		{name: "missing v= prefix", msg: "notaserver"},
 		{name: "invalid base64", msg: "v=!!!invalid!!!"},
 		{name: "empty signature", msg: "v="},
+		{name: "server error response", msg: "e=unknown-user"},
 	}
 
 	for _, tc := range tests {
