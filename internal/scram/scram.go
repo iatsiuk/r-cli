@@ -1,7 +1,9 @@
 package scram
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"strconv"
@@ -47,6 +49,52 @@ func parseServerFields(msg string) (map[string]string, error) {
 		fields[string(part[0])] = part[2:]
 	}
 	return fields, nil
+}
+
+// ComputeProof derives the ClientProof and ServerSignature per RFC 5802 using SCRAM-SHA-256.
+// authMsg is the concatenation: client-first-bare + "," + server-first + "," + client-final-without-proof.
+func ComputeProof(password string, salt []byte, iter int, authMsg string) (clientProof, serverSig []byte) {
+	saltedPassword := pbkdf2SHA256([]byte(password), salt, iter)
+
+	clientKey := hmacSHA256(saltedPassword, []byte("Client Key"))
+	storedKeyArr := sha256.Sum256(clientKey)
+	storedKey := storedKeyArr[:]
+
+	clientSig := hmacSHA256(storedKey, []byte(authMsg))
+	proof := make([]byte, len(clientKey))
+	for i := range clientKey {
+		proof[i] = clientKey[i] ^ clientSig[i]
+	}
+
+	serverKey := hmacSHA256(saltedPassword, []byte("Server Key"))
+	sig := hmacSHA256(serverKey, []byte(authMsg))
+	return proof, sig
+}
+
+// pbkdf2SHA256 implements PBKDF2-HMAC-SHA256 with a 32-byte output per RFC 2898.
+func pbkdf2SHA256(password, salt []byte, iterations int) []byte {
+	mac := hmac.New(sha256.New, password)
+	mac.Write(salt)
+	mac.Write([]byte{0, 0, 0, 1})
+	u := mac.Sum(nil)
+	result := make([]byte, len(u))
+	copy(result, u)
+	for i := 1; i < iterations; i++ {
+		mac.Reset()
+		mac.Write(u)
+		u = mac.Sum(nil)
+		for j := range result {
+			result[j] ^= u[j]
+		}
+	}
+	return result
+}
+
+// hmacSHA256 returns HMAC-SHA256(key, data).
+func hmacSHA256(key, data []byte) []byte {
+	mac := hmac.New(sha256.New, key)
+	mac.Write(data)
+	return mac.Sum(nil)
 }
 
 // ParseServerFirst parses a SCRAM server-first-message and validates the nonce prefix.

@@ -27,9 +27,9 @@ Package: `internal/scram`
 
 ### Task 3: SCRAM proof computation
 
-- [ ] Test: compute ClientProof with known inputs (use RFC 7677 test vectors)
-- [ ] Test: compute ServerSignature with known inputs
-- [ ] Implement: `ComputeProof(password string, salt []byte, iter int, authMsg string) (clientProof, serverSig []byte)`
+- [x] Test: compute ClientProof with known inputs (use RFC 7677 test vectors)
+- [x] Test: compute ServerSignature with known inputs
+- [x] Implement: `ComputeProof(password string, salt []byte, iter int, authMsg string) (clientProof, serverSig []byte)`
 
 ### Task 4: Client-final-message and server-final verification
 

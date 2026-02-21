@@ -7,6 +7,20 @@ import (
 	"testing"
 )
 
+// RFC 7677 SCRAM-SHA-256 test vectors.
+// https://www.rfc-editor.org/rfc/rfc7677 Section 3
+const (
+	rfc7677Password = "pencil"
+	// AuthMessage = client-first-bare + "," + server-first + "," + client-final-without-proof
+	rfc7677AuthMsg = "n=user,r=rOprNGfwEbeRWgbNEkqO," +
+		"r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,s=W22ZaJ0SNY7soEsUEjb6gQ==,i=4096," +
+		"c=biws,r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0"
+	rfc7677SaltB64     = "W22ZaJ0SNY7soEsUEjb6gQ=="
+	rfc7677Iterations  = 4096
+	rfc7677ClientProof = "dHzbZapWIk4jUhN+Ute9ytag9zjfMHgsqmmiz7AndVQ="
+	rfc7677ServerSig   = "6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4="
+)
+
 func TestGenerateNonce(t *testing.T) {
 	t.Parallel()
 
@@ -165,6 +179,44 @@ func TestParseServerFirstMalformed(t *testing.T) {
 				t.Error("expected error, got nil")
 			}
 		})
+	}
+}
+
+func TestComputeProofClientProof(t *testing.T) {
+	t.Parallel()
+
+	salt, err := base64.StdEncoding.DecodeString(rfc7677SaltB64)
+	if err != nil {
+		t.Fatalf("test setup: %v", err)
+	}
+	wantProof, err := base64.StdEncoding.DecodeString(rfc7677ClientProof)
+	if err != nil {
+		t.Fatalf("test setup: %v", err)
+	}
+
+	got, _ := ComputeProof(rfc7677Password, salt, rfc7677Iterations, rfc7677AuthMsg)
+	if !bytes.Equal(got, wantProof) {
+		t.Errorf("clientProof=%s, want %s",
+			base64.StdEncoding.EncodeToString(got), rfc7677ClientProof)
+	}
+}
+
+func TestComputeProofServerSig(t *testing.T) {
+	t.Parallel()
+
+	salt, err := base64.StdEncoding.DecodeString(rfc7677SaltB64)
+	if err != nil {
+		t.Fatalf("test setup: %v", err)
+	}
+	wantSig, err := base64.StdEncoding.DecodeString(rfc7677ServerSig)
+	if err != nil {
+		t.Fatalf("test setup: %v", err)
+	}
+
+	_, got := ComputeProof(rfc7677Password, salt, rfc7677Iterations, rfc7677AuthMsg)
+	if !bytes.Equal(got, wantSig) {
+		t.Errorf("serverSig=%s, want %s",
+			base64.StdEncoding.EncodeToString(got), rfc7677ServerSig)
 	}
 }
 
