@@ -26,8 +26,8 @@ func TestGenerateNonce(t *testing.T) {
 
 	nonce := GenerateNonce()
 
-	// must be valid base64
-	decoded, err := base64.StdEncoding.DecodeString(nonce)
+	// must be valid base64 (RawStdEncoding produces no padding)
+	decoded, err := base64.RawStdEncoding.DecodeString(nonce)
 	if err != nil {
 		t.Fatalf("nonce is not valid base64: %v", err)
 	}
