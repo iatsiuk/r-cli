@@ -12,11 +12,11 @@ Package: `internal/scram`
 
 ### Task 1: Nonce generation and client-first-message
 
-- [ ] Test: generated nonce is at least 18 bytes, base64-encoded, no commas
-- [ ] Implement: `GenerateNonce() string`
-- [ ] Test: build message with known user and nonce, verify format `n,,n=<user>,r=<nonce>`
-- [ ] Test: username with special characters (=, ,) is properly escaped
-- [ ] Implement: `ClientFirstMessage(user, nonce string) string`
+- [x] Test: generated nonce is at least 18 bytes, base64-encoded, no commas
+- [x] Implement: `GenerateNonce() string`
+- [x] Test: build message with known user and nonce, verify format `n,,n=<user>,r=<nonce>`
+- [x] Test: username with special characters (=, ,) is properly escaped
+- [x] Implement: `ClientFirstMessage(user, nonce string) string`
 
 ### Task 2: Parse server-first-message
 
