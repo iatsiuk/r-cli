@@ -22,12 +22,12 @@ Depends on: `04-reql-core`
 
 ### Task 2: Aggregation
 
-- [ ] Test: `.Map(func)` -> `[38,[<term>,<func>]]`
-- [ ] Test: `.Reduce(func)` -> `[37,[<term>,<func>]]`
-- [ ] Test: `.Group(field)` -> `[144,[<term>,<field>]]`
-- [ ] Test: `.Ungroup()` -> `[150,[<term>]]`
-- [ ] Test: `.Sum(field)` -> `[145,[<term>,<field>]]`
-- [ ] Test: `.Avg(field)` -> `[146,[<term>,<field>]]`
-- [ ] Test: `.Min(field)` -> `[147,[<term>,<field>]]`
-- [ ] Test: `.Max(field)` -> `[148,[<term>,<field>]]`
-- [ ] Implement: aggregation methods
+- [x] Test: `.Map(func)` -> `[38,[<term>,<func>]]`
+- [x] Test: `.Reduce(func)` -> `[37,[<term>,<func>]]`
+- [x] Test: `.Group(field)` -> `[144,[<term>,<field>]]`
+- [x] Test: `.Ungroup()` -> `[150,[<term>]]`
+- [x] Test: `.Sum(field)` -> `[145,[<term>,<field>]]`
+- [x] Test: `.Avg(field)` -> `[146,[<term>,<field>]]`
+- [x] Test: `.Min(field)` -> `[147,[<term>,<field>]]`
+- [x] Test: `.Max(field)` -> `[148,[<term>,<field>]]`
+- [x] Implement: aggregation methods

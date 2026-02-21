@@ -235,6 +235,38 @@ func TestObjectOperations(t *testing.T) {
 	}
 }
 
+func TestAggregationOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	fn := Datum("x")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"map", table.Map(fn), `[38,[[15,[[14,["test"]],"users"]],"x"]]`},
+		{"reduce", table.Reduce(fn), `[37,[[15,[[14,["test"]],"users"]],"x"]]`},
+		{"group", table.Group("age"), `[144,[[15,[[14,["test"]],"users"]],"age"]]`},
+		{"ungroup", table.Group("age").Ungroup(), `[150,[[144,[[15,[[14,["test"]],"users"]],"age"]]]]`},
+		{"sum", table.Sum("score"), `[145,[[15,[[14,["test"]],"users"]],"score"]]`},
+		{"avg", table.Avg("score"), `[146,[[15,[[14,["test"]],"users"]],"score"]]`},
+		{"min", table.Min("age"), `[147,[[15,[[14,["test"]],"users"]],"age"]]`},
+		{"max", table.Max("age"), `[148,[[15,[[14,["test"]],"users"]],"age"]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

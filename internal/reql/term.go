@@ -199,6 +199,46 @@ func (t Term) Distinct() Term {
 	return Term{termType: proto.TermDistinct, args: []Term{t}}
 }
 
+// Map creates a MAP term ([38, [term, func]]).
+func (t Term) Map(fn Term) Term {
+	return Term{termType: proto.TermMap, args: []Term{t, fn}}
+}
+
+// Reduce creates a REDUCE term ([37, [term, func]]).
+func (t Term) Reduce(fn Term) Term {
+	return Term{termType: proto.TermReduce, args: []Term{t, fn}}
+}
+
+// Group creates a GROUP term ([144, [term, field]]).
+func (t Term) Group(field string) Term {
+	return Term{termType: proto.TermGroup, args: []Term{t, Datum(field)}}
+}
+
+// Ungroup creates an UNGROUP term ([150, [term]]).
+func (t Term) Ungroup() Term {
+	return Term{termType: proto.TermUngroup, args: []Term{t}}
+}
+
+// Sum creates a SUM term ([145, [term, field]]).
+func (t Term) Sum(field string) Term {
+	return Term{termType: proto.TermSum, args: []Term{t, Datum(field)}}
+}
+
+// Avg creates an AVG term ([146, [term, field]]).
+func (t Term) Avg(field string) Term {
+	return Term{termType: proto.TermAvg, args: []Term{t, Datum(field)}}
+}
+
+// Min creates a MIN term ([147, [term, field]]).
+func (t Term) Min(field string) Term {
+	return Term{termType: proto.TermMin, args: []Term{t, Datum(field)}}
+}
+
+// Max creates a MAX term ([148, [term, field]]).
+func (t Term) Max(field string) Term {
+	return Term{termType: proto.TermMax, args: []Term{t, Datum(field)}}
+}
+
 // Eq creates an EQ term ([17, [term, value]]).
 func (t Term) Eq(value interface{}) Term {
 	return t.binop(proto.TermEq, value)
