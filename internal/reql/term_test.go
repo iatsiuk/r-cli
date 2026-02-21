@@ -216,6 +216,7 @@ func TestObjectOperations(t *testing.T) {
 		want string
 	}{
 		{"get_field", table.Get("alice").GetField("name"), `[31,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"name"]]`},
+		{"has_fields_none", table.Get("alice").HasFields(), `[32,[[16,[[15,[[14,["test"]],"users"]],"alice"]]]]`},
 		{"has_fields_one", table.Get("alice").HasFields("a"), `[32,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"a"]]`},
 		{"has_fields_multi", table.Get("alice").HasFields("a", "b"), `[32,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"a","b"]]`},
 		{"merge", table.Get("alice").Merge(doc), `[35,[[16,[[15,[[14,["test"]],"users"]],"alice"]],{"active":true}]]`},
@@ -238,14 +239,14 @@ func TestObjectOperations(t *testing.T) {
 func TestAggregationOperations(t *testing.T) {
 	t.Parallel()
 	table := DB("test").Table("users")
-	fn := Datum("x")
+	fn := DB("test").Table("funcs").Get("f")
 	tests := []struct {
 		name string
 		term Term
 		want string
 	}{
-		{"map", table.Map(fn), `[38,[[15,[[14,["test"]],"users"]],"x"]]`},
-		{"reduce", table.Reduce(fn), `[37,[[15,[[14,["test"]],"users"]],"x"]]`},
+		{"map", table.Map(fn), `[38,[[15,[[14,["test"]],"users"]],[16,[[15,[[14,["test"]],"funcs"]],"f"]]]]`},
+		{"reduce", table.Reduce(fn), `[37,[[15,[[14,["test"]],"users"]],[16,[[15,[[14,["test"]],"funcs"]],"f"]]]]`},
 		{"group", table.Group("age"), `[144,[[15,[[14,["test"]],"users"]],"age"]]`},
 		{"ungroup", table.Group("age").Ungroup(), `[150,[[144,[[15,[[14,["test"]],"users"]],"age"]]]]`},
 		{"sum", table.Sum("score"), `[145,[[15,[[14,["test"]],"users"]],"score"]]`},
