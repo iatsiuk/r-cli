@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io"
 	"testing"
+
+	"r-cli/internal/proto"
 )
 
 // slowReader returns one byte at a time to simulate a slow network connection.
@@ -72,16 +74,20 @@ func TestReadResponse(t *testing.T) {
 		}
 	})
 
-	t.Run("payload exceeds MaxFrameSize", func(t *testing.T) {
-		t.Parallel()
-		var hdr [12]byte
-		binary.LittleEndian.PutUint64(hdr[0:8], 1)
-		binary.LittleEndian.PutUint32(hdr[8:12], maxFrameSize+1)
-		_, _, err := ReadResponse(bytes.NewReader(hdr[:]))
-		if err == nil {
-			t.Fatal("expected error for oversized payload, got nil")
-		}
-	})
+}
+
+func TestReadResponseOversizedPayload(t *testing.T) {
+	t.Parallel()
+	var hdr [12]byte
+	binary.LittleEndian.PutUint64(hdr[0:8], 1)
+	binary.LittleEndian.PutUint32(hdr[8:12], proto.MaxFrameSize+1)
+	gotToken, _, err := ReadResponse(bytes.NewReader(hdr[:]))
+	if err == nil {
+		t.Fatal("expected error for oversized payload, got nil")
+	}
+	if gotToken != 0 {
+		t.Errorf("token=%d, want 0 on error", gotToken)
+	}
 }
 
 // errWriter always returns an error on Write.
@@ -121,7 +127,7 @@ func TestWriteQuery(t *testing.T) {
 
 	t.Run("payload exceeds MaxFrameSize", func(t *testing.T) {
 		t.Parallel()
-		oversized := make([]byte, maxFrameSize+1)
+		oversized := make([]byte, proto.MaxFrameSize+1)
 		err := WriteQuery(&bytes.Buffer{}, token, oversized)
 		if err == nil {
 			t.Fatal("expected error for oversized payload, got nil")

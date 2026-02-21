@@ -3,10 +3,9 @@ package wire
 import (
 	"fmt"
 	"io"
-)
 
-// maxFrameSize is the maximum allowed payload size (64MB) to prevent OOM.
-const maxFrameSize uint32 = 64 * 1024 * 1024
+	"r-cli/internal/proto"
+)
 
 // ReadResponse reads a RethinkDB wire frame from r: 12-byte header then payload.
 func ReadResponse(r io.Reader) (token uint64, payload []byte, err error) {
@@ -15,12 +14,12 @@ func ReadResponse(r io.Reader) (token uint64, payload []byte, err error) {
 		return 0, nil, fmt.Errorf("read header: %w", err)
 	}
 	token, length := DecodeHeader(hdr)
-	if length > maxFrameSize {
-		return token, nil, fmt.Errorf("payload length %d exceeds max %d", length, maxFrameSize)
+	if length > proto.MaxFrameSize {
+		return 0, nil, fmt.Errorf("payload length %d exceeds max %d", length, proto.MaxFrameSize)
 	}
-	payload = make([]byte, length) //nolint:gosec // G115: bounded by maxFrameSize check above
+	payload = make([]byte, length) //nolint:gosec // G115: bounded by proto.MaxFrameSize check above
 	if _, err = io.ReadFull(r, payload); err != nil {
-		return token, nil, fmt.Errorf("read payload: %w", err)
+		return 0, nil, fmt.Errorf("read payload: %w", err)
 	}
 	return token, payload, nil
 }
