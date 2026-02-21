@@ -121,6 +121,53 @@ func VerifyServerFinal(msg string, expectedSig []byte) error {
 	return nil
 }
 
+// Conversation tracks SCRAM-SHA-256 state across a 3-message exchange.
+type Conversation struct {
+	username        string
+	password        string
+	clientNonce     string
+	clientFirstBare string
+	serverFirstMsg  string
+	serverSig       []byte
+}
+
+// NewConversation creates a new SCRAM conversation for the given credentials.
+func NewConversation(username, password string) *Conversation {
+	return &Conversation{username: username, password: password}
+}
+
+// ClientFirst generates the client-first-message. Reuses clientNonce if already set (for testing).
+func (c *Conversation) ClientFirst() string {
+	if c.clientNonce == "" {
+		c.clientNonce = GenerateNonce()
+	}
+	msg := ClientFirstMessage(c.username, c.clientNonce)
+	c.clientFirstBare = msg[len("n,,"):]
+	return msg
+}
+
+// ServerFirst processes the server-first-message and returns the client-final-message.
+func (c *Conversation) ServerFirst(msg string) (string, error) {
+	sf, err := ParseServerFirst(msg, c.clientNonce)
+	if err != nil {
+		return "", err
+	}
+	c.serverFirstMsg = msg
+
+	finalWithoutProof := "c=biws,r=" + sf.Nonce
+	authMsg := c.clientFirstBare + "," + c.serverFirstMsg + "," + finalWithoutProof
+
+	proof, serverSig := ComputeProof(c.password, sf.Salt, sf.Iterations, authMsg)
+	c.serverSig = serverSig
+
+	return ClientFinalMessage(sf.Nonce, proof), nil
+}
+
+// ServerFinal verifies the server-final-message against the expected server signature.
+func (c *Conversation) ServerFinal(msg string) error {
+	return VerifyServerFinal(msg, c.serverSig)
+}
+
 // ParseServerFirst parses a SCRAM server-first-message and validates the nonce prefix.
 func ParseServerFirst(msg, clientNonce string) (*ServerFirst, error) {
 	fields, err := parseServerFields(msg)

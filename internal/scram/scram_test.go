@@ -279,6 +279,38 @@ func TestVerifyServerFinalWrongSig(t *testing.T) {
 	}
 }
 
+func TestConversationFullExchange(t *testing.T) {
+	t.Parallel()
+
+	// RFC 7677 test vectors with fixed client nonce for deterministic output.
+	c := &Conversation{
+		username:    "user",
+		password:    "pencil",
+		clientNonce: "rOprNGfwEbeRWgbNEkqO",
+	}
+
+	clientFirst := c.ClientFirst()
+	wantClientFirst := "n,,n=user,r=rOprNGfwEbeRWgbNEkqO"
+	if clientFirst != wantClientFirst {
+		t.Errorf("client-first=%q, want %q", clientFirst, wantClientFirst)
+	}
+
+	serverFirstMsg := "r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,s=W22ZaJ0SNY7soEsUEjb6gQ==,i=4096"
+	clientFinal, err := c.ServerFirst(serverFirstMsg)
+	if err != nil {
+		t.Fatalf("ServerFirst: %v", err)
+	}
+	wantClientFinal := "c=biws,r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,p=" + rfc7677ClientProof
+	if clientFinal != wantClientFinal {
+		t.Errorf("client-final=%q, want %q", clientFinal, wantClientFinal)
+	}
+
+	serverFinalMsg := "v=" + rfc7677ServerSig
+	if err := c.ServerFinal(serverFinalMsg); err != nil {
+		t.Errorf("ServerFinal: %v", err)
+	}
+}
+
 func TestVerifyServerFinalInvalid(t *testing.T) {
 	t.Parallel()
 

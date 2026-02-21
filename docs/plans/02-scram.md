@@ -41,5 +41,5 @@ Package: `internal/scram`
 
 ### Task 5: Full SCRAM conversation
 
-- [ ] Test: simulate full 3-step exchange with hardcoded messages, verify all outputs
-- [ ] Implement: `Conversation` struct that tracks state across steps
+- [x] Test: simulate full 3-step exchange with hardcoded messages, verify all outputs
+- [x] Implement: `Conversation` struct that tracks state across steps
