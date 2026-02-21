@@ -3,7 +3,11 @@ package wire
 import "encoding/binary"
 
 // Encode builds a RethinkDB wire frame: 8-byte LE token + 4-byte LE payload length + payload.
+// Panics if len(payload) exceeds maxFrameSize (64MB).
 func Encode(token uint64, payload []byte) []byte {
+	if len(payload) > int(maxFrameSize) {
+		panic("wire.Encode: payload exceeds max frame size")
+	}
 	frame := make([]byte, 12+len(payload))
 	binary.LittleEndian.PutUint64(frame[0:8], token)
 	binary.LittleEndian.PutUint32(frame[8:12], uint32(len(payload))) //nolint:gosec // G115: payload length is protocol-bounded, always < 64MB

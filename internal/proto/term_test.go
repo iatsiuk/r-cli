@@ -36,6 +36,8 @@ func TestTermTypeCoreConstants(t *testing.T) {
 		{"JAVASCRIPT", TermJavaScript, 11},
 		{"ERROR", TermError, 12},
 		{"IMPLICIT_VAR", TermImplicitVar, 13},
+		{"ARGS", TermArgs, 154},
+		{"BINARY", TermBinary, 155},
 	})
 }
 
