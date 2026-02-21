@@ -297,6 +297,37 @@ func TestIndexOperations(t *testing.T) {
 	}
 }
 
+func TestChangefeedAndMiscTerms(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"changes", table.Changes(), `[152,[[15,[[14,["test"]],"users"]]]]`},
+		{"changes_include_initial", table.Changes(OptArgs{"include_initial": true}), `[152,[[15,[[14,["test"]],"users"]]],{"include_initial":true}]`},
+		{"now", Now(), `[103,[]]`},
+		{"uuid", UUID(), `[169,[]]`},
+		{"binary", Binary("data"), `[155,["data"]]`},
+		{"config", table.Config(), `[174,[[15,[[14,["test"]],"users"]]]]`},
+		{"status", table.Status(), `[175,[[15,[[14,["test"]],"users"]]]]`},
+		{"grant", table.Grant("alice", map[string]interface{}{"read": true}), `[188,[[15,[[14,["test"]],"users"]],"alice",{"read":true}]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

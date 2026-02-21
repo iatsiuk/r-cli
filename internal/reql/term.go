@@ -344,6 +344,46 @@ func (t Term) IndexRename(oldName, newName string) Term {
 	return Term{termType: proto.TermIndexRename, args: []Term{t, Datum(oldName), Datum(newName)}}
 }
 
+// Changes creates a CHANGES term ([152, [term]], opts?).
+// Optional OptArgs can specify options like {"include_initial": true}.
+func (t Term) Changes(opts ...OptArgs) Term {
+	term := Term{termType: proto.TermChanges, args: []Term{t}}
+	if len(opts) > 0 && len(opts[0]) > 0 {
+		term.opts = map[string]interface{}(opts[0])
+	}
+	return term
+}
+
+// Now creates a NOW term ([103, []]).
+func Now() Term {
+	return Term{termType: proto.TermNow}
+}
+
+// UUID creates a UUID term ([169, []]).
+func UUID() Term {
+	return Term{termType: proto.TermUUID}
+}
+
+// Binary creates a BINARY term ([155, [data]]).
+func Binary(data interface{}) Term {
+	return Term{termType: proto.TermBinary, args: []Term{toTerm(data)}}
+}
+
+// Config creates a CONFIG term ([174, [term]]).
+func (t Term) Config() Term {
+	return Term{termType: proto.TermConfig, args: []Term{t}}
+}
+
+// Status creates a STATUS term ([175, [term]]).
+func (t Term) Status() Term {
+	return Term{termType: proto.TermStatus, args: []Term{t}}
+}
+
+// Grant creates a GRANT term ([188, [scope, user, perms]]).
+func (t Term) Grant(user string, perms interface{}) Term {
+	return Term{termType: proto.TermGrant, args: []Term{t, Datum(user), toTerm(perms)}}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}

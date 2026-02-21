@@ -24,15 +24,15 @@ Depends on: `04-reql-core`
 
 ### Task 2: Changefeed and misc terms
 
-- [ ] Test: `.Changes()` -> `[152,[<term>]]`
-- [ ] Test: `.Changes()` with optarg `include_initial=true`
-- [ ] Test: `Now()` -> `[103,[]]`
-- [ ] Test: `UUID()` -> `[169,[]]`
-- [ ] Test: `Binary(data)` -> `[155,[<data>]]`
-- [ ] Test: `.Config()` -> `[174,[<term>]]`
-- [ ] Test: `.Status()` -> `[175,[<term>]]`
-- [ ] Test: `Grant("user", perms)` -> `[188,[<scope>,"user",<perms>]]`
-- [ ] Implement: changefeed, time, binary, admin term methods
+- [x] Test: `.Changes()` -> `[152,[<term>]]`
+- [x] Test: `.Changes()` with optarg `include_initial=true`
+- [x] Test: `Now()` -> `[103,[]]`
+- [x] Test: `UUID()` -> `[169,[]]`
+- [x] Test: `Binary(data)` -> `[155,[<data>]]`
+- [x] Test: `.Config()` -> `[174,[<term>]]`
+- [x] Test: `.Status()` -> `[175,[<term>]]`
+- [x] Test: `Grant("user", perms)` -> `[188,[<scope>,"user",<perms>]]`
+- [x] Implement: changefeed, time, binary, admin term methods
 
 ### Task 3: Function serialization
 
