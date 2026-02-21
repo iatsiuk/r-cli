@@ -36,13 +36,13 @@ Package: `internal/proto`
 
 Package: `internal/wire`
 
-- [ ] Test: encode token=1, payload `[1,"foo",{}]` -> expected bytes (LE token + LE length + JSON)
-- [ ] Test: encode token=0 (edge case)
-- [ ] Test: encode large payload (verify length field correctness)
-- [ ] Implement: `Encode(token uint64, payload []byte) []byte`
-- [ ] Test: decode 12-byte header -> token + payload length
-- [ ] Test: decode with insufficient bytes -> error
-- [ ] Implement: `DecodeHeader(data [12]byte) (token uint64, length uint32)`
+- [x] Test: encode token=1, payload `[1,"foo",{}]` -> expected bytes (LE token + LE length + JSON)
+- [x] Test: encode token=0 (edge case)
+- [x] Test: encode large payload (verify length field correctness)
+- [x] Implement: `Encode(token uint64, payload []byte) []byte`
+- [x] Test: decode 12-byte header -> token + payload length
+- [x] Test: decode with insufficient bytes -> error
+- [x] Implement: `DecodeHeader(data [12]byte) (token uint64, length uint32)`
 
 ### Task 5: Wire protocol read/write
 
