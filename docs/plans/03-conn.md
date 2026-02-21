@@ -46,10 +46,10 @@ Handshake uses null-terminated JSON messages (not token+length framing).
 
 ### Task 4: Token counter and Config
 
-- [ ] Test: sequential tokens from same connection are monotonically increasing
-- [ ] Test: concurrent token generation is safe (no duplicates)
-- [ ] Implement: atomic uint64 counter in `Conn`
-- [ ] Test: Config.String() does not contain password
+- [x] Test: sequential tokens from same connection are monotonically increasing
+- [x] Test: concurrent token generation is safe (no duplicates)
+- [x] Implement: atomic uint64 counter in `Conn`
+- [x] Test: Config.String() does not contain password
 
 ### Task 5: Connection struct and multiplexing
 
