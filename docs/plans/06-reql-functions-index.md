@@ -45,11 +45,11 @@ Depends on: `04-reql-core`
 
 The driver must detect IMPLICIT_VAR (term 13) in term arguments, replace it with VAR(1), and wrap the argument in FUNC(69). See rethink-driver.md section 6.
 
-- [ ] Test: term containing `[13,[]]` is wrapped -> `[69,[[2,[1]],<body_with_var_1>]]`
-- [ ] Test: nested IMPLICIT_VAR in deeply nested term -> correctly replaced at all levels
-- [ ] Test: IMPLICIT_VAR in nested function context -> error (ambiguous per spec)
-- [ ] Test: term without IMPLICIT_VAR -> no wrapping applied
-- [ ] Implement: `wrapImplicitVar(term Term) Term` tree traversal
+- [x] Test: term containing `[13,[]]` is wrapped -> `[69,[[2,[1]],<body_with_var_1>]]`
+- [x] Test: nested IMPLICIT_VAR in deeply nested term -> correctly replaced at all levels
+- [x] Test: IMPLICIT_VAR in nested function context -> error (ambiguous per spec)
+- [x] Test: term without IMPLICIT_VAR -> no wrapping applied
+- [x] Implement: `wrapImplicitVar(term Term) Term` tree traversal
 
 ### Task 5: FUNCALL (r.do) argument reordering
 

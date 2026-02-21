@@ -2,6 +2,7 @@ package reql
 
 import (
 	"encoding/json"
+	"errors"
 
 	"r-cli/internal/proto"
 )
@@ -13,6 +14,70 @@ type Term struct {
 	datum    interface{}
 	args     []Term
 	opts     map[string]interface{}
+	err      error
+}
+
+// errTerm returns a Term that serializes as an error.
+func errTerm(err error) Term {
+	return Term{err: err}
+}
+
+// Row creates an IMPLICIT_VAR term ([13,[]]).
+// Used as a shorthand for a single-argument function in methods like Filter.
+func Row() Term {
+	return Term{termType: proto.TermImplicitVar}
+}
+
+// wrapImplicitVar detects IMPLICIT_VAR in t and, if found, replaces all occurrences
+// with VAR(1) and wraps the term in FUNC([2,[1]], body).
+// Returns unchanged term if no IMPLICIT_VAR is present.
+// Returns error if IMPLICIT_VAR appears inside a nested FUNC.
+func wrapImplicitVar(t Term) (Term, error) {
+	replaced, found, err := replaceImplicit(t, false)
+	if err != nil {
+		return Term{}, err
+	}
+	if !found {
+		return t, nil
+	}
+	return Func(replaced, 1), nil
+}
+
+// replaceImplicit walks t replacing IMPLICIT_VAR with VAR(1).
+// inFunc indicates we are inside a FUNC body; IMPLICIT_VAR there is ambiguous.
+// Returns the modified term, whether any replacement was made, and any error.
+func replaceImplicit(t Term, inFunc bool) (Term, bool, error) {
+	if t.termType == proto.TermImplicitVar {
+		if inFunc {
+			return Term{}, false, errors.New("reql: IMPLICIT_VAR inside nested function is ambiguous")
+		}
+		return Var(1), true, nil
+	}
+	if t.termType == 0 {
+		return t, false, nil
+	}
+	nested := inFunc || t.termType == proto.TermFunc
+	newArgs := make([]Term, len(t.args))
+	var anyReplaced bool
+	for i, a := range t.args {
+		rep, did, err := replaceImplicit(a, nested)
+		if err != nil {
+			return Term{}, false, err
+		}
+		newArgs[i] = rep
+		if did {
+			anyReplaced = true
+		}
+	}
+	if !anyReplaced {
+		return t, false, nil
+	}
+	return Term{
+		termType: t.termType,
+		datum:    t.datum,
+		args:     newArgs,
+		opts:     t.opts,
+	}, true, nil
 }
 
 // Datum wraps a raw Go value as a ReQL term.
@@ -52,9 +117,14 @@ func (t Term) Table(name string) Term {
 }
 
 // Filter creates a FILTER term ([39, [seq, predicate]]).
-// predicate can be a Term or any value that marshals to a JSON document.
+// If predicate contains IMPLICIT_VAR (Row()), it is auto-wrapped in FUNC.
 func (t Term) Filter(predicate interface{}) Term {
-	return Term{termType: proto.TermFilter, args: []Term{t, toTerm(predicate)}}
+	pt := toTerm(predicate)
+	wrapped, err := wrapImplicitVar(pt)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: proto.TermFilter, args: []Term{t, wrapped}}
 }
 
 // Insert creates an INSERT term ([56, [table, doc]]).
@@ -408,6 +478,9 @@ func (t Term) binop(tt proto.TermType, value interface{}) Term {
 // MarshalJSON serializes the term to ReQL wire format.
 // Datum terms serialize as their raw value; compound terms as [type, [args...], opts?].
 func (t Term) MarshalJSON() ([]byte, error) {
+	if t.err != nil {
+		return nil, t.err
+	}
 	if t.termType == 0 {
 		return json.Marshal(t.datum)
 	}

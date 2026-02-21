@@ -354,6 +354,64 @@ func TestFuncSerialization(t *testing.T) {
 	}
 }
 
+func TestImplicitVarWrapping(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	tests := []struct {
+		name    string
+		term    Term
+		want    string
+		wantErr bool
+	}{
+		{
+			// IMPLICIT_VAR in predicate -> auto-wrapped in FUNC
+			"wrap_simple",
+			table.Filter(Row().GetField("age").Gt(21)),
+			`[39,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[21,[[31,[[10,[1]],"age"]],21]]]]]]`,
+			false,
+		},
+		{
+			// multiple IMPLICIT_VAR at different positions -> all replaced
+			"wrap_multiple",
+			table.Filter(Row().GetField("x").Eq(Row().GetField("y"))),
+			`[39,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[17,[[31,[[10,[1]],"x"]],[31,[[10,[1]],"y"]]]]]]]]`,
+			false,
+		},
+		{
+			// no IMPLICIT_VAR -> no wrapping applied
+			"no_wrap",
+			table.Filter(Func(Var(1).GetField("age").Gt(21), 1)),
+			`[39,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[21,[[31,[[10,[1]],"age"]],21]]]]]]`,
+			false,
+		},
+		{
+			// IMPLICIT_VAR inside explicit FUNC -> error (ambiguous)
+			"nested_func_error",
+			table.Filter(Func(Row().Gt(0), 1)),
+			"",
+			true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
