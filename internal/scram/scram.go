@@ -178,6 +178,10 @@ func ParseServerFirst(msg, clientNonce string) (*ServerFirst, error) {
 		return nil, err
 	}
 
+	if clientNonce == "" {
+		return nil, fmt.Errorf("scram: empty client nonce")
+	}
+
 	nonce, ok := fields["r"]
 	if !ok {
 		return nil, fmt.Errorf("scram: missing nonce field")

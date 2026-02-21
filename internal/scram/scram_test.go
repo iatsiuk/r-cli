@@ -174,6 +174,11 @@ func TestParseServerFirstMalformed(t *testing.T) {
 			msg:         "r=noncecombined,ab,i=4096",
 			clientNonce: "nonce",
 		},
+		{
+			name:        "empty client nonce",
+			msg:         "r=noncecombined,s=QSXCR+Q6sek8bf92,i=4096",
+			clientNonce: "",
+		},
 	}
 
 	for _, tc := range tests {
