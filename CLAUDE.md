@@ -16,6 +16,7 @@ This project is developed using [ralphex](https://github.com/umputun/ralphex) CL
 - `internal/proto` - RethinkDB protocol constants only (Version, QueryType, ResponseType, ErrorType, ResponseNote, DatumType, TermType); pure constants, no I/O. Max payload constraint: 64MB.
 - `internal/wire` - Binary frame encode/decode (Encode, DecodeHeader) and I/O helpers (ReadResponse, WriteQuery); depends on internal/proto
 - `internal/scram` - SCRAM-SHA-256 authentication per RFC 5802 / RFC 7677; functions: GenerateNonce, ClientFirstMessage, ParseServerFirst, ComputeProof, ClientFinalMessage, VerifyServerFinal; Conversation struct for stateful 3-step exchange; pure cryptographic computation, no I/O
+- `internal/conn` - TCP/TLS connection with V1_0 SCRAM-SHA-256 handshake and multiplexed query dispatch; exported: `Conn`, `Config`, `Dial`, `ErrClosed`, `ErrReqlAuth`, `Handshake`; background `readLoop` dispatches responses by token into buffered channels; set `RCLI_DEBUG=wire` for hex-dump wire tracing to stderr; depends on `internal/proto`, `internal/wire`, `internal/scram`
 
 ## Code Style
 
