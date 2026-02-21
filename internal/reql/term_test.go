@@ -328,6 +328,32 @@ func TestChangefeedAndMiscTerms(t *testing.T) {
 	}
 }
 
+func TestFuncSerialization(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"var", Var(1), `[10,[1]]`},
+		{"var_id", Var(42), `[10,[42]]`},
+		{"single_arg_func", Func(Datum(42), 1), `[69,[[2,[1]],42]]`},
+		{"multi_arg_func", Func(Var(1).Add(Var(2)), 1, 2), `[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -344,6 +344,22 @@ func (t Term) IndexRename(oldName, newName string) Term {
 	return Term{termType: proto.TermIndexRename, args: []Term{t, Datum(oldName), Datum(newName)}}
 }
 
+// Var creates a VAR term ([10, [id]]) referencing a function parameter.
+func Var(id int) Term {
+	return Term{termType: proto.TermVar, args: []Term{Datum(id)}}
+}
+
+// Func creates a FUNC term ([69, [[2, [param_ids...]], body]]).
+// params are the integer parameter IDs; body is the function body term.
+func Func(body Term, params ...int) Term {
+	paramTerms := make([]Term, len(params))
+	for i, p := range params {
+		paramTerms[i] = Datum(p)
+	}
+	paramArray := Term{termType: proto.TermMakeArray, args: paramTerms}
+	return Term{termType: proto.TermFunc, args: []Term{paramArray, body}}
+}
+
 // Changes creates a CHANGES term ([152, [term]], opts?).
 // Optional OptArgs can specify options like {"include_initial": true}.
 func (t Term) Changes(opts ...OptArgs) Term {

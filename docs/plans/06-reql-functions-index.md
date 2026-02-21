@@ -36,10 +36,10 @@ Depends on: `04-reql-core`
 
 ### Task 3: Function serialization
 
-- [ ] Test: single-arg function -> `[69,[[2,[1]],<body>]]`
-- [ ] Test: multi-arg function -> correct param IDs
-- [ ] Test: VAR reference -> `[10,[<id>]]`
-- [ ] Implement: `Func` builder with VAR references
+- [x] Test: single-arg function -> `[69,[[2,[1]],<body>]]`
+- [x] Test: multi-arg function -> correct param IDs
+- [x] Test: VAR reference -> `[10,[<id>]]`
+- [x] Implement: `Func` builder with VAR references
 
 ### Task 4: IMPLICIT_VAR auto-wrapping
 
