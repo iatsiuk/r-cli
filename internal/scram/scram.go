@@ -204,8 +204,8 @@ func buildServerFirst(fields map[string]string, clientNonce string) (*ServerFirs
 	if !ok {
 		return nil, fmt.Errorf("scram: missing nonce field")
 	}
-	if !strings.HasPrefix(nonce, clientNonce) {
-		return nil, fmt.Errorf("scram: server nonce does not start with client nonce")
+	if !strings.HasPrefix(nonce, clientNonce) || len(nonce) == len(clientNonce) {
+		return nil, fmt.Errorf("scram: server nonce does not extend client nonce")
 	}
 
 	salt, err := decodeSalt(fields)

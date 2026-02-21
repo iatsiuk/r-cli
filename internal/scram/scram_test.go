@@ -220,6 +220,11 @@ func TestParseServerFirstMalformedSecurity(t *testing.T) {
 			msg:         "r=noncecombined,s=QSXCR+Q6sek8bf92,i=1000",
 			clientNonce: "nonce",
 		},
+		{
+			name:        "server nonce equal to client nonce",
+			msg:         "r=nonce,s=QSXCR+Q6sek8bf92,i=4096",
+			clientNonce: "nonce",
+		},
 	}
 
 	for _, tc := range tests {
