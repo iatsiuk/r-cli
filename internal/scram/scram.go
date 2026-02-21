@@ -46,7 +46,11 @@ func parseServerFields(msg string) (map[string]string, error) {
 		if len(part) < 2 || part[1] != '=' {
 			return nil, fmt.Errorf("scram: malformed field %q", part)
 		}
-		fields[string(part[0])] = part[2:]
+		key := string(part[0])
+		if _, exists := fields[key]; exists {
+			return nil, fmt.Errorf("scram: duplicate field %q", key)
+		}
+		fields[key] = part[2:]
 	}
 	return fields, nil
 }
@@ -172,6 +176,9 @@ func (c *Conversation) ServerFirst(msg string) (string, error) {
 
 // ServerFinal verifies the server-final-message against the expected server signature.
 func (c *Conversation) ServerFinal(msg string) error {
+	if c.serverSig == nil {
+		return fmt.Errorf("scram: ServerFirst must be called before ServerFinal")
+	}
 	return VerifyServerFinal(msg, c.serverSig)
 }
 
@@ -223,6 +230,9 @@ func decodeSalt(fields map[string]string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("scram: invalid salt: %w", err)
 	}
+	if len(salt) == 0 {
+		return nil, fmt.Errorf("scram: empty salt")
+	}
 	return salt, nil
 }
 
@@ -232,7 +242,7 @@ func decodeIter(fields map[string]string) (int, error) {
 		return 0, fmt.Errorf("scram: missing iteration count field")
 	}
 	iter, err := strconv.Atoi(iterStr)
-	if err != nil || iter < 1 {
+	if err != nil || iter < 4096 {
 		return 0, fmt.Errorf("scram: invalid iteration count %q", iterStr)
 	}
 	return iter, nil

@@ -197,6 +197,42 @@ func TestParseServerFirstMalformed(t *testing.T) {
 	}
 }
 
+func TestParseServerFirstMalformedSecurity(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		msg         string
+		clientNonce string
+	}{
+		{
+			name:        "duplicate nonce field",
+			msg:         "r=noncecombined,r=noncecombined2,s=QSXCR+Q6sek8bf92,i=4096",
+			clientNonce: "nonce",
+		},
+		{
+			name:        "empty salt value",
+			msg:         "r=noncecombined,s=,i=4096",
+			clientNonce: "nonce",
+		},
+		{
+			name:        "low iteration count",
+			msg:         "r=noncecombined,s=QSXCR+Q6sek8bf92,i=1000",
+			clientNonce: "nonce",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseServerFirst(tc.msg, tc.clientNonce)
+			if err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
 func TestComputeProofClientProof(t *testing.T) {
 	t.Parallel()
 
@@ -310,6 +346,16 @@ func TestConversationServerFirstBeforeClientFirst(t *testing.T) {
 	_, err := c.ServerFirst("r=nonce,s=QSXCR+Q6sek8bf92,i=4096")
 	if err == nil {
 		t.Error("expected error when ServerFirst called before ClientFirst, got nil")
+	}
+}
+
+func TestConversationServerFinalBeforeServerFirst(t *testing.T) {
+	t.Parallel()
+
+	c := NewConversation("user", "pencil")
+	c.ClientFirst()
+	if err := c.ServerFinal("v=" + rfc7677ServerSig); err == nil {
+		t.Error("expected error when ServerFinal called before ServerFirst, got nil")
 	}
 }
 
