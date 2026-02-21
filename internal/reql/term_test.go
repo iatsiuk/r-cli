@@ -119,6 +119,90 @@ func TestReadOperations(t *testing.T) {
 	}
 }
 
+func TestComparisonOperators(t *testing.T) {
+	t.Parallel()
+	base := DB("test").Table("users").Get("alice")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"eq", base.Eq("alice"), `[17,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"alice"]]`},
+		{"ne", base.Ne("bob"), `[18,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"bob"]]`},
+		{"lt", base.Lt(30), `[19,[[16,[[15,[[14,["test"]],"users"]],"alice"]],30]]`},
+		{"le", base.Le(30), `[20,[[16,[[15,[[14,["test"]],"users"]],"alice"]],30]]`},
+		{"gt", base.Gt(18), `[21,[[16,[[15,[[14,["test"]],"users"]],"alice"]],18]]`},
+		{"ge", base.Ge(18), `[22,[[16,[[15,[[14,["test"]],"users"]],"alice"]],18]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLogicOperators(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	a := table.Get("alice")
+	b := table.Get("bob")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"not", a.Not(), `[23,[[16,[[15,[[14,["test"]],"users"]],"alice"]]]]`},
+		{"and", a.And(b), `[67,[[16,[[15,[[14,["test"]],"users"]],"alice"]],[16,[[15,[[14,["test"]],"users"]],"bob"]]]]`},
+		{"or", a.Or(b), `[66,[[16,[[15,[[14,["test"]],"users"]],"alice"]],[16,[[15,[[14,["test"]],"users"]],"bob"]]]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestArithmeticOperators(t *testing.T) {
+	t.Parallel()
+	base := Datum(10)
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"add", base.Add(5), `[24,[10,5]]`},
+		{"sub", base.Sub(3), `[25,[10,3]]`},
+		{"mul", base.Mul(2), `[26,[10,2]]`},
+		{"div", base.Div(2), `[27,[10,2]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -52,18 +52,18 @@ Package: `internal/reql`
 
 ### Task 5: Comparison, logic operators and arithmetic
 
-- [ ] Test: `.Eq(value)` -> `[17,[<term>,<value>]]`
-- [ ] Test: `.Ne(value)` -> `[18,[<term>,<value>]]`
-- [ ] Test: `.Lt(value)` -> `[19,[<term>,<value>]]`
-- [ ] Test: `.Le(value)` -> `[20,[<term>,<value>]]`
-- [ ] Test: `.Gt(value)` -> `[21,[<term>,<value>]]`
-- [ ] Test: `.Ge(value)` -> `[22,[<term>,<value>]]`
-- [ ] Test: `.Not()` -> `[23,[<term>]]`
-- [ ] Test: `.And(other)` -> `[67,[<term>,<other>]]`
-- [ ] Test: `.Or(other)` -> `[66,[<term>,<other>]]`
-- [ ] Implement: comparison and logic operator methods
-- [ ] Test: `.Add(value)` -> `[24,[<term>,<value>]]`
-- [ ] Test: `.Sub(value)` -> `[25,[<term>,<value>]]`
-- [ ] Test: `.Mul(value)` -> `[26,[<term>,<value>]]`
-- [ ] Test: `.Div(value)` -> `[27,[<term>,<value>]]`
-- [ ] Implement: arithmetic methods
+- [x] Test: `.Eq(value)` -> `[17,[<term>,<value>]]`
+- [x] Test: `.Ne(value)` -> `[18,[<term>,<value>]]`
+- [x] Test: `.Lt(value)` -> `[19,[<term>,<value>]]`
+- [x] Test: `.Le(value)` -> `[20,[<term>,<value>]]`
+- [x] Test: `.Gt(value)` -> `[21,[<term>,<value>]]`
+- [x] Test: `.Ge(value)` -> `[22,[<term>,<value>]]`
+- [x] Test: `.Not()` -> `[23,[<term>]]`
+- [x] Test: `.And(other)` -> `[67,[<term>,<other>]]`
+- [x] Test: `.Or(other)` -> `[66,[<term>,<other>]]`
+- [x] Implement: comparison and logic operator methods
+- [x] Test: `.Add(value)` -> `[24,[<term>,<value>]]`
+- [x] Test: `.Sub(value)` -> `[25,[<term>,<value>]]`
+- [x] Test: `.Mul(value)` -> `[26,[<term>,<value>]]`
+- [x] Test: `.Div(value)` -> `[27,[<term>,<value>]]`
+- [x] Implement: arithmetic methods

@@ -207,6 +207,82 @@ func (t Term) Without(fields ...string) Term {
 	return Term{termType: proto.TermWithout, args: args}
 }
 
+// Eq creates an EQ term ([17, [term, value]]).
+func (t Term) Eq(value interface{}) Term {
+	return t.binop(proto.TermEq, value)
+}
+
+// Ne creates a NE term ([18, [term, value]]).
+func (t Term) Ne(value interface{}) Term {
+	return t.binop(proto.TermNe, value)
+}
+
+// Lt creates a LT term ([19, [term, value]]).
+func (t Term) Lt(value interface{}) Term {
+	return t.binop(proto.TermLt, value)
+}
+
+// Le creates a LE term ([20, [term, value]]).
+func (t Term) Le(value interface{}) Term {
+	return t.binop(proto.TermLe, value)
+}
+
+// Gt creates a GT term ([21, [term, value]]).
+func (t Term) Gt(value interface{}) Term {
+	return t.binop(proto.TermGt, value)
+}
+
+// Ge creates a GE term ([22, [term, value]]).
+func (t Term) Ge(value interface{}) Term {
+	return t.binop(proto.TermGe, value)
+}
+
+// Not creates a NOT term ([23, [term]]).
+func (t Term) Not() Term {
+	return Term{termType: proto.TermNot, args: []Term{t}}
+}
+
+// And creates an AND term ([67, [term, other]]).
+func (t Term) And(other Term) Term {
+	return Term{termType: proto.TermAnd, args: []Term{t, other}}
+}
+
+// Or creates an OR term ([66, [term, other]]).
+func (t Term) Or(other Term) Term {
+	return Term{termType: proto.TermOr, args: []Term{t, other}}
+}
+
+// Add creates an ADD term ([24, [term, value]]).
+func (t Term) Add(value interface{}) Term {
+	return t.binop(proto.TermAdd, value)
+}
+
+// Sub creates a SUB term ([25, [term, value]]).
+func (t Term) Sub(value interface{}) Term {
+	return t.binop(proto.TermSub, value)
+}
+
+// Mul creates a MUL term ([26, [term, value]]).
+func (t Term) Mul(value interface{}) Term {
+	return t.binop(proto.TermMul, value)
+}
+
+// Div creates a DIV term ([27, [term, value]]).
+func (t Term) Div(value interface{}) Term {
+	return t.binop(proto.TermDiv, value)
+}
+
+// binop builds a binary term [type, [t, value]].
+func (t Term) binop(tt proto.TermType, value interface{}) Term {
+	var v Term
+	if vt, ok := value.(Term); ok {
+		v = vt
+	} else {
+		v = Datum(value)
+	}
+	return Term{termType: tt, args: []Term{t, v}}
+}
+
 // MarshalJSON serializes the term to ReQL wire format.
 // Datum terms serialize as their raw value; compound terms as [type, [args...], opts?].
 func (t Term) MarshalJSON() ([]byte, error) {
