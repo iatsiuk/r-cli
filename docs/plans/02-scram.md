@@ -20,10 +20,10 @@ Package: `internal/scram`
 
 ### Task 2: Parse server-first-message
 
-- [ ] Test: parse `r=<nonce>,s=<salt>,i=<iter>` -> nonce, salt bytes, iteration count
-- [ ] Test: parse malformed message -> error
-- [ ] Test: parse message with wrong nonce prefix -> error
-- [ ] Implement: `ParseServerFirst(msg, clientNonce string) (*ServerFirst, error)`
+- [x] Test: parse `r=<nonce>,s=<salt>,i=<iter>` -> nonce, salt bytes, iteration count
+- [x] Test: parse malformed message -> error
+- [x] Test: parse message with wrong nonce prefix -> error
+- [x] Implement: `ParseServerFirst(msg, clientNonce string) (*ServerFirst, error)`
 
 ### Task 3: SCRAM proof computation
 
