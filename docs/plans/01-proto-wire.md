@@ -14,10 +14,10 @@ Packages: `internal/proto`, `internal/wire`
 
 Package: `internal/proto`
 
-- [ ] Test: verify magic number values match spec (V1_0 = 0x34c2bdc3, etc.)
-- [ ] Implement: `version.go` -- Version type + constants
-- [ ] Test: verify QueryType values (START=1, CONTINUE=2, STOP=3, NOREPLY_WAIT=4, SERVER_INFO=5)
-- [ ] Implement: `query.go` -- QueryType type + constants
+- [x] Test: verify magic number values match spec (V1_0 = 0x34c2bdc3, etc.)
+- [x] Implement: `version.go` -- Version type + constants
+- [x] Test: verify QueryType values (START=1, CONTINUE=2, STOP=3, NOREPLY_WAIT=4, SERVER_INFO=5)
+- [x] Implement: `query.go` -- QueryType type + constants
 
 ### Task 2: Response and datum type constants
 
