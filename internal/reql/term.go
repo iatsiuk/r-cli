@@ -55,6 +55,44 @@ func (t Term) Filter(predicate interface{}) Term {
 	return Term{termType: proto.TermFilter, args: []Term{t, pred}}
 }
 
+// Insert creates an INSERT term ([56, [table, doc]]).
+func (t Term) Insert(doc interface{}) Term {
+	var d Term
+	if dt, ok := doc.(Term); ok {
+		d = dt
+	} else {
+		d = Datum(doc)
+	}
+	return Term{termType: proto.TermInsert, args: []Term{t, d}}
+}
+
+// Update creates an UPDATE term ([53, [table, doc]]).
+func (t Term) Update(doc interface{}) Term {
+	var d Term
+	if dt, ok := doc.(Term); ok {
+		d = dt
+	} else {
+		d = Datum(doc)
+	}
+	return Term{termType: proto.TermUpdate, args: []Term{t, d}}
+}
+
+// Delete creates a DELETE term ([54, [table]]).
+func (t Term) Delete() Term {
+	return Term{termType: proto.TermDelete, args: []Term{t}}
+}
+
+// Replace creates a REPLACE term ([55, [table, doc]]).
+func (t Term) Replace(doc interface{}) Term {
+	var d Term
+	if dt, ok := doc.(Term); ok {
+		d = dt
+	} else {
+		d = Datum(doc)
+	}
+	return Term{termType: proto.TermReplace, args: []Term{t, d}}
+}
+
 // MarshalJSON serializes the term to ReQL wire format.
 // Datum terms serialize as their raw value; compound terms as [type, [args...], opts?].
 func (t Term) MarshalJSON() ([]byte, error) {

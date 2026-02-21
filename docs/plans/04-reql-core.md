@@ -31,11 +31,11 @@ Package: `internal/reql`
 
 ### Task 3: Write operations
 
-- [ ] Test: `.Insert(doc)` -> `[56,[<table_term>,<doc>]]`
-- [ ] Test: `.Update(doc)` -> `[53,[<table_term>,<doc>]]`
-- [ ] Test: `.Delete()` -> `[54,[<table_term>]]`
-- [ ] Test: `.Replace(doc)` -> `[55,[<table_term>,<doc>]]`
-- [ ] Implement: Insert, Update, Delete, Replace methods
+- [x] Test: `.Insert(doc)` -> `[56,[<table_term>,<doc>]]`
+- [x] Test: `.Update(doc)` -> `[53,[<table_term>,<doc>]]`
+- [x] Test: `.Delete()` -> `[54,[<table_term>]]`
+- [x] Test: `.Replace(doc)` -> `[55,[<table_term>,<doc>]]`
+- [x] Implement: Insert, Update, Delete, Replace methods
 
 ### Task 4: Read operations
 

@@ -56,6 +56,34 @@ func TestCoreTermBuilder(t *testing.T) {
 	}
 }
 
+func TestWriteOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	doc := map[string]interface{}{"name": "alice"}
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"insert", table.Insert(doc), `[56,[[15,[[14,["test"]],"users"]],{"name":"alice"}]]`},
+		{"update", table.Update(doc), `[53,[[15,[[14,["test"]],"users"]],{"name":"alice"}]]`},
+		{"delete", table.Delete(), `[54,[[15,[[14,["test"]],"users"]]]]`},
+		{"replace", table.Replace(doc), `[55,[[15,[[14,["test"]],"users"]],{"name":"alice"}]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
