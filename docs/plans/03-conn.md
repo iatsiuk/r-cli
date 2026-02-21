@@ -16,12 +16,12 @@ Depends on: `internal/proto`, `internal/wire`, `internal/scram`
 
 Handshake uses null-terminated JSON messages (not token+length framing).
 
-- [ ] Test: `readNullTerminated` reads until `\x00`, returns data without terminator
-- [ ] Test: `readNullTerminated` with data arriving in 1-byte chunks (partial reads)
-- [ ] Test: `readNullTerminated` on EOF before `\x00` -> error
-- [ ] Test: `readNullTerminated` exceeding maxHandshakeSize (16KB) -> error (prevent OOM)
-- [ ] Test: `writeNullTerminated` appends `\x00` to output
-- [ ] Implement: `readNullTerminated(r io.Reader) ([]byte, error)`, `writeNullTerminated(w io.Writer, data []byte) error`
+- [x] Test: `readNullTerminated` reads until `\x00`, returns data without terminator
+- [x] Test: `readNullTerminated` with data arriving in 1-byte chunks (partial reads)
+- [x] Test: `readNullTerminated` on EOF before `\x00` -> error
+- [x] Test: `readNullTerminated` exceeding maxHandshakeSize (16KB) -> error (prevent OOM)
+- [x] Test: `writeNullTerminated` appends `\x00` to output
+- [x] Implement: `readNullTerminated(r io.Reader) ([]byte, error)`, `writeNullTerminated(w io.Writer, data []byte) error`
 
 ### Task 2: Handshake message building and response parsing
 
