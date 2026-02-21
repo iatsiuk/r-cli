@@ -206,6 +206,68 @@ func TestArithmeticOperators(t *testing.T) {
 	}
 }
 
+func TestObjectOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	doc := map[string]interface{}{"active": true}
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"get_field", table.Get("alice").GetField("name"), `[31,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"name"]]`},
+		{"has_fields_none", table.Get("alice").HasFields(), `[32,[[16,[[15,[[14,["test"]],"users"]],"alice"]]]]`},
+		{"has_fields_one", table.Get("alice").HasFields("a"), `[32,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"a"]]`},
+		{"has_fields_multi", table.Get("alice").HasFields("a", "b"), `[32,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"a","b"]]`},
+		{"merge", table.Get("alice").Merge(doc), `[35,[[16,[[15,[[14,["test"]],"users"]],"alice"]],{"active":true}]]`},
+		{"distinct", table.Distinct(), `[42,[[15,[[14,["test"]],"users"]]]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAggregationOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	fn := DB("test").Table("funcs").Get("f")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"map", table.Map(fn), `[38,[[15,[[14,["test"]],"users"]],[16,[[15,[[14,["test"]],"funcs"]],"f"]]]]`},
+		{"reduce", table.Reduce(fn), `[37,[[15,[[14,["test"]],"users"]],[16,[[15,[[14,["test"]],"funcs"]],"f"]]]]`},
+		{"group", table.Group("age"), `[144,[[15,[[14,["test"]],"users"]],"age"]]`},
+		{"ungroup", table.Group("age").Ungroup(), `[150,[[144,[[15,[[14,["test"]],"users"]],"age"]]]]`},
+		{"sum", table.Sum("score"), `[145,[[15,[[14,["test"]],"users"]],"score"]]`},
+		{"avg", table.Avg("score"), `[146,[[15,[[14,["test"]],"users"]],"score"]]`},
+		{"min", table.Min("age"), `[147,[[15,[[14,["test"]],"users"]],"age"]]`},
+		{"max", table.Max("age"), `[148,[[15,[[14,["test"]],"users"]],"age"]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
