@@ -14,6 +14,7 @@ func TestDatumEncoding(t *testing.T) {
 	}{
 		{"string", Datum("foo"), `"foo"`},
 		{"number", Datum(42), `42`},
+		{"float", Datum(3.14), `3.14`},
 		{"bool", Datum(true), `true`},
 		{"nil", Datum(nil), `null`},
 	}
@@ -41,6 +42,7 @@ func TestCoreTermBuilder(t *testing.T) {
 		{"db", DB("test"), `[14,["test"]]`},
 		{"table", DB("test").Table("users"), `[15,[[14,["test"]],"users"]]`},
 		{"filter", DB("test").Table("users").Filter(map[string]interface{}{"age": 30}), `[39,[[15,[[14,["test"]],"users"]],{"age":30}]]`},
+		{"filter_term", DB("test").Table("users").Filter(DB("test").Table("other").Get("k")), `[39,[[15,[[14,["test"]],"users"]],[16,[[15,[[14,["test"]],"other"]],"k"]]]]`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -66,6 +68,7 @@ func TestWriteOperations(t *testing.T) {
 		want string
 	}{
 		{"insert", table.Insert(doc), `[56,[[15,[[14,["test"]],"users"]],{"name":"alice"}]]`},
+		{"insert_term", table.Insert(DB("other").Table("src")), `[56,[[15,[[14,["test"]],"users"]],[15,[[14,["other"]],"src"]]]]`},
 		{"update", table.Update(doc), `[53,[[15,[[14,["test"]],"users"]],{"name":"alice"}]]`},
 		{"delete", table.Delete(), `[54,[[15,[[14,["test"]],"users"]]]]`},
 		{"replace", table.Replace(doc), `[55,[[15,[[14,["test"]],"users"]],{"name":"alice"}]]`},

@@ -9,7 +9,7 @@ This project is developed using [ralphex](https://github.com/umputun/ralphex) CL
 ## Project Files
 
 - `rethink-driver.md` - RethinkDB wire protocol specification for driver implementation (handshake, SCRAM-SHA-256, ReQL serialization, term types, response format, streaming)
-- `plan.md` - TDD implementation plan with 13 phases, test cases as checklist
+- `docs/plans/` - numbered TDD implementation plans (e.g. `04-reql-core.md`); each plan has phases with test cases as checklist
 
 ## Package Structure
 
@@ -17,6 +17,7 @@ This project is developed using [ralphex](https://github.com/umputun/ralphex) CL
 - `internal/wire` - Binary frame encode/decode (Encode, DecodeHeader) and I/O helpers (ReadResponse, WriteQuery); depends on internal/proto
 - `internal/scram` - SCRAM-SHA-256 authentication per RFC 5802 / RFC 7677; functions: GenerateNonce, ClientFirstMessage, ParseServerFirst, ComputeProof, ClientFinalMessage, VerifyServerFinal; Conversation struct for stateful 3-step exchange; pure cryptographic computation, no I/O
 - `internal/conn` - TCP/TLS connection with V1_0 SCRAM-SHA-256 handshake and multiplexed query dispatch; exported: `Conn`, `Config`, `Dial`, `ErrClosed`, `ErrReqlAuth`, `Handshake`; background `readLoop` dispatches responses by token into buffered channels; set `RCLI_DEBUG=wire` for hex-dump wire tracing to stderr; depends on `internal/proto`, `internal/wire`, `internal/scram`
+- `internal/reql` - ReQL term builder; exported: `Term`, `Datum`, `Array`, `DB`, `Asc`, `Desc`, `OptArgs`; chainable methods on `Term`: `Table`, `Filter`, `Insert`, `Update`, `Delete`, `Replace`, `Get`, `GetAll`, `Between`, `OrderBy`, `Limit`, `Skip`, `Count`, `Pluck`, `Without`, `Eq`, `Ne`, `Lt`, `Le`, `Gt`, `Ge`, `Not`, `And`, `Or`, `Add`, `Sub`, `Mul`, `Div`; terms serialize to ReQL wire JSON via `MarshalJSON`; datum terms (termType==0) serialize as raw values; depends on `internal/proto`
 
 ## Code Style
 

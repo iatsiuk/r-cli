@@ -20,6 +20,14 @@ func Datum(v interface{}) Term {
 	return Term{datum: v}
 }
 
+// toTerm converts v to a Term: passes through existing Terms, wraps others in Datum.
+func toTerm(v interface{}) Term {
+	if t, ok := v.(Term); ok {
+		return t
+	}
+	return Datum(v)
+}
+
 // Array creates a MAKE_ARRAY term ([2, [items...]]).
 func Array(items ...interface{}) Term {
 	args := make([]Term, len(items))
@@ -46,35 +54,17 @@ func (t Term) Table(name string) Term {
 // Filter creates a FILTER term ([39, [seq, predicate]]).
 // predicate can be a Term or any value that marshals to a JSON document.
 func (t Term) Filter(predicate interface{}) Term {
-	var pred Term
-	if pt, ok := predicate.(Term); ok {
-		pred = pt
-	} else {
-		pred = Datum(predicate)
-	}
-	return Term{termType: proto.TermFilter, args: []Term{t, pred}}
+	return Term{termType: proto.TermFilter, args: []Term{t, toTerm(predicate)}}
 }
 
 // Insert creates an INSERT term ([56, [table, doc]]).
 func (t Term) Insert(doc interface{}) Term {
-	var d Term
-	if dt, ok := doc.(Term); ok {
-		d = dt
-	} else {
-		d = Datum(doc)
-	}
-	return Term{termType: proto.TermInsert, args: []Term{t, d}}
+	return Term{termType: proto.TermInsert, args: []Term{t, toTerm(doc)}}
 }
 
 // Update creates an UPDATE term ([53, [table, doc]]).
 func (t Term) Update(doc interface{}) Term {
-	var d Term
-	if dt, ok := doc.(Term); ok {
-		d = dt
-	} else {
-		d = Datum(doc)
-	}
-	return Term{termType: proto.TermUpdate, args: []Term{t, d}}
+	return Term{termType: proto.TermUpdate, args: []Term{t, toTerm(doc)}}
 }
 
 // Delete creates a DELETE term ([54, [table]]).
@@ -84,13 +74,7 @@ func (t Term) Delete() Term {
 
 // Replace creates a REPLACE term ([55, [table, doc]]).
 func (t Term) Replace(doc interface{}) Term {
-	var d Term
-	if dt, ok := doc.(Term); ok {
-		d = dt
-	} else {
-		d = Datum(doc)
-	}
-	return Term{termType: proto.TermReplace, args: []Term{t, d}}
+	return Term{termType: proto.TermReplace, args: []Term{t, toTerm(doc)}}
 }
 
 // OptArgs is a map of optional arguments passed as the last element to terms like GetAll.
@@ -98,13 +82,7 @@ type OptArgs map[string]interface{}
 
 // Get creates a GET term ([16, [table, key]]).
 func (t Term) Get(key interface{}) Term {
-	var k Term
-	if kt, ok := key.(Term); ok {
-		k = kt
-	} else {
-		k = Datum(key)
-	}
-	return Term{termType: proto.TermGet, args: []Term{t, k}}
+	return Term{termType: proto.TermGet, args: []Term{t, toTerm(key)}}
 }
 
 // GetAll creates a GETALL term ([78, [table, keys...], opts?]).
@@ -135,18 +113,7 @@ func (t Term) GetAll(args ...interface{}) Term {
 
 // Between creates a BETWEEN term ([182, [term, lower, upper]]).
 func (t Term) Between(lower, upper interface{}) Term {
-	var lo, hi Term
-	if lt, ok := lower.(Term); ok {
-		lo = lt
-	} else {
-		lo = Datum(lower)
-	}
-	if ht, ok := upper.(Term); ok {
-		hi = ht
-	} else {
-		hi = Datum(upper)
-	}
-	return Term{termType: proto.TermBetween, args: []Term{t, lo, hi}}
+	return Term{termType: proto.TermBetween, args: []Term{t, toTerm(lower), toTerm(upper)}}
 }
 
 // Asc creates an ASC term ([73, [field]]) for use with OrderBy.
@@ -189,8 +156,8 @@ func (t Term) Count() Term {
 
 // Pluck creates a PLUCK term ([33, [term, fields...]]).
 func (t Term) Pluck(fields ...string) Term {
-	args := make([]Term, 1, 1+len(fields))
-	args[0] = t
+	args := make([]Term, 0, 1+len(fields))
+	args = append(args, t)
 	for _, f := range fields {
 		args = append(args, Datum(f))
 	}
@@ -199,8 +166,8 @@ func (t Term) Pluck(fields ...string) Term {
 
 // Without creates a WITHOUT term ([34, [term, fields...]]).
 func (t Term) Without(fields ...string) Term {
-	args := make([]Term, 1, 1+len(fields))
-	args[0] = t
+	args := make([]Term, 0, 1+len(fields))
+	args = append(args, t)
 	for _, f := range fields {
 		args = append(args, Datum(f))
 	}
@@ -274,13 +241,7 @@ func (t Term) Div(value interface{}) Term {
 
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
-	var v Term
-	if vt, ok := value.(Term); ok {
-		v = vt
-	} else {
-		v = Datum(value)
-	}
-	return Term{termType: tt, args: []Term{t, v}}
+	return Term{termType: tt, args: []Term{t, toTerm(value)}}
 }
 
 // MarshalJSON serializes the term to ReQL wire format.
@@ -289,7 +250,11 @@ func (t Term) MarshalJSON() ([]byte, error) {
 	if t.termType == 0 {
 		return json.Marshal(t.datum)
 	}
-	parts := []interface{}{int(t.termType), t.args}
+	args := t.args
+	if args == nil {
+		args = []Term{}
+	}
+	parts := []interface{}{int(t.termType), args}
 	if len(t.opts) > 0 {
 		parts = append(parts, t.opts)
 	}
