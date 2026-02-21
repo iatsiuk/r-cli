@@ -29,8 +29,8 @@ Package: `internal/proto`
 
 ### Task 3: Term type constants
 
-- [ ] Test: verify core term values (DB=14, TABLE=15, FILTER=39, INSERT=56, etc.)
-- [ ] Implement: `term.go` -- TermType type + all constants grouped by category
+- [x] Test: verify core term values (DB=14, TABLE=15, FILTER=39, INSERT=56, etc.)
+- [x] Implement: `term.go` -- TermType type + all constants grouped by category
 
 ### Task 4: Wire protocol encode/decode
 
