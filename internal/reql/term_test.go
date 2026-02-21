@@ -268,6 +268,35 @@ func TestAggregationOperations(t *testing.T) {
 	}
 }
 
+func TestIndexOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"index_create", table.IndexCreate("name"), `[75,[[15,[[14,["test"]],"users"]],"name"]]`},
+		{"index_drop", table.IndexDrop("name"), `[76,[[15,[[14,["test"]],"users"]],"name"]]`},
+		{"index_list", table.IndexList(), `[77,[[15,[[14,["test"]],"users"]]]]`},
+		{"index_wait", table.IndexWait("name"), `[140,[[15,[[14,["test"]],"users"]],"name"]]`},
+		{"index_status", table.IndexStatus("name"), `[139,[[15,[[14,["test"]],"users"]],"name"]]`},
+		{"index_rename", table.IndexRename("old", "new"), `[156,[[15,[[14,["test"]],"users"]],"old","new"]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

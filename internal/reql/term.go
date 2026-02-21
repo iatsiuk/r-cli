@@ -304,6 +304,46 @@ func (t Term) Div(value interface{}) Term {
 	return t.binop(proto.TermDiv, value)
 }
 
+// IndexCreate creates an INDEX_CREATE term ([75, [table, name]]).
+func (t Term) IndexCreate(name string) Term {
+	return Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
+}
+
+// IndexDrop creates an INDEX_DROP term ([76, [table, name]]).
+func (t Term) IndexDrop(name string) Term {
+	return Term{termType: proto.TermIndexDrop, args: []Term{t, Datum(name)}}
+}
+
+// IndexList creates an INDEX_LIST term ([77, [table]]).
+func (t Term) IndexList() Term {
+	return Term{termType: proto.TermIndexList, args: []Term{t}}
+}
+
+// IndexWait creates an INDEX_WAIT term ([140, [table, names...]]).
+func (t Term) IndexWait(names ...string) Term {
+	args := make([]Term, 1, 1+len(names))
+	args[0] = t
+	for _, n := range names {
+		args = append(args, Datum(n))
+	}
+	return Term{termType: proto.TermIndexWait, args: args}
+}
+
+// IndexStatus creates an INDEX_STATUS term ([139, [table, names...]]).
+func (t Term) IndexStatus(names ...string) Term {
+	args := make([]Term, 1, 1+len(names))
+	args[0] = t
+	for _, n := range names {
+		args = append(args, Datum(n))
+	}
+	return Term{termType: proto.TermIndexStatus, args: args}
+}
+
+// IndexRename creates an INDEX_RENAME term ([156, [table, old, new]]).
+func (t Term) IndexRename(oldName, newName string) Term {
+	return Term{termType: proto.TermIndexRename, args: []Term{t, Datum(oldName), Datum(newName)}}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}

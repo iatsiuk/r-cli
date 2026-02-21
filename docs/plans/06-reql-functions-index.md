@@ -14,13 +14,13 @@ Depends on: `04-reql-core`
 
 ### Task 1: Index operations
 
-- [ ] Test: `.IndexCreate("name")` -> `[75,[<table_term>,"name"]]`
-- [ ] Test: `.IndexDrop("name")` -> `[76,[<table_term>,"name"]]`
-- [ ] Test: `.IndexList()` -> `[77,[<table_term>]]`
-- [ ] Test: `.IndexWait("name")` -> `[140,[<table_term>,"name"]]`
-- [ ] Test: `.IndexStatus("name")` -> `[139,[<table_term>,"name"]]`
-- [ ] Test: `.IndexRename("old","new")` -> `[156,[<table_term>,"old","new"]]`
-- [ ] Implement: index operation methods
+- [x] Test: `.IndexCreate("name")` -> `[75,[<table_term>,"name"]]`
+- [x] Test: `.IndexDrop("name")` -> `[76,[<table_term>,"name"]]`
+- [x] Test: `.IndexList()` -> `[77,[<table_term>]]`
+- [x] Test: `.IndexWait("name")` -> `[140,[<table_term>,"name"]]`
+- [x] Test: `.IndexStatus("name")` -> `[139,[<table_term>,"name"]]`
+- [x] Test: `.IndexRename("old","new")` -> `[156,[<table_term>,"old","new"]]`
+- [x] Implement: index operation methods
 
 ### Task 2: Changefeed and misc terms
 
