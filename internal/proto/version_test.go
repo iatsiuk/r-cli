@@ -12,6 +12,8 @@ func TestVersionConstants(t *testing.T) {
 		{"V1_0", V1_0, 0x34c2bdc3},
 		{"V0_4", V0_4, 0x400c2d20},
 		{"V0_3", V0_3, 0x5f75e83e},
+		{"V0_2", V0_2, 0x723081e1},
+		{"V0_1", V0_1, 0x3f61ba36},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

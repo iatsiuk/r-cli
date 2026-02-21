@@ -27,6 +27,9 @@ func ReadResponse(r io.Reader) (token uint64, payload []byte, err error) {
 
 // WriteQuery encodes and writes a RethinkDB query frame to w.
 func WriteQuery(w io.Writer, token uint64, payload []byte) error {
+	if uint32(len(payload)) > maxFrameSize { //nolint:gosec // G115: len never negative
+		return fmt.Errorf("payload length %d exceeds max %d", len(payload), maxFrameSize)
+	}
 	_, err := w.Write(Encode(token, payload))
 	if err != nil {
 		return fmt.Errorf("write query: %w", err)

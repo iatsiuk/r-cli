@@ -11,4 +11,8 @@ const (
 	V0_4 Version = 0x400c2d20
 	// V0_3 is a legacy protocol version.
 	V0_3 Version = 0x5f75e83e
+	// V0_2 is a legacy protocol version.
+	V0_2 Version = 0x723081e1
+	// V0_1 is the initial protocol version.
+	V0_1 Version = 0x3f61ba36
 )

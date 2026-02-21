@@ -111,4 +111,13 @@ func TestWriteQuery(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 	})
+
+	t.Run("payload exceeds MaxFrameSize", func(t *testing.T) {
+		t.Parallel()
+		oversized := make([]byte, maxFrameSize+1)
+		err := WriteQuery(&bytes.Buffer{}, token, oversized)
+		if err == nil {
+			t.Fatal("expected error for oversized payload, got nil")
+		}
+	})
 }
