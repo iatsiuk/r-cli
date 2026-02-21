@@ -16,7 +16,7 @@ func ReadResponse(r io.Reader) (token uint64, payload []byte, err error) {
 	}
 	token, length := DecodeHeader(hdr)
 	if length > maxFrameSize {
-		return 0, nil, fmt.Errorf("payload length %d exceeds max %d", length, maxFrameSize)
+		return token, nil, fmt.Errorf("payload length %d exceeds max %d", length, maxFrameSize)
 	}
 	payload = make([]byte, length) //nolint:gosec // G115: bounded by maxFrameSize check above
 	if _, err = io.ReadFull(r, payload); err != nil {
@@ -29,7 +29,7 @@ func ReadResponse(r io.Reader) (token uint64, payload []byte, err error) {
 func WriteQuery(w io.Writer, token uint64, payload []byte) error {
 	frame, err := Encode(token, payload)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode query: %w", err)
 	}
 	if _, err = w.Write(frame); err != nil {
 		return fmt.Errorf("write query: %w", err)

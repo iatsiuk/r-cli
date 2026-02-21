@@ -3,6 +3,7 @@ package wire
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
 	"testing"
 )
@@ -113,8 +114,8 @@ func TestWriteQuery(t *testing.T) {
 		t.Parallel()
 		writeErr := io.ErrClosedPipe
 		err := WriteQuery(&errWriter{err: writeErr}, token, payload)
-		if err == nil {
-			t.Fatal("expected error, got nil")
+		if !errors.Is(err, writeErr) {
+			t.Errorf("error = %v, want wrapping %v", err, writeErr)
 		}
 	})
 
