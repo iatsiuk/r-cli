@@ -16,7 +16,7 @@ func GenerateNonce() string {
 	if _, err := rand.Read(b); err != nil {
 		panic("scram: failed to generate nonce: " + err.Error())
 	}
-	return base64.StdEncoding.EncodeToString(b)
+	return base64.RawStdEncoding.EncodeToString(b)
 }
 
 // ClientFirstMessage returns the SCRAM client-first-message per RFC 5802:
@@ -76,7 +76,11 @@ func ComputeProof(password string, salt []byte, iter int, authMsg string) (clien
 }
 
 // pbkdf2SHA256 implements PBKDF2-HMAC-SHA256 with a 32-byte output per RFC 2898.
+// iterations must be >= 1.
 func pbkdf2SHA256(password, salt []byte, iterations int) []byte {
+	if iterations < 1 {
+		panic("scram: pbkdf2SHA256: iterations must be >= 1")
+	}
 	mac := hmac.New(sha256.New, password)
 	mac.Write(salt)
 	mac.Write([]byte{0, 0, 0, 1})
@@ -113,7 +117,7 @@ func ClientFinalMessage(combinedNonce string, proof []byte) string {
 func VerifyServerFinal(msg string, expectedSig []byte) error {
 	const errPrefix = "e="
 	if strings.HasPrefix(msg, errPrefix) {
-		return fmt.Errorf("scram: server authentication error: %s", msg[len(errPrefix):])
+		return fmt.Errorf("scram: server authentication error: %q", msg[len(errPrefix):])
 	}
 	const prefix = "v="
 	if !strings.HasPrefix(msg, prefix) {
