@@ -20,7 +20,7 @@ func ReadResponse(r io.Reader) (token uint64, payload []byte, err error) {
 	}
 	payload = make([]byte, length) //nolint:gosec // G115: bounded by maxFrameSize check above
 	if _, err = io.ReadFull(r, payload); err != nil {
-		return 0, nil, fmt.Errorf("read payload: %w", err)
+		return token, nil, fmt.Errorf("read payload: %w", err)
 	}
 	return token, payload, nil
 }
