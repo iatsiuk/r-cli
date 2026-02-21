@@ -97,6 +97,30 @@ func hmacSHA256(key, data []byte) []byte {
 	return mac.Sum(nil)
 }
 
+// ClientFinalMessage builds the SCRAM client-final-message:
+// "c=biws,r=<combinedNonce>,p=<base64proof>"
+// where "biws" is base64("n,,") - the GS2 header with no channel binding.
+func ClientFinalMessage(combinedNonce string, proof []byte) string {
+	return "c=biws,r=" + combinedNonce + ",p=" + base64.StdEncoding.EncodeToString(proof)
+}
+
+// VerifyServerFinal parses the server-final-message "v=<base64sig>" and checks
+// the signature against expectedSig using constant-time comparison.
+func VerifyServerFinal(msg string, expectedSig []byte) error {
+	const prefix = "v="
+	if !strings.HasPrefix(msg, prefix) {
+		return fmt.Errorf("scram: invalid server-final-message %q", msg)
+	}
+	sig, err := base64.StdEncoding.DecodeString(msg[len(prefix):])
+	if err != nil {
+		return fmt.Errorf("scram: invalid server signature encoding: %w", err)
+	}
+	if !hmac.Equal(sig, expectedSig) {
+		return fmt.Errorf("scram: server signature mismatch")
+	}
+	return nil
+}
+
 // ParseServerFirst parses a SCRAM server-first-message and validates the nonce prefix.
 func ParseServerFirst(msg, clientNonce string) (*ServerFirst, error) {
 	fields, err := parseServerFields(msg)

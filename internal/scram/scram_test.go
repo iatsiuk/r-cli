@@ -229,3 +229,78 @@ func TestParseServerFirstWrongNoncePrefix(t *testing.T) {
 		t.Error("expected error for wrong nonce prefix, got nil")
 	}
 }
+
+func TestClientFinalMessage(t *testing.T) {
+	t.Parallel()
+
+	// use RFC 7677 values: combined nonce and known proof bytes
+	combinedNonce := "rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0"
+	proof, err := base64.StdEncoding.DecodeString(rfc7677ClientProof)
+	if err != nil {
+		t.Fatalf("test setup: %v", err)
+	}
+	want := "c=biws,r=" + combinedNonce + ",p=" + rfc7677ClientProof
+
+	got := ClientFinalMessage(combinedNonce, proof)
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestVerifyServerFinalSuccess(t *testing.T) {
+	t.Parallel()
+
+	sig, err := base64.StdEncoding.DecodeString(rfc7677ServerSig)
+	if err != nil {
+		t.Fatalf("test setup: %v", err)
+	}
+	msg := "v=" + rfc7677ServerSig
+
+	if err := VerifyServerFinal(msg, sig); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestVerifyServerFinalWrongSig(t *testing.T) {
+	t.Parallel()
+
+	sig, err := base64.StdEncoding.DecodeString(rfc7677ServerSig)
+	if err != nil {
+		t.Fatalf("test setup: %v", err)
+	}
+	// flip one byte to make it wrong
+	wrong := make([]byte, len(sig))
+	copy(wrong, sig)
+	wrong[0] ^= 0xFF
+
+	msg := "v=" + base64.StdEncoding.EncodeToString(wrong)
+	if err := VerifyServerFinal(msg, sig); err == nil {
+		t.Error("expected error for wrong signature, got nil")
+	}
+}
+
+func TestVerifyServerFinalInvalid(t *testing.T) {
+	t.Parallel()
+
+	sig, err := base64.StdEncoding.DecodeString(rfc7677ServerSig)
+	if err != nil {
+		t.Fatalf("test setup: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		msg  string
+	}{
+		{name: "missing v= prefix", msg: "notaserver"},
+		{name: "invalid base64", msg: "v=!!!invalid!!!"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if err := VerifyServerFinal(tc.msg, sig); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}

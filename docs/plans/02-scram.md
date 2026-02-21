@@ -33,11 +33,11 @@ Package: `internal/scram`
 
 ### Task 4: Client-final-message and server-final verification
 
-- [ ] Test: build message with known combined nonce and proof, verify format
-- [ ] Implement: `ClientFinalMessage(combinedNonce string, proof []byte) string`
-- [ ] Test: verify correct server signature -> success
-- [ ] Test: verify wrong server signature -> error
-- [ ] Implement: `VerifyServerFinal(msg string, expectedSig []byte) error`
+- [x] Test: build message with known combined nonce and proof, verify format
+- [x] Implement: `ClientFinalMessage(combinedNonce string, proof []byte) string`
+- [x] Test: verify correct server signature -> success
+- [x] Test: verify wrong server signature -> error
+- [x] Implement: `VerifyServerFinal(msg string, expectedSig []byte) error`
 
 ### Task 5: Full SCRAM conversation
 
