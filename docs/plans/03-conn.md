@@ -38,11 +38,11 @@ Handshake uses null-terminated JSON messages (not token+length framing).
 
 ### Task 3: Full handshake over mock connection
 
-- [ ] Test: simulate full 6-step handshake using `net.Pipe()`, verify all messages
-- [ ] Test: handshake with wrong password -> auth error
-- [ ] Test: handshake with incompatible protocol version -> error
-- [ ] Test: pipelined handshake (steps 1+3 sent together, then read steps 2+4) reduces RTT
-- [ ] Implement: `Handshake(rw io.ReadWriter, user, password string) error`
+- [x] Test: simulate full 6-step handshake using `net.Pipe()`, verify all messages
+- [x] Test: handshake with wrong password -> auth error
+- [x] Test: handshake with incompatible protocol version -> error
+- [x] Test: pipelined handshake (steps 1+3 sent together, then read steps 2+4) reduces RTT
+- [x] Implement: `Handshake(rw io.ReadWriter, user, password string) error`
 
 ### Task 4: Token counter and Config
 
