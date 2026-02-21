@@ -470,6 +470,22 @@ func (t Term) Grant(user string, perms interface{}) Term {
 	return Term{termType: proto.TermGrant, args: []Term{t, Datum(user), toTerm(perms)}}
 }
 
+// Do creates a FUNCALL term ([64, [fn, args...]]).
+// API order: Do(arg1, arg2, ..., fn) - function is the last argument.
+// Wire order: [64, [fn, arg1, arg2, ...]] - function goes first on the wire.
+func Do(args ...interface{}) Term {
+	if len(args) == 0 {
+		return errTerm(errors.New("reql: Do requires at least a function argument"))
+	}
+	fn := toTerm(args[len(args)-1])
+	wireArgs := make([]Term, 1, len(args))
+	wireArgs[0] = fn
+	for _, a := range args[:len(args)-1] {
+		wireArgs = append(wireArgs, toTerm(a))
+	}
+	return Term{termType: proto.TermFuncCall, args: wireArgs}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}

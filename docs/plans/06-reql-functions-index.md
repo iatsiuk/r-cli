@@ -55,6 +55,6 @@ The driver must detect IMPLICIT_VAR (term 13) in term arguments, replace it with
 
 API order: `Do(arg1, arg2, func)`. Wire order: `[64, [func, arg1, arg2]]`. Function goes first on the wire. See rethink-driver.md section 7.
 
-- [ ] Test: `Do(10, 20, func)` -> `[64,[<func>,10,20]]`
-- [ ] Test: `Do(func)` with no extra args -> `[64,[<func>]]`
-- [ ] Implement: `Do` builder with argument reordering
+- [x] Test: `Do(10, 20, func)` -> `[64,[<func>,10,20]]`
+- [x] Test: `Do(func)` with no extra args -> `[64,[<func>]]`
+- [x] Implement: `Do` builder with argument reordering

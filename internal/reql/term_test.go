@@ -412,6 +412,41 @@ func TestImplicitVarWrapping(t *testing.T) {
 	}
 }
 
+func TestFuncCall(t *testing.T) {
+	t.Parallel()
+	fn := Func(Var(1).Add(Var(2)), 1, 2)
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			// Do(arg1, arg2, fn) -> [64,[fn,arg1,arg2]]
+			"two_args",
+			Do(10, 20, fn),
+			`[64,[[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]],10,20]]`,
+		},
+		{
+			// Do(fn) with no extra args -> [64,[fn]]
+			"no_args",
+			Do(fn),
+			`[64,[[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]]]`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
