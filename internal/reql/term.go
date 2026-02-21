@@ -97,11 +97,7 @@ func toTerm(v interface{}) Term {
 func Array(items ...interface{}) Term {
 	args := make([]Term, len(items))
 	for i, item := range items {
-		if t, ok := item.(Term); ok {
-			args[i] = t
-		} else {
-			args[i] = Datum(item)
-		}
+		args[i] = toTerm(item)
 	}
 	return Term{termType: proto.TermMakeArray, args: args}
 }
@@ -389,25 +385,21 @@ func (t Term) IndexList() Term {
 	return Term{termType: proto.TermIndexList, args: []Term{t}}
 }
 
-// IndexWait creates an INDEX_WAIT term ([140, [table, names...]]).
-func (t Term) IndexWait(names ...string) Term {
+// indexOp builds an index operation term with optional index names.
+func (t Term) indexOp(tt proto.TermType, names []string) Term {
 	args := make([]Term, 1, 1+len(names))
 	args[0] = t
 	for _, n := range names {
 		args = append(args, Datum(n))
 	}
-	return Term{termType: proto.TermIndexWait, args: args}
+	return Term{termType: tt, args: args}
 }
 
+// IndexWait creates an INDEX_WAIT term ([140, [table, names...]]).
+func (t Term) IndexWait(names ...string) Term { return t.indexOp(proto.TermIndexWait, names) }
+
 // IndexStatus creates an INDEX_STATUS term ([139, [table, names...]]).
-func (t Term) IndexStatus(names ...string) Term {
-	args := make([]Term, 1, 1+len(names))
-	args[0] = t
-	for _, n := range names {
-		args = append(args, Datum(n))
-	}
-	return Term{termType: proto.TermIndexStatus, args: args}
-}
+func (t Term) IndexStatus(names ...string) Term { return t.indexOp(proto.TermIndexStatus, names) }
 
 // IndexRename creates an INDEX_RENAME term ([156, [table, old, new]]).
 func (t Term) IndexRename(oldName, newName string) Term {
@@ -434,8 +426,8 @@ func Func(body Term, params ...int) Term {
 // Optional OptArgs can specify options like {"include_initial": true}.
 func (t Term) Changes(opts ...OptArgs) Term {
 	term := Term{termType: proto.TermChanges, args: []Term{t}}
-	if len(opts) > 0 && len(opts[0]) > 0 {
-		term.opts = map[string]interface{}(opts[0])
+	if len(opts) > 0 {
+		term.opts = opts[0]
 	}
 	return term
 }
