@@ -61,14 +61,14 @@ Architecture: `Conn` owns a `net.Conn` and runs a background `readLoop` goroutin
 - `Dial()` accepts optional `*tls.Config` parameter (nil = plain TCP).
 - Debug wire dump: `RCLI_DEBUG=wire` env var hex-dumps frames to stderr.
 
-- [ ] Test: connect to mock server (net.Pipe), handshake, send query, receive response
-- [ ] Test: concurrent queries on same connection -> each receives its own response
-- [ ] Test: out-of-order responses (server replies token 2 before token 1) -> correct dispatch
-- [ ] Test: slow consumer on token 1 does not block delivery to token 2
-- [ ] Test: late response after STOP (token removed) -> silently discarded, no panic
-- [ ] Test: close connection unblocks all pending waiters with error
-- [ ] Test: Send() after Close() returns error immediately
-- [ ] Test: context cancellation during query sends STOP and cleans up dispatch entry
-- [ ] Test: context cancellation during handshake -> no goroutine leak
-- [ ] Test: STOP sent while server sends one more SUCCESS_PARTIAL -> no deadlock
-- [ ] Implement: `Conn` struct with `Dial()`, `Close()`, `Send()`, background `readLoop`
+- [x] Test: connect to mock server (net.Pipe), handshake, send query, receive response
+- [x] Test: concurrent queries on same connection -> each receives its own response
+- [x] Test: out-of-order responses (server replies token 2 before token 1) -> correct dispatch
+- [x] Test: slow consumer on token 1 does not block delivery to token 2
+- [x] Test: late response after STOP (token removed) -> silently discarded, no panic
+- [x] Test: close connection unblocks all pending waiters with error
+- [x] Test: Send() after Close() returns error immediately
+- [x] Test: context cancellation during query sends STOP and cleans up dispatch entry
+- [x] Test: context cancellation during handshake -> no goroutine leak
+- [x] Test: STOP sent while server sends one more SUCCESS_PARTIAL -> no deadlock
+- [x] Implement: `Conn` struct with `Dial()`, `Close()`, `Send()`, background `readLoop`
