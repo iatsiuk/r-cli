@@ -64,43 +64,44 @@ const (
 	TermRound TermType = 185
 
 	// sequence / array operators
-	TermAppend        TermType = 29
-	TermPrepend       TermType = 80
-	TermDifference    TermType = 95
-	TermSetInsert     TermType = 88
-	TermSetIntersect  TermType = 89
-	TermSetUnion      TermType = 90
-	TermSetDifference TermType = 91
-	TermSlice         TermType = 30
-	TermSkip          TermType = 70
-	TermLimit         TermType = 71
-	TermOffsetsOf     TermType = 87
-	TermContains      TermType = 93
-	TermRange         TermType = 173
-	TermInsertAt      TermType = 82
-	TermDeleteAt      TermType = 83
-	TermChangeAt      TermType = 84
-	TermSpliceAt      TermType = 85
-	TermNth           TermType = 45
-	TermBracket       TermType = 170
-	TermInnerJoin     TermType = 48
-	TermOuterJoin     TermType = 49
-	TermEqJoin        TermType = 50
-	TermZip           TermType = 72
-	TermUnion         TermType = 44
-	TermSample        TermType = 81
-	TermIsEmpty       TermType = 86
-	TermDistinct      TermType = 42
-	TermCount         TermType = 43
-	TermGroup         TermType = 144
-	TermUngroup       TermType = 150
-	TermSum           TermType = 145
-	TermAvg           TermType = 146
-	TermMin           TermType = 147
-	TermMax           TermType = 148
-	TermMinVal        TermType = 180
-	TermMaxVal        TermType = 181
-	TermRandom        TermType = 151
+	TermAppend          TermType = 29
+	TermPrepend         TermType = 80
+	TermDifference      TermType = 95
+	TermSetInsert       TermType = 88
+	TermSetIntersection TermType = 89
+	TermSetUnion        TermType = 90
+	TermSetDifference   TermType = 91
+	TermSlice           TermType = 30
+	TermSkip            TermType = 70
+	TermLimit           TermType = 71
+	TermOffsetsOf       TermType = 87
+	TermContains        TermType = 93
+	TermRange           TermType = 173
+	TermInsertAt        TermType = 82
+	TermDeleteAt        TermType = 83
+	TermChangeAt        TermType = 84
+	TermSpliceAt        TermType = 85
+	TermNth             TermType = 45
+	TermBracket         TermType = 170
+	TermInnerJoin       TermType = 48
+	TermOuterJoin       TermType = 49
+	TermEqJoin          TermType = 50
+	TermBetween         TermType = 182
+	TermZip             TermType = 72
+	TermUnion           TermType = 44
+	TermSample          TermType = 81
+	TermIsEmpty         TermType = 86
+	TermDistinct        TermType = 42
+	TermCount           TermType = 43
+	TermGroup           TermType = 144
+	TermUngroup         TermType = 150
+	TermSum             TermType = 145
+	TermAvg             TermType = 146
+	TermMin             TermType = 147
+	TermMax             TermType = 148
+	TermMinVal          TermType = 180
+	TermMaxVal          TermType = 181
+	TermRandom          TermType = 151
 
 	// document operators
 	TermGetField   TermType = 31
@@ -115,7 +116,6 @@ const (
 	TermLiteral    TermType = 137
 
 	// query operators
-	TermBetween   TermType = 36
 	TermFilter    TermType = 39
 	TermReduce    TermType = 37
 	TermMap       TermType = 38
@@ -147,10 +147,26 @@ const (
 	TermInfo     TermType = 79
 
 	// string operators
-	TermMatch    TermType = 97
-	TermUpcase   TermType = 141
-	TermDowncase TermType = 142
-	TermSplit    TermType = 149
+	TermMatch        TermType = 97
+	TermUpcase       TermType = 141
+	TermDowncase     TermType = 142
+	TermSplit        TermType = 149
+	TermToJSONString TermType = 172
+
+	// admin / permissions
+	TermGrant TermType = 188
+
+	// write hooks
+	TermSetWriteHook TermType = 189
+	TermGetWriteHook TermType = 190
+
+	// bitwise operators
+	TermBitAnd TermType = 191
+	TermBitOr  TermType = 192
+	TermBitXor TermType = 193
+	TermBitNot TermType = 194
+	TermBitSal TermType = 195
+	TermBitSar TermType = 196
 
 	// JSON / HTTP
 	TermJSON TermType = 98

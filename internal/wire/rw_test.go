@@ -17,6 +17,9 @@ func (r *slowReader) Read(p []byte) (int, error) {
 	if r.pos >= len(r.data) {
 		return 0, io.EOF
 	}
+	if len(p) == 0 {
+		return 0, nil
+	}
 	p[0] = r.data[r.pos]
 	r.pos++
 	return 1, nil
@@ -77,17 +80,35 @@ func TestReadResponse(t *testing.T) {
 	})
 }
 
+// errWriter always returns an error on Write.
+type errWriter struct{ err error }
+
+func (w *errWriter) Write([]byte) (int, error) { return 0, w.err }
+
 func TestWriteQuery(t *testing.T) {
 	t.Parallel()
 
 	token := uint64(7)
 	payload := []byte(`[1,"bar",{}]`)
-	var buf bytes.Buffer
-	if err := WriteQuery(&buf, token, payload); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	want := Encode(token, payload)
-	if !bytes.Equal(buf.Bytes(), want) {
-		t.Errorf("got %x, want %x", buf.Bytes(), want)
-	}
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+		var buf bytes.Buffer
+		if err := WriteQuery(&buf, token, payload); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := Encode(token, payload)
+		if !bytes.Equal(buf.Bytes(), want) {
+			t.Errorf("got %x, want %x", buf.Bytes(), want)
+		}
+	})
+
+	t.Run("write error propagated", func(t *testing.T) {
+		t.Parallel()
+		writeErr := io.ErrClosedPipe
+		err := WriteQuery(&errWriter{err: writeErr}, token, payload)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
 }

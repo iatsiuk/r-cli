@@ -11,6 +11,11 @@ This project is developed using [ralphex](https://github.com/umputun/ralphex) CL
 - `rethink-driver.md` - RethinkDB wire protocol specification for driver implementation (handshake, SCRAM-SHA-256, ReQL serialization, term types, response format, streaming)
 - `plan.md` - TDD implementation plan with 13 phases, test cases as checklist
 
+## Package Structure
+
+- `internal/proto` - RethinkDB protocol constants only (Version, QueryType, ResponseType, ErrorType, ResponseNote, DatumType, TermType); pure constants, no I/O. Max payload constraint: 64MB.
+- `internal/wire` - Binary frame encode/decode (Encode, DecodeHeader) and I/O helpers (ReadResponse, WriteQuery); depends on internal/proto
+
 ## Code Style
 
 ### Imports

@@ -105,7 +105,41 @@ func TestTermTypeSequenceConstants(t *testing.T) {
 		{"MAP", TermMap, 38},
 		{"CONCAT_MAP", TermConcatMap, 40},
 		{"ORDER_BY", TermOrderBy, 41},
-		{"BETWEEN", TermBetween, 36},
+	})
+}
+
+func TestTermTypeJoinConstants(t *testing.T) {
+	t.Parallel()
+	testTerms(t, []struct {
+		name string
+		got  TermType
+		want TermType
+	}{
+		{"INNER_JOIN", TermInnerJoin, 48},
+		{"OUTER_JOIN", TermOuterJoin, 49},
+		{"EQ_JOIN", TermEqJoin, 50},
+		{"BETWEEN", TermBetween, 182},
+		{"SET_INTERSECTION", TermSetIntersection, 89},
+	})
+}
+
+func TestTermTypeExtendedConstants(t *testing.T) {
+	t.Parallel()
+	testTerms(t, []struct {
+		name string
+		got  TermType
+		want TermType
+	}{
+		{"TO_JSON_STRING", TermToJSONString, 172},
+		{"GRANT", TermGrant, 188},
+		{"SET_WRITE_HOOK", TermSetWriteHook, 189},
+		{"GET_WRITE_HOOK", TermGetWriteHook, 190},
+		{"BIT_AND", TermBitAnd, 191},
+		{"BIT_OR", TermBitOr, 192},
+		{"BIT_XOR", TermBitXor, 193},
+		{"BIT_NOT", TermBitNot, 194},
+		{"BIT_SAL", TermBitSal, 195},
+		{"BIT_SAR", TermBitSar, 196},
 	})
 }
 
