@@ -21,11 +21,11 @@ Package: `internal/proto`
 
 ### Task 2: Response and datum type constants
 
-- [ ] Test: verify ResponseType values (SUCCESS_ATOM=1 .. RUNTIME_ERROR=18)
-- [ ] Test: `IsError()` method returns true for types >= 16
-- [ ] Implement: `response.go` -- ResponseType, ErrorType, ResponseNote types + constants
-- [ ] Test: verify DatumType values (R_NULL=1 .. R_JSON=7)
-- [ ] Implement: `datum.go` -- DatumType type + constants
+- [x] Test: verify ResponseType values (SUCCESS_ATOM=1 .. RUNTIME_ERROR=18)
+- [x] Test: `IsError()` method returns true for types >= 16
+- [x] Implement: `response.go` -- ResponseType, ErrorType, ResponseNote types + constants
+- [x] Test: verify DatumType values (R_NULL=1 .. R_JSON=7)
+- [x] Implement: `datum.go` -- DatumType type + constants
 
 ### Task 3: Term type constants
 
