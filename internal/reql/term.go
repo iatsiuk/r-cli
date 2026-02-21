@@ -174,6 +174,31 @@ func (t Term) Without(fields ...string) Term {
 	return Term{termType: proto.TermWithout, args: args}
 }
 
+// GetField creates a GET_FIELD term ([31, [term, field]]).
+func (t Term) GetField(field string) Term {
+	return Term{termType: proto.TermGetField, args: []Term{t, Datum(field)}}
+}
+
+// HasFields creates a HAS_FIELDS term ([32, [term, fields...]]).
+func (t Term) HasFields(fields ...string) Term {
+	args := make([]Term, 0, 1+len(fields))
+	args = append(args, t)
+	for _, f := range fields {
+		args = append(args, Datum(f))
+	}
+	return Term{termType: proto.TermHasFields, args: args}
+}
+
+// Merge creates a MERGE term ([35, [term, obj]]).
+func (t Term) Merge(obj interface{}) Term {
+	return Term{termType: proto.TermMerge, args: []Term{t, toTerm(obj)}}
+}
+
+// Distinct creates a DISTINCT term ([42, [term]]).
+func (t Term) Distinct() Term {
+	return Term{termType: proto.TermDistinct, args: []Term{t}}
+}
+
 // Eq creates an EQ term ([17, [term, value]]).
 func (t Term) Eq(value interface{}) Term {
 	return t.binop(proto.TermEq, value)

@@ -14,11 +14,11 @@ Depends on: `04-reql-core`
 
 ### Task 1: Object operations
 
-- [ ] Test: `.GetField("name")` -> `[31,[<term>,"name"]]`
-- [ ] Test: `.HasFields("a","b")` -> `[32,[<term>,"a","b"]]`
-- [ ] Test: `.Merge(obj)` -> `[35,[<term>,<obj>]]`
-- [ ] Test: `.Distinct()` -> `[42,[<term>]]`
-- [ ] Implement: object operation methods
+- [x] Test: `.GetField("name")` -> `[31,[<term>,"name"]]`
+- [x] Test: `.HasFields("a","b")` -> `[32,[<term>,"a","b"]]`
+- [x] Test: `.Merge(obj)` -> `[35,[<term>,<obj>]]`
+- [x] Test: `.Distinct()` -> `[42,[<term>]]`
+- [x] Implement: object operation methods
 
 ### Task 2: Aggregation
 

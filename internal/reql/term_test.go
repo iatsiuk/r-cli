@@ -206,6 +206,35 @@ func TestArithmeticOperators(t *testing.T) {
 	}
 }
 
+func TestObjectOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	doc := map[string]interface{}{"active": true}
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"get_field", table.Get("alice").GetField("name"), `[31,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"name"]]`},
+		{"has_fields_one", table.Get("alice").HasFields("a"), `[32,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"a"]]`},
+		{"has_fields_multi", table.Get("alice").HasFields("a", "b"), `[32,[[16,[[15,[[14,["test"]],"users"]],"alice"]],"a","b"]]`},
+		{"merge", table.Get("alice").Merge(doc), `[35,[[16,[[15,[[14,["test"]],"users"]],"alice"]],{"active":true}]]`},
+		{"distinct", table.Distinct(), `[42,[[15,[[14,["test"]],"users"]]]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
