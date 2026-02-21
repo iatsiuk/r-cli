@@ -25,16 +25,16 @@ Handshake uses null-terminated JSON messages (not token+length framing).
 
 ### Task 2: Handshake message building and response parsing
 
-- [ ] Test: build step 1 bytes (magic number LE)
-- [ ] Test: build step 3 JSON (protocol_version, authentication_method, authentication) + `\x00`
-- [ ] Test: build step 5 JSON (client-final-message) + `\x00`
-- [ ] Implement: handshake message builders
-- [ ] Test: parse step 2 JSON -> server version, protocol range
-- [ ] Test: parse step 2 non-JSON error string -> error
-- [ ] Test: parse step 4 success -> extract authentication field
-- [ ] Test: parse step 4 with error_code 10-20 -> ReqlAuthError
-- [ ] Test: parse step 6 success -> extract server signature
-- [ ] Implement: handshake response parsers
+- [x] Test: build step 1 bytes (magic number LE)
+- [x] Test: build step 3 JSON (protocol_version, authentication_method, authentication) + `\x00`
+- [x] Test: build step 5 JSON (client-final-message) + `\x00`
+- [x] Implement: handshake message builders
+- [x] Test: parse step 2 JSON -> server version, protocol range
+- [x] Test: parse step 2 non-JSON error string -> error
+- [x] Test: parse step 4 success -> extract authentication field
+- [x] Test: parse step 4 with error_code 10-20 -> ReqlAuthError
+- [x] Test: parse step 6 success -> extract server signature
+- [x] Implement: handshake response parsers
 
 ### Task 3: Full handshake over mock connection
 
