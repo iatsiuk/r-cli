@@ -29,6 +29,7 @@ type step2Response struct {
 	MinProtocolVersion int    `json:"min_protocol_version"`
 	MaxProtocolVersion int    `json:"max_protocol_version"`
 	ServerVersion      string `json:"server_version"`
+	Error              string `json:"error"`
 }
 
 type step4Response struct {
@@ -82,6 +83,9 @@ func parseStep2(data []byte) (*step2Response, error) {
 		return nil, fmt.Errorf("parseStep2: %w", err)
 	}
 	if !resp.Success {
+		if resp.Error != "" {
+			return nil, fmt.Errorf("parseStep2: server returned failure: %s", resp.Error)
+		}
 		return nil, fmt.Errorf("parseStep2: server returned failure")
 	}
 	return &resp, nil

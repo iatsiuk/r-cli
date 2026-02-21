@@ -121,7 +121,7 @@ func TestConnBasicSendReceive(t *testing.T) {
 	}
 }
 
-func TestConnConcurrentQueries(t *testing.T) {
+func TestConnConcurrentQueries(t *testing.T) { //nolint:cyclop
 	t.Parallel()
 	c, server := setupConn(t)
 
@@ -168,7 +168,17 @@ func TestConnConcurrentQueries(t *testing.T) {
 			}
 		}()
 	}
-	wg.Wait()
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("concurrent queries timed out - server goroutine may have failed")
+	}
 }
 
 func TestConnOutOfOrderResponses(t *testing.T) {
@@ -302,6 +312,9 @@ func TestConnLateResponseDiscarded(t *testing.T) {
 	case err := <-sendDone:
 		if err == nil {
 			t.Fatal("expected context error, got nil")
+		}
+		if !errors.Is(err, context.Canceled) {
+			t.Errorf("expected context.Canceled, got %v", err)
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("Send did not return after cancel")
@@ -463,6 +476,33 @@ func TestDialContextCancellationNoGoroutineLeak(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("Dial did not return after cancel - goroutine leaked")
+	}
+}
+
+func TestConnSendWriteError(t *testing.T) {
+	t.Parallel()
+	client, _ := net.Pipe()
+	_ = client.Close() // writes will fail immediately
+
+	c := &Conn{
+		nc:      client,
+		waiters: make(map[uint64]chan result),
+		done:    make(chan struct{}),
+	}
+	// readLoop not started; we only exercise the write-failure path
+
+	tok := c.token.Add(1)
+	_, err := c.Send(context.Background(), tok, []byte(`"q"`))
+	if err == nil {
+		t.Fatal("expected write error, got nil")
+	}
+
+	// waiter must be cleaned up after write failure
+	c.mu.Lock()
+	_, exists := c.waiters[tok]
+	c.mu.Unlock()
+	if exists {
+		t.Error("waiter not cleaned up after write error")
 	}
 }
 

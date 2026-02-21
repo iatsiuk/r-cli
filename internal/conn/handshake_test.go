@@ -145,37 +145,38 @@ func TestParseStep4(t *testing.T) {
 		}
 	})
 
-	t.Run("error_code 10-20 wraps ErrReqlAuth", func(t *testing.T) {
-		t.Parallel()
-		data, _ := json.Marshal(map[string]interface{}{
-			"success":    false,
-			"error":      "wrong password",
-			"error_code": 12,
+	// table-driven tests for error_code boundary conditions
+	errorCases := []struct {
+		name      string
+		errorCode int
+		isAuth    bool
+	}{
+		{"code 5 is not ErrReqlAuth", 5, false},
+		{"code 10 wraps ErrReqlAuth", 10, true},
+		{"code 12 wraps ErrReqlAuth", 12, true},
+		{"code 20 wraps ErrReqlAuth", 20, true},
+		{"code 21 is not ErrReqlAuth", 21, false},
+	}
+	for _, tc := range errorCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			data, _ := json.Marshal(map[string]interface{}{
+				"success":    false,
+				"error":      "test error",
+				"error_code": tc.errorCode,
+			})
+			_, err := parseStep4(data)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if tc.isAuth && !errors.Is(err, ErrReqlAuth) {
+				t.Errorf("expected ErrReqlAuth for code %d, got %v", tc.errorCode, err)
+			}
+			if !tc.isAuth && errors.Is(err, ErrReqlAuth) {
+				t.Errorf("should not be ErrReqlAuth for code %d", tc.errorCode)
+			}
 		})
-		_, err := parseStep4(data)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if !errors.Is(err, ErrReqlAuth) {
-			t.Errorf("expected ErrReqlAuth, got %v", err)
-		}
-	})
-
-	t.Run("error_code outside 10-20 is not ErrReqlAuth", func(t *testing.T) {
-		t.Parallel()
-		data, _ := json.Marshal(map[string]interface{}{
-			"success":    false,
-			"error":      "other error",
-			"error_code": 5,
-		})
-		_, err := parseStep4(data)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if errors.Is(err, ErrReqlAuth) {
-			t.Error("should not be ErrReqlAuth for code outside 10-20")
-		}
-	})
+	}
 }
 
 func TestParseStep6(t *testing.T) {

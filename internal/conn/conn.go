@@ -175,6 +175,9 @@ func (c *Conn) readLoop() {
 	for {
 		token, payload, err := wire.ReadResponse(c.nc)
 		if err != nil {
+			// close nc to release the fd when the connection dies unexpectedly
+			// (user's Close() won't call nc.Close() once closed=true is set)
+			_ = c.nc.Close()
 			c.closeWaiters(fmt.Errorf("readLoop: %w", err))
 			return
 		}
