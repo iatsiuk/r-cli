@@ -102,43 +102,43 @@ Implements SCRAM-SHA-256 per RFC 5802 / RFC 7677.
 
 #### 3.1 Nonce generation
 
-- [ ] Test: generated nonce is at least 18 bytes, base64-encoded, no commas
-- [ ] Implement: `GenerateNonce() string`
+- [x] Test: generated nonce is at least 18 bytes, base64-encoded, no commas
+- [x] Implement: `GenerateNonce() string`
 
 #### 3.2 Client-first-message
 
-- [ ] Test: build message with known user and nonce, verify format `n,,n=<user>,r=<nonce>`
-- [ ] Test: username with special characters (=, ,) is properly escaped
-- [ ] Implement: `ClientFirstMessage(user, nonce string) string`
+- [x] Test: build message with known user and nonce, verify format `n,,n=<user>,r=<nonce>`
+- [x] Test: username with special characters (=, ,) is properly escaped
+- [x] Implement: `ClientFirstMessage(user, nonce string) string`
 
 #### 3.3 Parse server-first-message
 
-- [ ] Test: parse `r=<nonce>,s=<salt>,i=<iter>` -> nonce, salt bytes, iteration count
-- [ ] Test: parse malformed message -> error
-- [ ] Test: parse message with wrong nonce prefix -> error
-- [ ] Implement: `ParseServerFirst(msg, clientNonce string) (*ServerFirst, error)`
+- [x] Test: parse `r=<nonce>,s=<salt>,i=<iter>` -> nonce, salt bytes, iteration count
+- [x] Test: parse malformed message -> error
+- [x] Test: parse message with wrong nonce prefix -> error
+- [x] Implement: `ParseServerFirst(msg, clientNonce string) (*ServerFirst, error)`
 
 #### 3.4 SCRAM proof computation
 
-- [ ] Test: compute ClientProof with known inputs (use RFC 7677 test vectors)
-- [ ] Test: compute ServerSignature with known inputs
-- [ ] Implement: `ComputeProof(password string, salt []byte, iter int, authMsg string) (clientProof, serverSig []byte)`
+- [x] Test: compute ClientProof with known inputs (use RFC 7677 test vectors)
+- [x] Test: compute ServerSignature with known inputs
+- [x] Implement: `ComputeProof(password string, salt []byte, iter int, authMsg string) (clientProof, serverSig []byte)`
 
 #### 3.5 Client-final-message
 
-- [ ] Test: build message with known combined nonce and proof, verify format
-- [ ] Implement: `ClientFinalMessage(combinedNonce string, proof []byte) string`
+- [x] Test: build message with known combined nonce and proof, verify format
+- [x] Implement: `ClientFinalMessage(combinedNonce string, proof []byte) string`
 
 #### 3.6 Verify server-final
 
-- [ ] Test: verify correct server signature -> success
-- [ ] Test: verify wrong server signature -> error
-- [ ] Implement: `VerifyServerFinal(msg string, expectedSig []byte) error`
+- [x] Test: verify correct server signature -> success
+- [x] Test: verify wrong server signature -> error
+- [x] Implement: `VerifyServerFinal(msg string, expectedSig []byte) error`
 
 #### 3.7 Full SCRAM conversation (integration)
 
-- [ ] Test: simulate full 3-step exchange with hardcoded messages, verify all outputs
-- [ ] Implement: `Conversation` struct that tracks state across steps
+- [x] Test: simulate full 3-step exchange with hardcoded messages, verify all outputs
+- [x] Implement: `Conversation` struct that tracks state across steps
 
 ---
 

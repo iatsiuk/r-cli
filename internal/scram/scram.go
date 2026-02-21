@@ -115,7 +115,7 @@ func VerifyServerFinal(msg string, expectedSig []byte) error {
 	if err != nil {
 		return fmt.Errorf("scram: invalid server signature encoding: %w", err)
 	}
-	if !hmac.Equal(sig, expectedSig) {
+	if len(sig) == 0 || len(expectedSig) == 0 || !hmac.Equal(sig, expectedSig) {
 		return fmt.Errorf("scram: server signature mismatch")
 	}
 	return nil
@@ -136,7 +136,7 @@ func NewConversation(username, password string) *Conversation {
 	return &Conversation{username: username, password: password}
 }
 
-// ClientFirst generates the client-first-message. Reuses clientNonce if already set (for testing).
+// ClientFirst generates the client-first-message.
 func (c *Conversation) ClientFirst() string {
 	if c.clientNonce == "" {
 		c.clientNonce = GenerateNonce()
@@ -148,6 +148,9 @@ func (c *Conversation) ClientFirst() string {
 
 // ServerFirst processes the server-first-message and returns the client-final-message.
 func (c *Conversation) ServerFirst(msg string) (string, error) {
+	if c.clientFirstBare == "" {
+		return "", fmt.Errorf("scram: ClientFirst must be called before ServerFirst")
+	}
 	sf, err := ParseServerFirst(msg, c.clientNonce)
 	if err != nil {
 		return "", err

@@ -169,6 +169,11 @@ func TestParseServerFirstMalformed(t *testing.T) {
 			msg:         "r=noncecombined,s=QSXCR+Q6sek8bf92,i=0",
 			clientNonce: "nonce",
 		},
+		{
+			name:        "field without equals separator",
+			msg:         "r=noncecombined,ab,i=4096",
+			clientNonce: "nonce",
+		},
 	}
 
 	for _, tc := range tests {
@@ -279,6 +284,25 @@ func TestVerifyServerFinalWrongSig(t *testing.T) {
 	}
 }
 
+func TestVerifyServerFinalNilExpected(t *testing.T) {
+	t.Parallel()
+
+	// "v=" decodes to empty bytes; hmac.Equal([]byte{}, nil) would be true without the length check.
+	if err := VerifyServerFinal("v=", nil); err == nil {
+		t.Error("expected error when expectedSig is nil, got nil")
+	}
+}
+
+func TestConversationServerFirstBeforeClientFirst(t *testing.T) {
+	t.Parallel()
+
+	c := NewConversation("user", "pencil")
+	_, err := c.ServerFirst("r=nonce,s=QSXCR+Q6sek8bf92,i=4096")
+	if err == nil {
+		t.Error("expected error when ServerFirst called before ClientFirst, got nil")
+	}
+}
+
 func TestConversationFullExchange(t *testing.T) {
 	t.Parallel()
 
@@ -325,6 +349,7 @@ func TestVerifyServerFinalInvalid(t *testing.T) {
 	}{
 		{name: "missing v= prefix", msg: "notaserver"},
 		{name: "invalid base64", msg: "v=!!!invalid!!!"},
+		{name: "empty signature", msg: "v="},
 	}
 
 	for _, tc := range tests {
