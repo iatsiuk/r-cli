@@ -46,10 +46,10 @@ Package: `internal/wire`
 
 ### Task 5: Wire protocol read/write
 
-- [ ] Test: read header + payload from `bytes.Reader` -> token + JSON
-- [ ] Test: read from reader that returns partial data (simulate slow network)
-- [ ] Test: read from reader that returns EOF mid-header -> error
-- [ ] Test: payload length > MaxFrameSize (64MB) -> error (prevent OOM)
-- [ ] Implement: `ReadResponse(r io.Reader) (token uint64, payload []byte, err error)`
-- [ ] Test: write query message to `bytes.Buffer`, verify bytes
-- [ ] Implement: `WriteQuery(w io.Writer, token uint64, payload []byte) error`
+- [x] Test: read header + payload from `bytes.Reader` -> token + JSON
+- [x] Test: read from reader that returns partial data (simulate slow network)
+- [x] Test: read from reader that returns EOF mid-header -> error
+- [x] Test: payload length > MaxFrameSize (64MB) -> error (prevent OOM)
+- [x] Implement: `ReadResponse(r io.Reader) (token uint64, payload []byte, err error)`
+- [x] Test: write query message to `bytes.Buffer`, verify bytes
+- [x] Implement: `WriteQuery(w io.Writer, token uint64, payload []byte) error`
