@@ -22,12 +22,12 @@ Depends on: `16-integration-basic`, `15-cli-query`, `13-cli-extended`
 
 ### Task 2: String/time operations and joins
 
-- [ ] Test: filter with match regex -> correct results
-- [ ] Test: insert with r.now(), read back -> recent timestamp
-- [ ] Test: group by .year() -> correct grouping
-- [ ] Test: epochTime roundtrip -> correct value
-- [ ] Test: eqJoin between two tables on secondary index -> correct joined docs
-- [ ] Test: eqJoin + zip -> flattened result
+- [x] Test: filter with match regex -> correct results
+- [x] Test: insert with r.now(), read back -> recent timestamp
+- [x] Test: group by .year() -> correct grouping
+- [x] Test: epochTime roundtrip -> correct value
+- [x] Test: eqJoin between two tables on secondary index -> correct joined docs
+- [x] Test: eqJoin + zip -> flattened result
 
 ### Task 3: Control flow
 
