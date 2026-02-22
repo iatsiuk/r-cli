@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"r-cli/internal/conn"
 	"r-cli/internal/response"
@@ -51,6 +52,21 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Args:          cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 1 {
+				return fmt.Errorf("accepts at most 1 arg(s), received %d", len(args))
+			}
+			if len(args) == 0 && term.IsTerminal(int(os.Stdin.Fd())) { //nolint:gosec
+				_ = cmd.Help()
+				return nil
+			}
+			expr, err := readQueryExpr(args, cmd.InOrStdin())
+			if err != nil {
+				return err
+			}
+			return runQueryExpr(cmd, cfg, expr)
+		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// completion subcommands don't need connection config
 			if p := cmd.Parent(); p != nil && p.Name() == "completion" {
@@ -67,6 +83,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		},
 	}
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	cmd.AddCommand(newQueryCmd(cfg))
 	cmd.AddCommand(newRunCmd(cfg))
 	cmd.AddCommand(newDBCmd(cfg))
 	cmd.AddCommand(newTableCmd(cfg))
@@ -109,12 +126,13 @@ func exitCode(err error) int {
 }
 
 func isQueryError(err error) bool {
+	var qe *queryError
 	var c *response.ReqlCompileError
 	var r *response.ReqlRuntimeError
 	var cl *response.ReqlClientError
 	var ne *response.ReqlNonExistenceError
 	var pe *response.ReqlPermissionError
-	return errors.As(err, &c) || errors.As(err, &r) || errors.As(err, &cl) ||
+	return errors.As(err, &qe) || errors.As(err, &c) || errors.As(err, &r) || errors.As(err, &cl) ||
 		errors.As(err, &ne) || errors.As(err, &pe)
 }
 
