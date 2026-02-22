@@ -23,14 +23,14 @@ Depends on: `04-reql-core`, `06-reql-functions-index`
 
 ### Task 2: String operations
 
-- [ ] Test: `MATCH(97)` -> `[97,[<term>,"pattern"]]`
-- [ ] Test: `SPLIT(149)` with delimiter -> `[149,[<term>,"delim"]]`
-- [ ] Test: `SPLIT(149)` without delimiter -> `[149,[<term>]]`
-- [ ] Test: `UPCASE(141)` -> `[141,[<term>]]`
-- [ ] Test: `DOWNCASE(142)` -> `[142,[<term>]]`
-- [ ] Test: `TO_JSON_STRING(172)` -> `[172,[<term>]]`
-- [ ] Test: `JSON(98)` -> `[98,["json_string"]]`
-- [ ] Implement: Match, Split, Upcase, Downcase, ToJsonString, Json methods
+- [x] Test: `MATCH(97)` -> `[97,[<term>,"pattern"]]`
+- [x] Test: `SPLIT(149)` with delimiter -> `[149,[<term>,"delim"]]`
+- [x] Test: `SPLIT(149)` without delimiter -> `[149,[<term>]]`
+- [x] Test: `UPCASE(141)` -> `[141,[<term>]]`
+- [x] Test: `DOWNCASE(142)` -> `[142,[<term>]]`
+- [x] Test: `TO_JSON_STRING(172)` -> `[172,[<term>]]`
+- [x] Test: `JSON(98)` -> `[98,["json_string"]]`
+- [x] Implement: Match, Split, Upcase, Downcase, ToJsonString, Json methods
 
 ### Task 3: Time operations
 

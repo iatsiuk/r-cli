@@ -608,6 +608,64 @@ func TestJoinOperations(t *testing.T) {
 	}
 }
 
+func TestStringOperations(t *testing.T) {
+	t.Parallel()
+	str := Datum("hello world")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"match",
+			str.Match(`\w+`),
+			`[97,["hello world","\\w+"]]`,
+		},
+		{
+			"split_with_delim",
+			str.Split(" "),
+			`[149,["hello world"," "]]`,
+		},
+		{
+			"split_no_delim",
+			str.Split(),
+			`[149,["hello world"]]`,
+		},
+		{
+			"upcase",
+			str.Upcase(),
+			`[141,["hello world"]]`,
+		},
+		{
+			"downcase",
+			str.Downcase(),
+			`[142,["hello world"]]`,
+		},
+		{
+			"to_json_string",
+			str.ToJsonString(),
+			`[172,["hello world"]]`,
+		},
+		{
+			"json",
+			Json(`{"a":1}`),
+			`[98,["{\"a\":1}"]]`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

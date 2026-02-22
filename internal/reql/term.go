@@ -552,6 +552,39 @@ func (t Term) Zip() Term {
 	return Term{termType: proto.TermZip, args: []Term{t}}
 }
 
+// Match creates a MATCH term ([97, [term, "pattern"]]).
+func (t Term) Match(pattern string) Term {
+	return Term{termType: proto.TermMatch, args: []Term{t, Datum(pattern)}}
+}
+
+// Split creates a SPLIT term ([149, [term]] or [149, [term, "delim"]]).
+func (t Term) Split(delim ...string) Term {
+	if len(delim) == 0 {
+		return Term{termType: proto.TermSplit, args: []Term{t}}
+	}
+	return Term{termType: proto.TermSplit, args: []Term{t, Datum(delim[0])}}
+}
+
+// Upcase creates an UPCASE term ([141, [term]]).
+func (t Term) Upcase() Term {
+	return Term{termType: proto.TermUpcase, args: []Term{t}}
+}
+
+// Downcase creates a DOWNCASE term ([142, [term]]).
+func (t Term) Downcase() Term {
+	return Term{termType: proto.TermDowncase, args: []Term{t}}
+}
+
+// ToJsonString creates a TO_JSON_STRING term ([172, [term]]).
+func (t Term) ToJsonString() Term {
+	return Term{termType: proto.TermToJSONString, args: []Term{t}}
+}
+
+// Json creates a JSON term ([98, ["json_string"]]).
+func Json(s string) Term {
+	return Term{termType: proto.TermJSON, args: []Term{Datum(s)}}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}
