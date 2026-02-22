@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -8,6 +9,18 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"r-cli/internal/conn"
+	"r-cli/internal/response"
+)
+
+// exit codes
+const (
+	exitOK         = 0
+	exitConnection = 1
+	exitQuery      = 2
+	exitAuth       = 3
+	exitINT        = 130
 )
 
 type rootConfig struct {
@@ -19,6 +32,11 @@ type rootConfig struct {
 	passwordFile string
 	timeout      time.Duration
 	format       string
+	profile      bool
+	timeFormat   string
+	binaryFormat string
+	quiet        bool
+	verbose      bool
 }
 
 func newRootCmd() *cobra.Command {
@@ -50,8 +68,37 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	f.StringVar(&cfg.passwordFile, "password-file", "", "read password from file")
 	f.DurationVarP(&cfg.timeout, "timeout", "t", 30*time.Second, "connection timeout")
 	f.StringVarP(&cfg.format, "format", "f", "json", "output format: json, jsonl, raw, table")
+	f.BoolVar(&cfg.profile, "profile", false, "enable query profiling output")
+	f.StringVar(&cfg.timeFormat, "time-format", "native", "time format: native (convert pseudo-types), raw (pass-through)")
+	f.StringVar(&cfg.binaryFormat, "binary-format", "native", "binary format: native (convert pseudo-types), raw (pass-through)")
+	f.BoolVar(&cfg.quiet, "quiet", false, "suppress non-data output to stderr")
+	f.BoolVar(&cfg.verbose, "verbose", false, "show connection info and query timing to stderr")
 
 	return cmd
+}
+
+// exitCode maps an error to the appropriate process exit code.
+func exitCode(err error) int {
+	if err == nil {
+		return exitOK
+	}
+	if errors.Is(err, conn.ErrReqlAuth) {
+		return exitAuth
+	}
+	if isQueryError(err) {
+		return exitQuery
+	}
+	return exitConnection
+}
+
+func isQueryError(err error) bool {
+	var c *response.ReqlCompileError
+	var r *response.ReqlRuntimeError
+	var cl *response.ReqlClientError
+	var ne *response.ReqlNonExistenceError
+	var pe *response.ReqlPermissionError
+	return errors.As(err, &c) || errors.As(err, &r) || errors.As(err, &cl) ||
+		errors.As(err, &ne) || errors.As(err, &pe)
 }
 
 // resolveEnvVars applies env var values for flags not explicitly set via CLI.

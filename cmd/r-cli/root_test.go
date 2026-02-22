@@ -2,10 +2,16 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"testing"
 	"time"
+
+	"r-cli/internal/conn"
+	"r-cli/internal/response"
 )
 
 func TestRootHostDefault(t *testing.T) {
@@ -322,6 +328,138 @@ func TestFlagPrecedenceOverEnvVar(t *testing.T) {
 	}
 	if cfg.database != "flagdb" {
 		t.Errorf("database: got %q, want %q", cfg.database, "flagdb")
+	}
+}
+
+func TestProfileFlagDefault(t *testing.T) {
+	t.Parallel()
+	cmd := newRootCmd()
+	v, err := cmd.PersistentFlags().GetBool("profile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v {
+		t.Error("profile flag: expected false by default")
+	}
+}
+
+func TestTimeFormatFlagDefault(t *testing.T) {
+	t.Parallel()
+	cmd := newRootCmd()
+	v, err := cmd.PersistentFlags().GetString("time-format")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "native" {
+		t.Errorf("time-format: got %q, want %q", v, "native")
+	}
+}
+
+func TestBinaryFormatFlagDefault(t *testing.T) {
+	t.Parallel()
+	cmd := newRootCmd()
+	v, err := cmd.PersistentFlags().GetString("binary-format")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "native" {
+		t.Errorf("binary-format: got %q, want %q", v, "native")
+	}
+}
+
+func TestQuietFlagDefault(t *testing.T) {
+	t.Parallel()
+	cmd := newRootCmd()
+	v, err := cmd.PersistentFlags().GetBool("quiet")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v {
+		t.Error("quiet flag: expected false by default")
+	}
+}
+
+func TestVerboseFlagDefault(t *testing.T) {
+	t.Parallel()
+	cmd := newRootCmd()
+	v, err := cmd.PersistentFlags().GetBool("verbose")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v {
+		t.Error("verbose flag: expected false by default")
+	}
+}
+
+func TestExitCodeSuccess(t *testing.T) {
+	t.Parallel()
+	if code := exitCode(nil); code != exitOK {
+		t.Errorf("exitCode(nil): got %d, want %d", code, exitOK)
+	}
+}
+
+func TestExitCodeConnection(t *testing.T) {
+	t.Parallel()
+	err := errors.New("dial tcp: connection refused")
+	if code := exitCode(err); code != exitConnection {
+		t.Errorf("exitCode(conn error): got %d, want %d", code, exitConnection)
+	}
+}
+
+func TestExitCodeQuery(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{"compile", &response.ReqlCompileError{Msg: "syntax error"}},
+		{"runtime", &response.ReqlRuntimeError{Msg: "runtime error"}},
+		{"client", &response.ReqlClientError{Msg: "client error"}},
+		{"nonexistence", &response.ReqlNonExistenceError{Msg: "not found"}},
+		{"permission", &response.ReqlPermissionError{Msg: "permission denied"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if code := exitCode(tc.err); code != exitQuery {
+				t.Errorf("exitCode(%s): got %d, want %d", tc.name, code, exitQuery)
+			}
+		})
+	}
+}
+
+func TestExitCodeAuth(t *testing.T) {
+	t.Parallel()
+	err := fmt.Errorf("wrapped: %w", conn.ErrReqlAuth)
+	if code := exitCode(err); code != exitAuth {
+		t.Errorf("exitCode(auth): got %d, want %d", code, exitAuth)
+	}
+}
+
+func TestSIGINTExitConstant(t *testing.T) {
+	t.Parallel()
+	if exitINT != 130 {
+		t.Errorf("exitINT: got %d, want 130", exitINT)
+	}
+}
+
+func TestSignalCancelsContext(t *testing.T) {
+	ctx, stop := signal.NotifyContext(t.Context(), os.Interrupt)
+	defer stop()
+
+	proc, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := proc.Signal(os.Interrupt); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case <-ctx.Done():
+		// context cancelled by signal as expected
+	case <-time.After(time.Second):
+		t.Error("context not cancelled after SIGINT")
 	}
 }
 

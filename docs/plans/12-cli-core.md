@@ -36,18 +36,18 @@ Depends on: `10-connmgr-query`, `11-output`
 
 ### Task 3: Additional flags and signal handling
 
-- [ ] Test: `--profile` flag enables query profiling output
-- [ ] Test: `--time-format` flag: "native" (default, pseudo-type conversion), "raw" (pass-through)
-- [ ] Test: `--binary-format` flag: "native" (default), "raw" (pass-through)
-- [ ] Test: `--quiet` suppresses non-data output to stderr
-- [ ] Test: `--verbose` shows connection info and query timing to stderr
-- [ ] Test: exit code 0 on success
-- [ ] Test: exit code 1 on connection error
-- [ ] Test: exit code 2 on query/parse error
-- [ ] Test: exit code 3 on auth error
-- [ ] Test: SIGINT during query -> cancel context, clean exit code 130
-- [ ] Test: SIGINT during output streaming -> stop output, clean exit
-- [ ] Implement: signal handler (SIGINT/SIGTERM) -> cancel root context
+- [x] Test: `--profile` flag enables query profiling output
+- [x] Test: `--time-format` flag: "native" (default, pseudo-type conversion), "raw" (pass-through)
+- [x] Test: `--binary-format` flag: "native" (default), "raw" (pass-through)
+- [x] Test: `--quiet` suppresses non-data output to stderr
+- [x] Test: `--verbose` shows connection info and query timing to stderr
+- [x] Test: exit code 0 on success
+- [x] Test: exit code 1 on connection error
+- [x] Test: exit code 2 on query/parse error
+- [x] Test: exit code 3 on auth error
+- [x] Test: SIGINT during query -> cancel context, clean exit code 130
+- [x] Test: SIGINT during output streaming -> stop output, clean exit
+- [x] Implement: signal handler (SIGINT/SIGTERM) -> cancel root context
 
 ### Task 4: `run` command
 
