@@ -14,16 +14,16 @@ Depends on: `10-connmgr-query`, `11-output`
 
 ### Task 1: Root command and global flags
 
-- [ ] Test: `--host` / `-H` flag defaults to "localhost"
-- [ ] Test: `--port` / `-P` flag defaults to 28015
-- [ ] Test: `--db` / `-d` flag sets default database
-- [ ] Test: `--user` / `-u` flag defaults to "admin"
-- [ ] Test: `--password` / `-p` flag (also `RETHINKDB_PASSWORD` env)
-- [ ] Test: `--password-file` reads password from file (avoids shell history leaks)
-- [ ] Test: `--timeout` / `-t` flag defaults to 30s
-- [ ] Test: `--format` / `-f` flag: "json" (default), "jsonl", "raw", "table"
-- [ ] Test: `--version` flag
-- [ ] Implement: root command with persistent flags
+- [x] Test: `--host` / `-H` flag defaults to "localhost"
+- [x] Test: `--port` / `-P` flag defaults to 28015
+- [x] Test: `--db` / `-d` flag sets default database
+- [x] Test: `--user` / `-u` flag defaults to "admin"
+- [x] Test: `--password` / `-p` flag (also `RETHINKDB_PASSWORD` env)
+- [x] Test: `--password-file` reads password from file (avoids shell history leaks)
+- [x] Test: `--timeout` / `-t` flag defaults to 30s
+- [x] Test: `--format` / `-f` flag: "json" (default), "jsonl", "raw", "table"
+- [x] Test: `--version` flag
+- [x] Implement: root command with persistent flags
 
 ### Task 2: Environment variables and precedence
 
