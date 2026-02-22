@@ -73,7 +73,9 @@ func (c *seqCursor) Next() (json.RawMessage, error) {
 }
 
 func (c *seqCursor) All() ([]json.RawMessage, error) {
-	return c.items, nil
+	remaining := c.items[c.pos:]
+	c.pos = len(c.items)
+	return remaining, nil
 }
 
 func (c *seqCursor) Close() error { return nil }
@@ -343,8 +345,13 @@ func (c *changefeedCursor) All() ([]json.RawMessage, error) {
 
 func (c *changefeedCursor) Close() error {
 	c.closeOnce.Do(func() {
+		c.mu.Lock()
+		needStop := c.err == nil
+		c.mu.Unlock()
 		c.cancel()
-		c.stopErr = c.send(proto.QueryStop)
+		if needStop {
+			c.stopErr = c.send(proto.QueryStop)
+		}
 	})
 	return c.stopErr
 }

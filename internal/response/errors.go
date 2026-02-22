@@ -92,7 +92,7 @@ func extractMessage(results []json.RawMessage) string {
 	return s
 }
 
-// formatMsg appends backtrace frame count to the message when frames are present.
+// formatMsg appends backtrace frames to the message when frames are present.
 func formatMsg(msg string, bt []json.RawMessage) string {
 	if len(bt) == 0 {
 		return msg
