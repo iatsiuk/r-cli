@@ -221,6 +221,11 @@ func TestParseServerFirstMalformedSecurity(t *testing.T) {
 			clientNonce: "nonce",
 		},
 		{
+			name:        "negative iteration count",
+			msg:         "r=noncecombined,s=QSXCR+Q6sek8bf92,i=-1",
+			clientNonce: "nonce",
+		},
+		{
 			name:        "server nonce equal to client nonce",
 			msg:         "r=nonce,s=QSXCR+Q6sek8bf92,i=4096",
 			clientNonce: "nonce",
