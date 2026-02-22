@@ -916,3 +916,40 @@ func TestSequenceOperations(t *testing.T) {
 		},
 	})
 }
+
+func TestObjectExtendedOperations(t *testing.T) {
+	t.Parallel()
+	seq := DB("test").Table("users")
+	obj := DB("test").Table("users").Get("id1")
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"with_fields",
+			seq.WithFields("field1", "field2"),
+			`[96,[[15,[[14,["test"]],"users"]],"field1","field2"]]`,
+		},
+		{
+			"keys",
+			obj.Keys(),
+			`[94,[[16,[[15,[[14,["test"]],"users"]],"id1"]]]]`,
+		},
+		{
+			"values",
+			obj.Values(),
+			`[186,[[16,[[15,[[14,["test"]],"users"]],"id1"]]]]`,
+		},
+		{
+			"literal",
+			Literal(map[string]interface{}{"a": 1}),
+			`[137,[{"a":1}]]`,
+		},
+		{
+			"literal_in_merge",
+			obj.Merge(map[string]interface{}{"nested": Literal(map[string]interface{}{"x": 2})}),
+			`[35,[[16,[[15,[[14,["test"]],"users"]],"id1"]],{"nested":[137,[{"x":2}]]}]]`,
+		},
+	})
+}

@@ -105,12 +105,12 @@ Constants:
 
 ### Task 7: Additional object operations
 
-- [ ] Test: `WITH_FIELDS(96)` -> `[96,[<seq>,"field1","field2"]]`
-- [ ] Test: `KEYS(94)` -> `[94,[<term>]]`
-- [ ] Test: `VALUES(186)` -> `[186,[<term>]]`
-- [ ] Test: `LITERAL(137)` -> `[137,[<value>]]`
-- [ ] Test: `LITERAL(137)` in merge -> merge uses literal to replace nested field
-- [ ] Implement: WithFields, Keys, Values, Literal methods
+- [x] Test: `WITH_FIELDS(96)` -> `[96,[<seq>,"field1","field2"]]`
+- [x] Test: `KEYS(94)` -> `[94,[<term>]]`
+- [x] Test: `VALUES(186)` -> `[186,[<term>]]`
+- [x] Test: `LITERAL(137)` -> `[137,[<value>]]`
+- [x] Test: `LITERAL(137)` in merge -> merge uses literal to replace nested field
+- [x] Implement: WithFields, Keys, Values, Literal methods
 
 ### Task 8: Admin operations
 

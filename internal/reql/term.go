@@ -868,6 +868,31 @@ func (t Term) Bracket(field string) Term {
 	return Term{termType: proto.TermBracket, args: []Term{t, Datum(field)}}
 }
 
+// WithFields creates a WITH_FIELDS term ([96, [seq, fields...]]).
+func (t Term) WithFields(fields ...string) Term {
+	args := make([]Term, 1, 1+len(fields))
+	args[0] = t
+	for _, f := range fields {
+		args = append(args, Datum(f))
+	}
+	return Term{termType: proto.TermWithFields, args: args}
+}
+
+// Keys creates a KEYS term ([94, [term]]).
+func (t Term) Keys() Term {
+	return Term{termType: proto.TermKeys, args: []Term{t}}
+}
+
+// Values creates a VALUES term ([186, [term]]).
+func (t Term) Values() Term {
+	return Term{termType: proto.TermValues, args: []Term{t}}
+}
+
+// Literal creates a LITERAL term ([137, [value]]).
+func Literal(value interface{}) Term {
+	return Term{termType: proto.TermLiteral, args: []Term{toTerm(value)}}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}
