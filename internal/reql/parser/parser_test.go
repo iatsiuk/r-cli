@@ -145,3 +145,124 @@ func TestParse_Args(t *testing.T) {
 	want := reql.Args(reql.Array(reql.MinVal(), reql.MaxVal()))
 	assertTermEqual(t, got, want)
 }
+
+func TestParse_EqJoin(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("test").table("users").eqJoin("id", r.table("other"))`)
+	want := reql.DB("test").Table("users").EqJoin("id", reql.Table("other"))
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_Match(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("test").table("users").match("^foo")`)
+	want := reql.DB("test").Table("users").Match("^foo")
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_Point(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.point(-122.4, 37.7)`)
+	assertTermEqual(t, got, reql.Point(-122.4, 37.7))
+}
+
+func TestParse_EpochTime(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.epochTime(1234567890)`)
+	assertTermEqual(t, got, reql.EpochTime(1234567890))
+}
+
+func TestParse_CoerceTo(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("test").table("users").coerceTo("string")`)
+	want := reql.DB("test").Table("users").CoerceTo("string")
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_Default(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("test").table("users").default(0)`)
+	want := reql.DB("test").Table("users").Default(0)
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_MethodMapping(t *testing.T) {
+	t.Parallel()
+	db := `r.db("test").table("users")`
+	dbterm := reql.DB("test").Table("users")
+	tests := []struct {
+		name  string
+		input string
+		want  reql.Term
+	}{
+		// core sequence ops
+		{"update", db + `.update({a: 1})`, dbterm.Update(reql.Datum(map[string]interface{}{"a": 1}))},
+		{"delete", db + `.delete()`, dbterm.Delete()},
+		{"skip", db + `.skip(5)`, dbterm.Skip(5)},
+		{"count", db + `.count()`, dbterm.Count()},
+		{"distinct", db + `.distinct()`, dbterm.Distinct()},
+		{"replace", db + `.replace({a: 2})`, dbterm.Replace(reql.Datum(map[string]interface{}{"a": 2}))},
+		// field ops
+		{"group", db + `.group("age")`, dbterm.Group("age")},
+		{"keys", db + `.keys()`, dbterm.Keys()},
+		{"values", db + `.values()`, dbterm.Values()},
+		{"sum", db + `.sum("score")`, dbterm.Sum("score")},
+		{"avg", db + `.avg("score")`, dbterm.Avg("score")},
+		{"typeOf", db + `.typeOf()`, dbterm.TypeOf()},
+		{"map", db + `.map(r.row)`, dbterm.Map(reql.Row())},
+		// comparisons
+		{"eq", `r.row("x").eq(1)`, reql.Row().Bracket("x").Eq(1)},
+		{"ne", `r.row("x").ne(0)`, reql.Row().Bracket("x").Ne(0)},
+		{"lt", `r.row("x").lt(10)`, reql.Row().Bracket("x").Lt(10)},
+		{"le", `r.row("x").le(10)`, reql.Row().Bracket("x").Le(10)},
+		{"ge", `r.row("x").ge(0)`, reql.Row().Bracket("x").Ge(0)},
+		{"not", `r.row("x").not()`, reql.Row().Bracket("x").Not()},
+		{"and", `r.row("x").gt(0).and(r.row("x").lt(10))`, reql.Row().Bracket("x").Gt(0).And(reql.Row().Bracket("x").Lt(10))},
+		{"or", `r.row("x").lt(0).or(r.row("x").gt(10))`, reql.Row().Bracket("x").Lt(0).Or(reql.Row().Bracket("x").Gt(10))},
+		// arithmetic
+		{"add", `r.row("x").add(1)`, reql.Row().Bracket("x").Add(1)},
+		{"sub", `r.row("x").sub(1)`, reql.Row().Bracket("x").Sub(1)},
+		{"mul", `r.row("x").mul(2)`, reql.Row().Bracket("x").Mul(2)},
+		{"div", `r.row("x").div(2)`, reql.Row().Bracket("x").Div(2)},
+		{"mod", `r.row("x").mod(3)`, reql.Row().Bracket("x").Mod(3)},
+		{"floor", `r.row("x").floor()`, reql.Row().Bracket("x").Floor()},
+		{"ceil", `r.row("x").ceil()`, reql.Row().Bracket("x").Ceil()},
+		{"round", `r.row("x").round()`, reql.Row().Bracket("x").Round()},
+		// strings
+		{"upcase", `r.row("name").upcase()`, reql.Row().Bracket("name").Upcase()},
+		{"downcase", `r.row("name").downcase()`, reql.Row().Bracket("name").Downcase()},
+		// time
+		{"date", `r.now().date()`, reql.Now().Date()},
+		{"year", `r.now().year()`, reql.Now().Year()},
+		{"inTimezone", `r.now().inTimezone("UTC")`, reql.Now().InTimezone("UTC")},
+		// arrays
+		{"append", db + `.append(1)`, dbterm.Append(1)},
+		{"prepend", db + `.prepend(1)`, dbterm.Prepend(1)},
+		{"setInsert", db + `.setInsert("x")`, dbterm.SetInsert("x")},
+		// admin
+		{"changes", db + `.changes()`, dbterm.Changes()},
+		{"config", db + `.config()`, dbterm.Config()},
+		{"tableList", `r.db("test").tableList()`, reql.DB("test").TableList()},
+		{"tableCreate", `r.db("test").tableCreate("new")`, reql.DB("test").TableCreate("new")},
+		{"tableDrop", `r.db("test").tableDrop("old")`, reql.DB("test").TableDrop("old")},
+		{"indexCreate", db + `.indexCreate("idx")`, dbterm.IndexCreate("idx")},
+		{"indexDrop", db + `.indexDrop("idx")`, dbterm.IndexDrop("idx")},
+		{"indexList", db + `.indexList()`, dbterm.IndexList()},
+		// r.* builders
+		{"r.now", `r.now()`, reql.Now()},
+		{"r.uuid", `r.uuid()`, reql.UUID()},
+		{"r.dbCreate", `r.dbCreate("newdb")`, reql.DBCreate("newdb")},
+		{"r.dbDrop", `r.dbDrop("olddb")`, reql.DBDrop("olddb")},
+		{"r.dbList", `r.dbList()`, reql.DBList()},
+		{"r.table", `r.table("users")`, reql.Table("users")},
+		{"r.epochTime", `r.epochTime(1000)`, reql.EpochTime(1000)},
+		{"r.literal", `r.literal(42)`, reql.Literal(42)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := mustParse(t, tt.input)
+			assertTermEqual(t, got, tt.want)
+		})
+	}
+}

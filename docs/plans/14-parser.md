@@ -49,14 +49,14 @@ Depends on: `04-reql-core`, `06-reql-functions-index`
 
 ### Task 4: Parser - all method names and extended operations
 
-- [ ] Test: parse all new method names -> correct term types (mapping table test)
-- [ ] Test: parse `.eqJoin("field", r.table("other"))` -> EQ_JOIN with table arg
-- [ ] Test: parse `.match("^foo")` -> MATCH with string arg
-- [ ] Test: parse `r.point(-122.4, 37.7)` -> POINT term
-- [ ] Test: parse `r.epochTime(1234567890)` -> EPOCH_TIME term
-- [ ] Test: parse `.coerceTo("string")` -> COERCE_TO term
-- [ ] Test: parse `.default(0)` -> DEFAULT term
-- [ ] Implement: complete method name -> term type mapping
+- [x] Test: parse all new method names -> correct term types (mapping table test)
+- [x] Test: parse `.eqJoin("field", r.table("other"))` -> EQ_JOIN with table arg
+- [x] Test: parse `.match("^foo")` -> MATCH with string arg
+- [x] Test: parse `r.point(-122.4, 37.7)` -> POINT term
+- [x] Test: parse `r.epochTime(1234567890)` -> EPOCH_TIME term
+- [x] Test: parse `.coerceTo("string")` -> COERCE_TO term
+- [x] Test: parse `.default(0)` -> DEFAULT term
+- [x] Implement: complete method name -> term type mapping
 
 ### Task 5: Error handling and fuzz testing
 
