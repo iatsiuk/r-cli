@@ -53,8 +53,8 @@ Depends on: `14-parser`, `12-cli-core`
 
 ### Task 6: CLI integration
 
-- [ ] Test: `r-cli` (no args, TTY) -> start REPL
-- [ ] Test: `r-cli` (no args, not TTY, stdin has data) -> read from stdin
-- [ ] Test: `r-cli repl` -> force REPL mode
-- [ ] Test: REPL respects --host/--port/--db/--user flags
-- [ ] Implement: REPL command in cobra, auto-detect mode
+- [x] Test: `r-cli` (no args, TTY) -> start REPL
+- [x] Test: `r-cli` (no args, not TTY, stdin has data) -> read from stdin
+- [x] Test: `r-cli repl` -> force REPL mode
+- [x] Test: REPL respects --host/--port/--db/--user flags
+- [x] Implement: REPL command in cobra, auto-detect mode
