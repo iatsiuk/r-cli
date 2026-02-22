@@ -14,14 +14,14 @@ Depends on: `04-reql-core`, `06-reql-functions-index`
 
 ### Task 1: Lexer
 
-- [ ] Test: tokenize `r.db("test")` -> [IDENT:r, DOT, IDENT:db, LPAREN, STRING:"test", RPAREN]
-- [ ] Test: tokenize numbers, bools, null
-- [ ] Test: tokenize object literals `{name: "foo", age: 42}`
-- [ ] Test: tokenize array literals `[1, 2, 3]`
-- [ ] Test: tokenize chained methods `.table("x").filter({...})`
-- [ ] Test: tokenize single-quoted strings `'foo'` (in addition to double-quoted)
-- [ ] Test: tokenize `r.minval` / `r.maxval` as IDENT (no parens)
-- [ ] Implement: lexer producing token stream
+- [x] Test: tokenize `r.db("test")` -> [IDENT:r, DOT, IDENT:db, LPAREN, STRING:"test", RPAREN]
+- [x] Test: tokenize numbers, bools, null
+- [x] Test: tokenize object literals `{name: "foo", age: 42}`
+- [x] Test: tokenize array literals `[1, 2, 3]`
+- [x] Test: tokenize chained methods `.table("x").filter({...})`
+- [x] Test: tokenize single-quoted strings `'foo'` (in addition to double-quoted)
+- [x] Test: tokenize `r.minval` / `r.maxval` as IDENT (no parens)
+- [x] Implement: lexer producing token stream
 
 ### Task 2: Parser - basic expressions
 
