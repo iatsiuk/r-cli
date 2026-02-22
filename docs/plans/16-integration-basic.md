@@ -57,16 +57,16 @@ Set up TestMain with shared container, `setupTestDB`, `createTestTable` helpers.
 
 ### Task 5: Get, GetAll and Filter
 
-- [ ] Test: GET with existing id -> returns the document
-- [ ] Test: GET with non-existent id -> returns null
-- [ ] Test: GET_ALL with multiple ids -> returns matching documents
-- [ ] Test: GET_ALL with secondary index -> returns matching documents
-- [ ] Test: GET_ALL with no matches -> empty sequence
-- [ ] Test: filter by exact field match -> returns matching docs
-- [ ] Test: filter with GT comparison -> correct results
-- [ ] Test: filter with compound condition (AND) -> correct results
-- [ ] Test: filter returns empty sequence when nothing matches
-- [ ] Test: filter with nested field access -> correct results
+- [x] Test: GET with existing id -> returns the document
+- [x] Test: GET with non-existent id -> returns null
+- [x] Test: GET_ALL with multiple ids -> returns matching documents
+- [x] Test: GET_ALL with secondary index -> returns matching documents
+- [x] Test: GET_ALL with no matches -> empty sequence
+- [x] Test: filter by exact field match -> returns matching docs
+- [x] Test: filter with GT comparison -> correct results
+- [x] Test: filter with compound condition (AND) -> correct results
+- [x] Test: filter returns empty sequence when nothing matches
+- [x] Test: filter with nested field access -> correct results
 
 ### Task 6: Update, Replace and Delete
 
