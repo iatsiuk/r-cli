@@ -69,11 +69,11 @@ Depends on: `16-integration-basic`
 
 ### Task 7: Pseudo-types
 
-- [ ] Test: insert document with r.now() -> returned epoch_time is recent timestamp
-- [ ] Test: TIME pseudo-type in response converts to time.Time correctly
-- [ ] Test: timezone preserved in roundtrip
-- [ ] Test: BINARY pseudo-type -> insert base64 data, read back as []byte, matches original
-- [ ] Test: r.uuid() -> returns valid UUID string
+- [x] Test: insert document with r.now() -> returned epoch_time is recent timestamp
+- [x] Test: TIME pseudo-type in response converts to time.Time correctly
+- [x] Test: timezone preserved in roundtrip
+- [x] Test: BINARY pseudo-type -> insert base64 data, read back as []byte, matches original
+- [x] Test: r.uuid() -> returns valid UUID string
 
 ### Task 8: Error handling
 
