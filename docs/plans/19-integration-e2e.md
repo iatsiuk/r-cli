@@ -39,19 +39,19 @@ Depends on: `16-integration-basic`, `15-cli-query`, `13-cli-extended`
 
 Tests execute compiled `r-cli` binary via `os/exec`. Host and port from `testAddr`.
 
-- [ ] Test: `r-cli -H <host> -P <port> 'r.dbList()'` -> output contains "test"
-- [ ] Test: `r-cli -H <host> -P <port> db list` -> output contains "test"
-- [ ] Test: `r-cli -H <host> -P <port> -d <testdb> table list` -> output is valid JSON array
-- [ ] Test: `r-cli -H <host> -P <port> status` -> output contains server name
-- [ ] Test: `r-cli -H <host> -P <port> -f json 'r.dbList()'` -> valid JSON output
-- [ ] Test: `r-cli -H <host> -P <port> -f table 'r.db("<testdb>").table("<t>").limit(5)'` -> ASCII table output
-- [ ] Test: `r-cli -H <host> -P <port> -f raw 'r.dbList()'` -> plain text, one item per line
-- [ ] Test: `r-cli -H badhost -P <port> 'r.dbList()'` -> exit code 1, stderr contains error
-- [ ] Test: `r-cli -H <host> -P <port> run '[59,[]]'` -> same result as r.dbList()
-- [ ] Test: `echo 'r.dbList()' | r-cli -H <host> -P <port>` -> works via stdin
-- [ ] Test: `r-cli -H <host> -P <port> query -F /tmp/test.reql` -> reads query from file
-- [ ] Test: `r-cli -H <host> -P <port> db create <name>` + `r-cli db drop <name>` -> roundtrip
-- [ ] Test: `r-cli -H <host> -P <port> table create <name> -d <testdb>` + `table drop` -> roundtrip
+- [x] Test: `r-cli -H <host> -P <port> 'r.dbList()'` -> output contains "test"
+- [x] Test: `r-cli -H <host> -P <port> db list` -> output contains "test"
+- [x] Test: `r-cli -H <host> -P <port> -d <testdb> table list` -> output is valid JSON array
+- [x] Test: `r-cli -H <host> -P <port> status` -> output contains server name
+- [x] Test: `r-cli -H <host> -P <port> -f json 'r.dbList()'` -> valid JSON output
+- [x] Test: `r-cli -H <host> -P <port> -f table 'r.db("<testdb>").table("<t>").limit(5)'` -> ASCII table output
+- [x] Test: `r-cli -H <host> -P <port> -f raw 'r.dbList()'` -> plain text, one item per line
+- [x] Test: `r-cli -H badhost -P <port> 'r.dbList()'` -> exit code 1, stderr contains error
+- [x] Test: `r-cli -H <host> -P <port> run '[59,[]]'` -> same result as r.dbList()
+- [x] Test: `echo 'r.dbList()' | r-cli -H <host> -P <port>` -> works via stdin
+- [x] Test: `r-cli -H <host> -P <port> query -F /tmp/test.reql` -> reads query from file
+- [x] Test: `r-cli -H <host> -P <port> db create <name>` + `r-cli db drop <name>` -> roundtrip
+- [x] Test: `r-cli -H <host> -P <port> table create <name> -d <testdb>` + `table drop` -> roundtrip
 
 ### Task 5: REPL e2e
 
