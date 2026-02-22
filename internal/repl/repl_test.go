@@ -16,6 +16,7 @@ type fakeReader struct {
 	lines   []string
 	pos     int
 	prompt  string
+	prompts []string // history of all SetPrompt calls
 	history []string
 }
 
@@ -31,7 +32,10 @@ func (f *fakeReader) Readline() (string, error) {
 	return line, nil
 }
 
-func (f *fakeReader) SetPrompt(prompt string)      { f.prompt = prompt }
+func (f *fakeReader) SetPrompt(prompt string) {
+	f.prompt = prompt
+	f.prompts = append(f.prompts, prompt)
+}
 func (f *fakeReader) AddHistory(line string) error { f.history = append(f.history, line); return nil }
 func (f *fakeReader) Close() error                 { return nil }
 
@@ -148,6 +152,114 @@ func TestReplHistorySaved(t *testing.T) {
 		if fr.history[i] != w {
 			t.Errorf("history[%d] = %q, want %q", i, fr.history[i], w)
 		}
+	}
+}
+
+func TestReplMultilineUnclosedParen(t *testing.T) {
+	t.Parallel()
+	var capturedExpr string
+	fr := &fakeReader{
+		lines: []string{
+			`r.table(`, // incomplete
+			`"test")`,  // closes paren
+		},
+	}
+
+	r := New(&Config{
+		Reader: fr,
+		Exec: func(_ context.Context, expr string, _ io.Writer) error {
+			capturedExpr = expr
+			return nil
+		},
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	})
+
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// prompt must have switched to continuation prompt
+	if !strings.Contains(strings.Join(fr.prompts, ","), contPrompt) {
+		t.Errorf("continuation prompt not seen; prompts: %v", fr.prompts)
+	}
+	if !strings.Contains(capturedExpr, `r.table(`) || !strings.Contains(capturedExpr, `"test")`) {
+		t.Errorf("unexpected captured expr: %q", capturedExpr)
+	}
+}
+
+func TestReplMultilineUnclosedBrace(t *testing.T) {
+	t.Parallel()
+	var capturedExpr string
+	fr := &fakeReader{
+		lines: []string{
+			`r.table("t").insert({`,
+			`"name": "x"})`,
+		},
+	}
+
+	r := New(&Config{
+		Reader: fr,
+		Exec: func(_ context.Context, expr string, _ io.Writer) error {
+			capturedExpr = expr
+			return nil
+		},
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	})
+
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(strings.Join(fr.prompts, ","), contPrompt) {
+		t.Errorf("continuation prompt not seen; prompts: %v", fr.prompts)
+	}
+	if !strings.Contains(capturedExpr, `"name"`) {
+		t.Errorf("unexpected captured expr: %q", capturedExpr)
+	}
+}
+
+func TestReplMultilineCompleteQueryExecutes(t *testing.T) {
+	t.Parallel()
+	var capturedExpr string
+	called := 0
+	fr := &fakeReader{
+		lines: []string{
+			`r.table(`,
+			`"heroes"`,
+			`)`,
+		},
+	}
+
+	r := New(&Config{
+		Reader: fr,
+		Exec: func(_ context.Context, expr string, _ io.Writer) error {
+			called++
+			capturedExpr = expr
+			return nil
+		},
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	})
+
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if called != 1 {
+		t.Errorf("exec called %d times, want 1", called)
+	}
+	want := `r.table(\n"heroes"\n)`
+	_ = want
+	if !strings.Contains(capturedExpr, `r.table(`) || !strings.Contains(capturedExpr, `"heroes"`) || !strings.Contains(capturedExpr, ")") {
+		t.Errorf("captured expr missing expected parts: %q", capturedExpr)
+	}
+	// verify the history entry is the joined multiline expression
+	if len(fr.history) != 1 {
+		t.Errorf("history len %d, want 1", len(fr.history))
+	} else if fr.history[0] != capturedExpr {
+		t.Errorf("history[0] = %q, want %q", fr.history[0], capturedExpr)
 	}
 }
 

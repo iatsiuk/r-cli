@@ -67,9 +67,12 @@ func New(cfg *Config) *Repl {
 	}
 }
 
+const contPrompt = "... "
+
 // Run starts the REPL loop. Returns nil on clean exit (EOF).
 func (r *Repl) Run(ctx context.Context) error {
 	r.reader.SetPrompt(r.prompt)
+	var lines []string
 	for {
 		line, err := r.reader.Readline()
 		if err != nil {
@@ -77,17 +80,66 @@ func (r *Repl) Run(ctx context.Context) error {
 				return nil
 			}
 			if errors.Is(err, ErrInterrupt) {
+				lines = lines[:0]
+				r.reader.SetPrompt(r.prompt)
 				continue
 			}
 			return err
 		}
-		line = strings.TrimSpace(line)
-		if line == "" {
+
+		if len(lines) == 0 {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+		}
+
+		lines = append(lines, line)
+		input := strings.Join(lines, "\n")
+
+		if !isComplete(input) {
+			r.reader.SetPrompt(contPrompt)
 			continue
 		}
-		_ = r.reader.AddHistory(line)
-		r.runQuery(ctx, line)
+
+		r.reader.SetPrompt(r.prompt)
+		lines = lines[:0]
+
+		expr := strings.TrimSpace(input)
+		_ = r.reader.AddHistory(expr)
+		r.runQuery(ctx, expr)
 	}
+}
+
+// isComplete returns true when all parentheses, braces, and brackets are balanced.
+// Bracket characters inside string literals are ignored.
+func isComplete(s string) bool {
+	depth := 0
+	inStr := false
+	strChar := byte(0)
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if inStr {
+			if ch == '\\' {
+				i++
+				continue
+			}
+			if ch == strChar {
+				inStr = false
+			}
+			continue
+		}
+		switch ch {
+		case '"', '\'':
+			inStr = true
+			strChar = ch
+		case '(', '{', '[':
+			depth++
+		case ')', '}', ']':
+			depth--
+		}
+	}
+	return depth <= 0
 }
 
 func (r *Repl) runQuery(ctx context.Context, expr string) {

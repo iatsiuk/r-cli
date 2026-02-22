@@ -30,10 +30,10 @@ Depends on: `14-parser`, `12-cli-core`
 
 ### Task 3: Multiline input
 
-- [ ] Test: unclosed parenthesis -> continuation prompt, wait for closing
-- [ ] Test: unclosed brace -> continuation prompt
-- [ ] Test: complete multiline query executes correctly
-- [ ] Implement: paren/brace/bracket counting for continuation detection
+- [x] Test: unclosed parenthesis -> continuation prompt, wait for closing
+- [x] Test: unclosed brace -> continuation prompt
+- [x] Test: complete multiline query executes correctly
+- [x] Implement: paren/brace/bracket counting for continuation detection
 
 ### Task 4: Tab completion
 
