@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -23,6 +24,9 @@ func main() {
 		os.Exit(exitINT)
 	}
 	if err != nil {
+		if errors.Is(err, errAborted) {
+			os.Exit(exitOK)
+		}
 		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(exitCode(err))
 	}

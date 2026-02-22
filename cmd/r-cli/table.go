@@ -68,14 +68,14 @@ func newTableDropCmd(cfg *rootConfig) *cobra.Command {
 		Short: "Drop a table",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			db, err := tableDB(cfg)
+			if err != nil {
+				return err
+			}
 			if !yes {
 				if err := confirmDrop("table", args[0], os.Stdin); err != nil {
 					return err
 				}
-			}
-			db, err := tableDB(cfg)
-			if err != nil {
-				return err
 			}
 			return execTerm(cmd.Context(), cfg, db.TableDrop(args[0]), os.Stdout)
 		},

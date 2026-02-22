@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -66,6 +67,8 @@ func newDBDropCmd(cfg *rootConfig) *cobra.Command {
 	return cmd
 }
 
+var errAborted = errors.New("aborted")
+
 // confirmDrop prompts the user to confirm a destructive drop operation.
 func confirmDrop(kind, name string, r io.Reader) error {
 	fmt.Fprintf(os.Stderr, "Drop %s %q? [y/N] ", kind, name)
@@ -79,5 +82,5 @@ func confirmDrop(kind, name string, r io.Reader) error {
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("reading input: %w", err)
 	}
-	return fmt.Errorf("aborted")
+	return errAborted
 }
