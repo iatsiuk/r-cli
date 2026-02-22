@@ -22,13 +22,13 @@ Depends on: `01-proto-wire`, `03-conn`
 
 ### Task 2: Pseudo-type conversion
 
-- [ ] Test: TIME pseudo-type -> Go `time.Time`
-- [ ] Test: BINARY pseudo-type -> Go `[]byte`
-- [ ] Test: nested pseudo-types in result documents
-- [ ] Test: GEOMETRY pseudo-type -> pass-through as GeoJSON object (no conversion needed)
-- [ ] Test: nested GEOMETRY in result documents
-- [ ] Test: pass-through when conversion disabled
-- [ ] Implement: `ConvertPseudoTypes(v interface{}) interface{}`
+- [x] Test: TIME pseudo-type -> Go `time.Time`
+- [x] Test: BINARY pseudo-type -> Go `[]byte`
+- [x] Test: nested pseudo-types in result documents
+- [x] Test: GEOMETRY pseudo-type -> pass-through as GeoJSON object (no conversion needed)
+- [x] Test: nested GEOMETRY in result documents
+- [x] Test: pass-through when conversion disabled
+- [x] Implement: `ConvertPseudoTypes(v interface{}) interface{}`
 
 ### Task 3: Error mapping
 
