@@ -758,3 +758,59 @@ func TestArray(t *testing.T) {
 		})
 	}
 }
+
+func runTermTests(t *testing.T, tests []struct {
+	name string
+	term Term
+	want string
+}) {
+	t.Helper()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestArrayMutations(t *testing.T) {
+	t.Parallel()
+	arr := Array(1, 2, 3)
+	other := Array(3, 4, 5)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"append", arr.Append(4), `[29,[[2,[1,2,3]],4]]`},
+		{"prepend", arr.Prepend(0), `[80,[[2,[1,2,3]],0]]`},
+		{"slice", arr.Slice(1, 3), `[30,[[2,[1,2,3]],1,3]]`},
+		{"difference", arr.Difference(other), `[95,[[2,[1,2,3]],[2,[3,4,5]]]]`},
+		{"insert_at", arr.InsertAt(1, 99), `[82,[[2,[1,2,3]],1,99]]`},
+		{"delete_at", arr.DeleteAt(1), `[83,[[2,[1,2,3]],1]]`},
+		{"change_at", arr.ChangeAt(1, 99), `[84,[[2,[1,2,3]],1,99]]`},
+		{"splice_at", arr.SpliceAt(1, Array(10, 11)), `[85,[[2,[1,2,3]],1,[2,[10,11]]]]`},
+	})
+}
+
+func TestSetOperations(t *testing.T) {
+	t.Parallel()
+	arr := Array(1, 2, 3)
+	other := Array(3, 4, 5)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"set_insert", arr.SetInsert(4), `[88,[[2,[1,2,3]],4]]`},
+		{"set_intersection", arr.SetIntersection(other), `[89,[[2,[1,2,3]],[2,[3,4,5]]]]`},
+		{"set_union", arr.SetUnion(other), `[90,[[2,[1,2,3]],[2,[3,4,5]]]]`},
+		{"set_difference", arr.SetDifference(other), `[91,[[2,[1,2,3]],[2,[3,4,5]]]]`},
+	})
+}

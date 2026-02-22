@@ -735,6 +735,66 @@ func November() Term { return Term{termType: proto.TermNovember} }
 // December creates a DECEMBER constant term ([125, []]).
 func December() Term { return Term{termType: proto.TermDecember} }
 
+// Append creates an APPEND term ([29, [term, value]]).
+func (t Term) Append(value interface{}) Term {
+	return Term{termType: proto.TermAppend, args: []Term{t, toTerm(value)}}
+}
+
+// Prepend creates a PREPEND term ([80, [term, value]]).
+func (t Term) Prepend(value interface{}) Term {
+	return Term{termType: proto.TermPrepend, args: []Term{t, toTerm(value)}}
+}
+
+// Slice creates a SLICE term ([30, [term, start, end]]).
+func (t Term) Slice(start, end int) Term {
+	return Term{termType: proto.TermSlice, args: []Term{t, Datum(start), Datum(end)}}
+}
+
+// Difference creates a DIFFERENCE term ([95, [term, array]]).
+func (t Term) Difference(other Term) Term {
+	return Term{termType: proto.TermDifference, args: []Term{t, other}}
+}
+
+// InsertAt creates an INSERT_AT term ([82, [term, index, value]]).
+func (t Term) InsertAt(index int, value interface{}) Term {
+	return Term{termType: proto.TermInsertAt, args: []Term{t, Datum(index), toTerm(value)}}
+}
+
+// DeleteAt creates a DELETE_AT term ([83, [term, index]]).
+func (t Term) DeleteAt(index int) Term {
+	return Term{termType: proto.TermDeleteAt, args: []Term{t, Datum(index)}}
+}
+
+// ChangeAt creates a CHANGE_AT term ([84, [term, index, value]]).
+func (t Term) ChangeAt(index int, value interface{}) Term {
+	return Term{termType: proto.TermChangeAt, args: []Term{t, Datum(index), toTerm(value)}}
+}
+
+// SpliceAt creates a SPLICE_AT term ([85, [term, index, array]]).
+func (t Term) SpliceAt(index int, array Term) Term {
+	return Term{termType: proto.TermSpliceAt, args: []Term{t, Datum(index), array}}
+}
+
+// SetInsert creates a SET_INSERT term ([88, [term, value]]).
+func (t Term) SetInsert(value interface{}) Term {
+	return Term{termType: proto.TermSetInsert, args: []Term{t, toTerm(value)}}
+}
+
+// SetIntersection creates a SET_INTERSECTION term ([89, [term, array]]).
+func (t Term) SetIntersection(other Term) Term {
+	return Term{termType: proto.TermSetIntersection, args: []Term{t, other}}
+}
+
+// SetUnion creates a SET_UNION term ([90, [term, array]]).
+func (t Term) SetUnion(other Term) Term {
+	return Term{termType: proto.TermSetUnion, args: []Term{t, other}}
+}
+
+// SetDifference creates a SET_DIFFERENCE term ([91, [term, array]]).
+func (t Term) SetDifference(other Term) Term {
+	return Term{termType: proto.TermSetDifference, args: []Term{t, other}}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}

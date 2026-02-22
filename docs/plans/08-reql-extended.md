@@ -66,19 +66,19 @@ Constants:
 
 ### Task 4: Array operations
 
-- [ ] Test: `APPEND(29)` -> `[29,[<term>,<value>]]`
-- [ ] Test: `PREPEND(80)` -> `[80,[<term>,<value>]]`
-- [ ] Test: `SLICE(30)` -> `[30,[<term>,<start>,<end>]]`
-- [ ] Test: `DIFFERENCE(95)` -> `[95,[<term>,<array>]]`
-- [ ] Test: `INSERT_AT(82)` -> `[82,[<term>,<index>,<value>]]`
-- [ ] Test: `DELETE_AT(83)` -> `[83,[<term>,<index>]]`
-- [ ] Test: `CHANGE_AT(84)` -> `[84,[<term>,<index>,<value>]]`
-- [ ] Test: `SPLICE_AT(85)` -> `[85,[<term>,<index>,<array>]]`
-- [ ] Test: `SET_INSERT(88)` -> `[88,[<term>,<value>]]`
-- [ ] Test: `SET_INTERSECTION(89)` -> `[89,[<term>,<array>]]`
-- [ ] Test: `SET_UNION(90)` -> `[90,[<term>,<array>]]`
-- [ ] Test: `SET_DIFFERENCE(91)` -> `[91,[<term>,<array>]]`
-- [ ] Implement: Append, Prepend, Slice, Difference, InsertAt, DeleteAt, ChangeAt, SpliceAt, SetInsert, SetIntersection, SetUnion, SetDifference methods
+- [x] Test: `APPEND(29)` -> `[29,[<term>,<value>]]`
+- [x] Test: `PREPEND(80)` -> `[80,[<term>,<value>]]`
+- [x] Test: `SLICE(30)` -> `[30,[<term>,<start>,<end>]]`
+- [x] Test: `DIFFERENCE(95)` -> `[95,[<term>,<array>]]`
+- [x] Test: `INSERT_AT(82)` -> `[82,[<term>,<index>,<value>]]`
+- [x] Test: `DELETE_AT(83)` -> `[83,[<term>,<index>]]`
+- [x] Test: `CHANGE_AT(84)` -> `[84,[<term>,<index>,<value>]]`
+- [x] Test: `SPLICE_AT(85)` -> `[85,[<term>,<index>,<array>]]`
+- [x] Test: `SET_INSERT(88)` -> `[88,[<term>,<value>]]`
+- [x] Test: `SET_INTERSECTION(89)` -> `[89,[<term>,<array>]]`
+- [x] Test: `SET_UNION(90)` -> `[90,[<term>,<array>]]`
+- [x] Test: `SET_DIFFERENCE(91)` -> `[91,[<term>,<array>]]`
+- [x] Implement: Append, Prepend, Slice, Difference, InsertAt, DeleteAt, ChangeAt, SpliceAt, SetInsert, SetIntersection, SetUnion, SetDifference methods
 
 ### Task 5: Control flow
 
