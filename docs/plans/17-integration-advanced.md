@@ -32,11 +32,11 @@ Depends on: `16-integration-basic`
 
 ### Task 3: Map, Reduce, Group
 
-- [ ] Test: map extracts single field -> array of values
-- [ ] Test: reduce with ADD -> sum of values
-- [ ] Test: group by field -> grouped object with arrays
-- [ ] Test: group + count -> count per group
-- [ ] Test: ungroup -> array of {group, reduction} objects
+- [x] Test: map extracts single field -> array of values
+- [x] Test: reduce with ADD -> sum of values
+- [x] Test: group by field -> grouped object with arrays
+- [x] Test: group + count -> count per group
+- [x] Test: ungroup -> array of {group, reduction} objects
 
 ### Task 4: Secondary indexes
 
