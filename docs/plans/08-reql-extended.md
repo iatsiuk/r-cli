@@ -35,34 +35,34 @@ Depends on: `04-reql-core`, `06-reql-functions-index`
 ### Task 3: Time operations
 
 Construction:
-- [ ] Test: `ISO8601(99)` -> `[99,["2024-01-01T00:00:00Z"]]`
-- [ ] Test: `EPOCH_TIME(101)` -> `[101,[1234567890]]`
-- [ ] Test: `TIME(136)` -> `[136,[2024,1,1,"Z"]]`
-- [ ] Test: `NOW(103)` -> `[103,[]]`
+- [x] Test: `ISO8601(99)` -> `[99,["2024-01-01T00:00:00Z"]]`
+- [x] Test: `EPOCH_TIME(101)` -> `[101,[1234567890]]`
+- [x] Test: `TIME(136)` -> `[136,[2024,1,1,"Z"]]`
+- [x] Test: `NOW(103)` -> `[103,[]]`
 
 Extraction:
-- [ ] Test: `TO_ISO8601(100)` -> `[100,[<time_term>]]`
-- [ ] Test: `TO_EPOCH_TIME(102)` -> `[102,[<time_term>]]`
-- [ ] Test: `DATE(106)` -> `[106,[<time_term>]]`
-- [ ] Test: `TIME_OF_DAY(126)` -> `[126,[<time_term>]]`
-- [ ] Test: `TIMEZONE(127)` -> `[127,[<time_term>]]`
-- [ ] Test: `YEAR(128)` -> `[128,[<time_term>]]`
-- [ ] Test: `MONTH(129)` -> `[129,[<time_term>]]`
-- [ ] Test: `DAY(130)` -> `[130,[<time_term>]]`
-- [ ] Test: `DAY_OF_WEEK(131)` -> `[131,[<time_term>]]`
-- [ ] Test: `DAY_OF_YEAR(132)` -> `[132,[<time_term>]]`
-- [ ] Test: `HOURS(133)` -> `[133,[<time_term>]]`
-- [ ] Test: `MINUTES(134)` -> `[134,[<time_term>]]`
-- [ ] Test: `SECONDS(135)` -> `[135,[<time_term>]]`
+- [x] Test: `TO_ISO8601(100)` -> `[100,[<time_term>]]`
+- [x] Test: `TO_EPOCH_TIME(102)` -> `[102,[<time_term>]]`
+- [x] Test: `DATE(106)` -> `[106,[<time_term>]]`
+- [x] Test: `TIME_OF_DAY(126)` -> `[126,[<time_term>]]`
+- [x] Test: `TIMEZONE(127)` -> `[127,[<time_term>]]`
+- [x] Test: `YEAR(128)` -> `[128,[<time_term>]]`
+- [x] Test: `MONTH(129)` -> `[129,[<time_term>]]`
+- [x] Test: `DAY(130)` -> `[130,[<time_term>]]`
+- [x] Test: `DAY_OF_WEEK(131)` -> `[131,[<time_term>]]`
+- [x] Test: `DAY_OF_YEAR(132)` -> `[132,[<time_term>]]`
+- [x] Test: `HOURS(133)` -> `[133,[<time_term>]]`
+- [x] Test: `MINUTES(134)` -> `[134,[<time_term>]]`
+- [x] Test: `SECONDS(135)` -> `[135,[<time_term>]]`
 
 Operations:
-- [ ] Test: `IN_TIMEZONE(104)` -> `[104,[<time_term>,"+02:00"]]`
-- [ ] Test: `DURING(105)` -> `[105,[<time_term>,<start>,<end>]]`
+- [x] Test: `IN_TIMEZONE(104)` -> `[104,[<time_term>,"+02:00"]]`
+- [x] Test: `DURING(105)` -> `[105,[<time_term>,<start>,<end>]]`
 
 Constants:
-- [ ] Test: `MONDAY(107)` through `SUNDAY(113)` -> `[107,[]]` .. `[113,[]]`
-- [ ] Test: `JANUARY(114)` through `DECEMBER(125)` -> `[114,[]]` .. `[125,[]]`
-- [ ] Implement: all time construction, extraction, operation, and constant methods
+- [x] Test: `MONDAY(107)` through `SUNDAY(113)` -> `[107,[]]` .. `[113,[]]`
+- [x] Test: `JANUARY(114)` through `DECEMBER(125)` -> `[114,[]]` .. `[125,[]]`
+- [x] Implement: all time construction, extraction, operation, and constant methods
 
 ### Task 4: Array operations
 

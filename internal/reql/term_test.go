@@ -666,6 +666,74 @@ func TestStringOperations(t *testing.T) {
 	}
 }
 
+func TestTimeOperations(t *testing.T) {
+	t.Parallel()
+	ts := Now()
+	start := EpochTime(0)
+	end := EpochTime(1000000)
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		// construction
+		{"iso8601", ISO8601("2024-01-01T00:00:00Z"), `[99,["2024-01-01T00:00:00Z"]]`},
+		{"epoch_time", EpochTime(1234567890), `[101,[1234567890]]`},
+		{"time", Time(2024, 1, 1, "Z"), `[136,[2024,1,1,"Z"]]`},
+		{"now", Now(), `[103,[]]`},
+		// extraction
+		{"to_iso8601", ts.ToISO8601(), `[100,[[103,[]]]]`},
+		{"to_epoch_time", ts.ToEpochTime(), `[102,[[103,[]]]]`},
+		{"date", ts.Date(), `[106,[[103,[]]]]`},
+		{"time_of_day", ts.TimeOfDay(), `[126,[[103,[]]]]`},
+		{"timezone", ts.Timezone(), `[127,[[103,[]]]]`},
+		{"year", ts.Year(), `[128,[[103,[]]]]`},
+		{"month", ts.Month(), `[129,[[103,[]]]]`},
+		{"day", ts.Day(), `[130,[[103,[]]]]`},
+		{"day_of_week", ts.DayOfWeek(), `[131,[[103,[]]]]`},
+		{"day_of_year", ts.DayOfYear(), `[132,[[103,[]]]]`},
+		{"hours", ts.Hours(), `[133,[[103,[]]]]`},
+		{"minutes", ts.Minutes(), `[134,[[103,[]]]]`},
+		{"seconds", ts.Seconds(), `[135,[[103,[]]]]`},
+		// operations
+		{"in_timezone", ts.InTimezone("+02:00"), `[104,[[103,[]],"+02:00"]]`},
+		{"during", ts.During(start, end), `[105,[[103,[]],[101,[0]],[101,[1000000]]]]`},
+		// day-of-week constants
+		{"monday", Monday(), `[107,[]]`},
+		{"tuesday", Tuesday(), `[108,[]]`},
+		{"wednesday", Wednesday(), `[109,[]]`},
+		{"thursday", Thursday(), `[110,[]]`},
+		{"friday", Friday(), `[111,[]]`},
+		{"saturday", Saturday(), `[112,[]]`},
+		{"sunday", Sunday(), `[113,[]]`},
+		// month constants
+		{"january", January(), `[114,[]]`},
+		{"february", February(), `[115,[]]`},
+		{"march", March(), `[116,[]]`},
+		{"april", April(), `[117,[]]`},
+		{"may", May(), `[118,[]]`},
+		{"june", June(), `[119,[]]`},
+		{"july", July(), `[120,[]]`},
+		{"august", August(), `[121,[]]`},
+		{"september", September(), `[122,[]]`},
+		{"october", October(), `[123,[]]`},
+		{"november", November(), `[124,[]]`},
+		{"december", December(), `[125,[]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

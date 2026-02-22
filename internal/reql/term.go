@@ -585,6 +585,156 @@ func Json(s string) Term {
 	return Term{termType: proto.TermJSON, args: []Term{Datum(s)}}
 }
 
+// ISO8601 creates an ISO8601 term ([99, [<iso_string>]]).
+func ISO8601(s string) Term {
+	return Term{termType: proto.TermISO8601, args: []Term{Datum(s)}}
+}
+
+// EpochTime creates an EPOCH_TIME term ([101, [<epoch>]]).
+func EpochTime(epoch interface{}) Term {
+	return Term{termType: proto.TermEpochTime, args: []Term{toTerm(epoch)}}
+}
+
+// Time creates a TIME term ([136, [year, month, day, timezone]]).
+func Time(year, month, day int, timezone string) Term {
+	return Term{
+		termType: proto.TermTime,
+		args:     []Term{Datum(year), Datum(month), Datum(day), Datum(timezone)},
+	}
+}
+
+// ToISO8601 creates a TO_ISO8601 term ([100, [<time_term>]]).
+func (t Term) ToISO8601() Term {
+	return Term{termType: proto.TermToISO8601, args: []Term{t}}
+}
+
+// ToEpochTime creates a TO_EPOCH_TIME term ([102, [<time_term>]]).
+func (t Term) ToEpochTime() Term {
+	return Term{termType: proto.TermToEpochTime, args: []Term{t}}
+}
+
+// Date creates a DATE term ([106, [<time_term>]]).
+func (t Term) Date() Term {
+	return Term{termType: proto.TermDate, args: []Term{t}}
+}
+
+// TimeOfDay creates a TIME_OF_DAY term ([126, [<time_term>]]).
+func (t Term) TimeOfDay() Term {
+	return Term{termType: proto.TermTimeOfDay, args: []Term{t}}
+}
+
+// Timezone creates a TIMEZONE term ([127, [<time_term>]]).
+func (t Term) Timezone() Term {
+	return Term{termType: proto.TermTimezone, args: []Term{t}}
+}
+
+// Year creates a YEAR term ([128, [<time_term>]]).
+func (t Term) Year() Term {
+	return Term{termType: proto.TermYear, args: []Term{t}}
+}
+
+// Month creates a MONTH term ([129, [<time_term>]]).
+func (t Term) Month() Term {
+	return Term{termType: proto.TermMonth, args: []Term{t}}
+}
+
+// Day creates a DAY term ([130, [<time_term>]]).
+func (t Term) Day() Term {
+	return Term{termType: proto.TermDay, args: []Term{t}}
+}
+
+// DayOfWeek creates a DAY_OF_WEEK term ([131, [<time_term>]]).
+func (t Term) DayOfWeek() Term {
+	return Term{termType: proto.TermDayOfWeek, args: []Term{t}}
+}
+
+// DayOfYear creates a DAY_OF_YEAR term ([132, [<time_term>]]).
+func (t Term) DayOfYear() Term {
+	return Term{termType: proto.TermDayOfYear, args: []Term{t}}
+}
+
+// Hours creates an HOURS term ([133, [<time_term>]]).
+func (t Term) Hours() Term {
+	return Term{termType: proto.TermHours, args: []Term{t}}
+}
+
+// Minutes creates a MINUTES term ([134, [<time_term>]]).
+func (t Term) Minutes() Term {
+	return Term{termType: proto.TermMinutes, args: []Term{t}}
+}
+
+// Seconds creates a SECONDS term ([135, [<time_term>]]).
+func (t Term) Seconds() Term {
+	return Term{termType: proto.TermSeconds, args: []Term{t}}
+}
+
+// InTimezone creates an IN_TIMEZONE term ([104, [<time_term>, <tz>]]).
+func (t Term) InTimezone(tz string) Term {
+	return Term{termType: proto.TermInTimezone, args: []Term{t, Datum(tz)}}
+}
+
+// During creates a DURING term ([105, [<time_term>, <start>, <end>]]).
+func (t Term) During(start, end Term) Term {
+	return Term{termType: proto.TermDuring, args: []Term{t, start, end}}
+}
+
+// Monday creates a MONDAY constant term ([107, []]).
+func Monday() Term { return Term{termType: proto.TermMonday} }
+
+// Tuesday creates a TUESDAY constant term ([108, []]).
+func Tuesday() Term { return Term{termType: proto.TermTuesday} }
+
+// Wednesday creates a WEDNESDAY constant term ([109, []]).
+func Wednesday() Term { return Term{termType: proto.TermWednesday} }
+
+// Thursday creates a THURSDAY constant term ([110, []]).
+func Thursday() Term { return Term{termType: proto.TermThursday} }
+
+// Friday creates a FRIDAY constant term ([111, []]).
+func Friday() Term { return Term{termType: proto.TermFriday} }
+
+// Saturday creates a SATURDAY constant term ([112, []]).
+func Saturday() Term { return Term{termType: proto.TermSaturday} }
+
+// Sunday creates a SUNDAY constant term ([113, []]).
+func Sunday() Term { return Term{termType: proto.TermSunday} }
+
+// January creates a JANUARY constant term ([114, []]).
+func January() Term { return Term{termType: proto.TermJanuary} }
+
+// February creates a FEBRUARY constant term ([115, []]).
+func February() Term { return Term{termType: proto.TermFebruary} }
+
+// March creates a MARCH constant term ([116, []]).
+func March() Term { return Term{termType: proto.TermMarch} }
+
+// April creates an APRIL constant term ([117, []]).
+func April() Term { return Term{termType: proto.TermApril} }
+
+// May creates a MAY constant term ([118, []]).
+func May() Term { return Term{termType: proto.TermMay} }
+
+// June creates a JUNE constant term ([119, []]).
+func June() Term { return Term{termType: proto.TermJune} }
+
+// July creates a JULY constant term ([120, []]).
+func July() Term { return Term{termType: proto.TermJuly} }
+
+// August creates an AUGUST constant term ([121, []]).
+func August() Term { return Term{termType: proto.TermAugust} }
+
+// September creates a SEPTEMBER constant term ([122, []]).
+func September() Term { return Term{termType: proto.TermSeptember} }
+
+// October creates an OCTOBER constant term ([123, []]).
+func October() Term { return Term{termType: proto.TermOctober} }
+
+// November creates a NOVEMBER constant term ([124, []]).
+func November() Term { return Term{termType: proto.TermNovember} }
+
+// December creates a DECEMBER constant term ([125, []]).
+func December() Term { return Term{termType: proto.TermDecember} }
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}
