@@ -211,10 +211,21 @@ func TestEqJoinSecondaryIndex(t *testing.T) {
 		{"id": "o3", "user_id": "u1", "amount": 150},
 	})
 
-	// create secondary index on users.id (effectively the primary key, use a real secondary)
-	// eqJoin orders.user_id -> users (primary key = id, no separate index needed for left side)
-	_, cur, err := exec.Run(ctx,
-		reql.DB(dbName).Table("orders").EqJoin("user_id", reql.DB(dbName).Table("users")), nil)
+	// create secondary index on orders.user_id to test eqJoin via index
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("orders").IndexCreate("user_id"), nil)
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("index create: %v", err)
+	}
+	_, cur, err = exec.Run(ctx, reql.DB(dbName).Table("orders").IndexWait("user_id"), nil)
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("index wait: %v", err)
+	}
+
+	// eqJoin users.id -> orders via secondary index user_id
+	_, cur, err = exec.Run(ctx,
+		reql.DB(dbName).Table("users").EqJoin("id", reql.DB(dbName).Table("orders"), reql.OptArgs{"index": "user_id"}), nil)
 	if err != nil {
 		t.Fatalf("eqJoin: %v", err)
 	}
@@ -224,8 +235,9 @@ func TestEqJoinSecondaryIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cursor all: %v", err)
 	}
-	if len(rows) != 3 {
-		t.Fatalf("eqJoin got %d rows, want 3", len(rows))
+	// 2 users, each matched to one order via secondary index (eqJoin returns first match per left row)
+	if len(rows) != 2 {
+		t.Fatalf("eqJoin got %d rows, want 2", len(rows))
 	}
 	for _, raw := range rows {
 		var pair struct {
@@ -238,10 +250,10 @@ func TestEqJoinSecondaryIndex(t *testing.T) {
 		if pair.Left == nil || pair.Right == nil {
 			t.Errorf("join pair has nil side: left=%v right=%v", pair.Left, pair.Right)
 		}
-		userID, _ := pair.Left["user_id"].(string)
-		rightID, _ := pair.Right["id"].(string)
-		if userID != rightID {
-			t.Errorf("join mismatch: order.user_id=%q != user.id=%q", userID, rightID)
+		leftID, _ := pair.Left["id"].(string)
+		rightUserID, _ := pair.Right["user_id"].(string)
+		if leftID != rightUserID {
+			t.Errorf("join mismatch: user.id=%q != order.user_id=%q", leftID, rightUserID)
 		}
 	}
 }

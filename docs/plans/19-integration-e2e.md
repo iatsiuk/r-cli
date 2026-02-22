@@ -56,7 +56,7 @@ Tests execute compiled `r-cli` binary via `os/exec`. Host and port from `testAdd
 ### Task 5: REPL e2e
 
 - [x] Test: echo query via pipe to r-cli binary (REPL stdin mode)
-- [x] Test: multiple queries via pipe separated by newlines
+- [x] Test: multiple queries via file with `---` separator
 
 ### Task 6: User/permission and index e2e
 
