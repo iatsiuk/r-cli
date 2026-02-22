@@ -122,9 +122,14 @@ func DBList() Term {
 	return Term{termType: proto.TermDBList}
 }
 
-// TableCreate creates a TABLE_CREATE term ([60, [db, name]]) chained on a DB term.
-func (t Term) TableCreate(name string) Term {
-	return Term{termType: proto.TermTableCreate, args: []Term{t, Datum(name)}}
+// TableCreate creates a TABLE_CREATE term ([60, [db, name]], opts?) chained on a DB term.
+// Optional OptArgs can specify options like {"primary_key": "id"}.
+func (t Term) TableCreate(name string, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermTableCreate, args: []Term{t, Datum(name)}}
+	if len(opts) > 0 {
+		term.opts = map[string]interface{}(opts[0])
+	}
+	return term
 }
 
 // TableDrop creates a TABLE_DROP term ([61, [db, name]]) chained on a DB term.
@@ -153,9 +158,14 @@ func (t Term) Filter(predicate interface{}) Term {
 	return Term{termType: proto.TermFilter, args: []Term{t, wrapped}}
 }
 
-// Insert creates an INSERT term ([56, [table, doc]]).
-func (t Term) Insert(doc interface{}) Term {
-	return Term{termType: proto.TermInsert, args: []Term{t, toTerm(doc)}}
+// Insert creates an INSERT term ([56, [table, doc]], opts?).
+// Optional OptArgs can specify options like {"conflict": "replace"}.
+func (t Term) Insert(doc interface{}, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermInsert, args: []Term{t, toTerm(doc)}}
+	if len(opts) > 0 {
+		term.opts = map[string]interface{}(opts[0])
+	}
+	return term
 }
 
 // Update creates an UPDATE term ([53, [table, doc]]).
@@ -222,17 +232,26 @@ func Desc(field string) Term {
 	return Term{termType: proto.TermDesc, args: []Term{Datum(field)}}
 }
 
-// OrderBy creates an ORDERBY term ([41, [term, fields...]]).
+// OrderBy creates an ORDERBY term ([41, [term, fields...]], opts?).
+// The last argument may be an OptArgs to specify options (e.g. {"index": "field"}).
 func (t Term) OrderBy(fields ...interface{}) Term {
+	var opts map[string]interface{}
+	termFields := fields
+	if len(fields) > 0 {
+		if o, ok := fields[len(fields)-1].(OptArgs); ok {
+			opts = map[string]interface{}(o)
+			termFields = fields[:len(fields)-1]
+		}
+	}
 	args := []Term{t}
-	for _, f := range fields {
+	for _, f := range termFields {
 		if ft, ok := f.(Term); ok {
 			args = append(args, ft)
 		} else {
 			args = append(args, Datum(f))
 		}
 	}
-	return Term{termType: proto.TermOrderBy, args: args}
+	return Term{termType: proto.TermOrderBy, args: args, opts: opts}
 }
 
 // Limit creates a LIMIT term ([71, [term, n]]).

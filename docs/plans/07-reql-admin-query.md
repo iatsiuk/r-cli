@@ -24,12 +24,12 @@ Depends on: `04-reql-core`
 
 ### Task 2: Term optargs
 
-- [ ] Test: `.Insert(doc)` with `conflict` optarg -> `[56,[<table>,<doc>],{"conflict":"replace"}]`
-- [ ] Test: `.Insert(doc)` with `return_changes` optarg
-- [ ] Test: `.Changes()` with `include_initial` optarg
-- [ ] Test: `.TableCreate("name")` with `primary_key` optarg
-- [ ] Test: `.OrderBy()` with `index` optarg
-- [ ] Implement: optarg support on all term methods that need it
+- [x] Test: `.Insert(doc)` with `conflict` optarg -> `[56,[<table>,<doc>],{"conflict":"replace"}]`
+- [x] Test: `.Insert(doc)` with `return_changes` optarg
+- [x] Test: `.Changes()` with `include_initial` optarg
+- [x] Test: `.TableCreate("name")` with `primary_key` optarg
+- [x] Test: `.OrderBy()` with `index` optarg
+- [x] Implement: optarg support on all term methods that need it
 
 ### Task 3: Full query serialization
 
