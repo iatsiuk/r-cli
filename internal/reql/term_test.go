@@ -1101,6 +1101,8 @@ func TestValidationErrors(t *testing.T) {
 		{"branch_no_args", Branch()},
 		{"branch_one_arg", Branch(Datum(true))},
 		{"branch_two_args", Branch(Datum(true), Datum("yes"))},
+		{"branch_four_args", Branch(Datum(true), Datum(1), Datum(false), Datum(2))},
+		{"contains_no_args", DB("test").Table("x").Contains()},
 		{"line_zero_points", Line()},
 		{"line_one_point", Line(Point(0, 0))},
 		{"polygon_zero_points", Polygon()},
