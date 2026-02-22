@@ -310,7 +310,6 @@ func TestChangefeedAndMiscTerms(t *testing.T) {
 	}{
 		{"changes", table.Changes(), `[152,[[15,[[14,["test"]],"users"]]]]`},
 		{"changes_empty_opts", table.Changes(OptArgs{}), `[152,[[15,[[14,["test"]],"users"]]]]`},
-		{"changes_include_initial", table.Changes(OptArgs{"include_initial": true}), `[152,[[15,[[14,["test"]],"users"]]],{"include_initial":true}]`},
 		{"now", Now(), `[103,[]]`},
 		{"uuid", UUID(), `[169,[]]`},
 		{"binary", Binary("data"), `[155,["data"]]`},
@@ -467,6 +466,90 @@ func TestDoError(t *testing.T) {
 	_, err := json.Marshal(Do())
 	if err == nil {
 		t.Fatal("expected error for Do() with no args, got nil")
+	}
+}
+
+func TestAdminTerms(t *testing.T) {
+	t.Parallel()
+	db := DB("test")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"db_create", DBCreate("mydb"), `[57,["mydb"]]`},
+		{"db_drop", DBDrop("mydb"), `[58,["mydb"]]`},
+		{"db_list", DBList(), `[59,[]]`},
+		{"table_create", db.TableCreate("users"), `[60,[[14,["test"]],"users"]]`},
+		{"table_drop", db.TableDrop("users"), `[61,[[14,["test"]],"users"]]`},
+		{"table_list", db.TableList(), `[62,[[14,["test"]]]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTermOptargs(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	db := DB("test")
+	doc := map[string]interface{}{"name": "alice"}
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"insert_conflict",
+			table.Insert(doc, OptArgs{"conflict": "replace"}),
+			`[56,[[15,[[14,["test"]],"users"]],{"name":"alice"}],{"conflict":"replace"}]`,
+		},
+		{
+			"insert_return_changes",
+			table.Insert(doc, OptArgs{"return_changes": true}),
+			`[56,[[15,[[14,["test"]],"users"]],{"name":"alice"}],{"return_changes":true}]`,
+		},
+		{
+			"changes_include_initial",
+			table.Changes(OptArgs{"include_initial": true}),
+			`[152,[[15,[[14,["test"]],"users"]]],{"include_initial":true}]`,
+		},
+		{
+			"table_create_primary_key",
+			db.TableCreate("users", OptArgs{"primary_key": "user_id"}),
+			`[60,[[14,["test"]],"users"],{"primary_key":"user_id"}]`,
+		},
+		{
+			"orderby_index",
+			table.OrderBy(OptArgs{"index": "name"}),
+			`[41,[[15,[[14,["test"]],"users"]]],{"index":"name"}]`,
+		},
+		{
+			"orderby_field_and_index",
+			table.OrderBy("age", OptArgs{"index": "name"}),
+			`[41,[[15,[[14,["test"]],"users"]],"age"],{"index":"name"}]`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
 	}
 }
 
