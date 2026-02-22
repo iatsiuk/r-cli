@@ -43,12 +43,12 @@ Depends on: `12-cli-core`
 
 ### Task 4: `table reconfigure`, `rebalance`, `wait`, `sync`
 
-- [ ] Test: `r-cli table reconfigure <name> --shards 4 --replicas 2`
-- [ ] Test: `r-cli table reconfigure <name> --dry-run` -> preview without applying
-- [ ] Test: `r-cli table rebalance <name>`
-- [ ] Test: `r-cli table wait <name>`
-- [ ] Test: `r-cli table sync <name>`
-- [ ] Implement: extend table command group
+- [x] Test: `r-cli table reconfigure <name> --shards 4 --replicas 2`
+- [x] Test: `r-cli table reconfigure <name> --dry-run` -> preview without applying
+- [x] Test: `r-cli table rebalance <name>`
+- [x] Test: `r-cli table wait <name>`
+- [x] Test: `r-cli table sync <name>`
+- [x] Implement: extend table command group
 
 ### Task 5: `insert` command (bulk)
 
