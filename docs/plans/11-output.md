@@ -38,8 +38,8 @@ Package: `internal/output`
 
 ### Task 4: Non-TTY detection and auto-format
 
-- [ ] Test: isatty(stdout) true -> default to pretty JSON
-- [ ] Test: isatty(stdout) false -> default to JSONL
-- [ ] Test: explicit --format flag overrides auto-detection
-- [ ] Test: NO_COLOR env var disables colored output
-- [ ] Implement: `DetectFormat(stdout *os.File, flagFormat string) string`
+- [x] Test: isatty(stdout) true -> default to pretty JSON
+- [x] Test: isatty(stdout) false -> default to JSONL
+- [x] Test: explicit --format flag overrides auto-detection
+- [x] Test: NO_COLOR env var disables colored output
+- [x] Implement: `DetectFormat(stdout *os.File, flagFormat string) string`
