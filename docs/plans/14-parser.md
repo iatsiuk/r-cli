@@ -25,16 +25,16 @@ Depends on: `04-reql-core`, `06-reql-functions-index`
 
 ### Task 2: Parser - basic expressions
 
-- [ ] Test: parse `r.db("test")` -> DB("test") term
-- [ ] Test: parse `r.db("test").table("users")` -> chained terms
-- [ ] Test: parse `.filter({name: "foo"})` -> FILTER with object arg
-- [ ] Test: parse `.get("id")` -> GET term
-- [ ] Test: parse `.insert({...})` -> INSERT term
-- [ ] Test: parse `.orderBy(r.desc("name"))` -> ORDER_BY with DESC
-- [ ] Test: parse `.limit(10)` -> LIMIT term
-- [ ] Test: parse `r.row("field").gt(21)` -> IMPLICIT_VAR with GT comparison
-- [ ] Test: parse nested `r.row` in filter -> auto-wrapped via IMPLICIT_VAR
-- [ ] Implement: recursive descent parser core
+- [x] Test: parse `r.db("test")` -> DB("test") term
+- [x] Test: parse `r.db("test").table("users")` -> chained terms
+- [x] Test: parse `.filter({name: "foo"})` -> FILTER with object arg
+- [x] Test: parse `.get("id")` -> GET term
+- [x] Test: parse `.insert({...})` -> INSERT term
+- [x] Test: parse `.orderBy(r.desc("name"))` -> ORDER_BY with DESC
+- [x] Test: parse `.limit(10)` -> LIMIT term
+- [x] Test: parse `r.row("field").gt(21)` -> IMPLICIT_VAR with GT comparison
+- [x] Test: parse nested `r.row` in filter -> auto-wrapped via IMPLICIT_VAR
+- [x] Implement: recursive descent parser core
 
 ### Task 3: Parser - advanced expressions
 
