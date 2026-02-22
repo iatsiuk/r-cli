@@ -85,8 +85,8 @@ Depends on: `16-integration-basic`
 
 ### Task 9: Connection manager, reconnect and noreply
 
-- [ ] Test: 50 concurrent queries through single multiplexed connection -> all succeed, no races
-- [ ] Test: kill container mid-query -> ConnManager reconnects after restart (uses `startRethinkDBForRestart`, `ctr.Stop(ctx)` + `ctr.Start(ctx)`)
-- [ ] Test: ConnManager Close() with active queries -> all queries return error
-- [ ] Test: insert with noreply=true -> no response, document appears in table
-- [ ] Test: NOREPLY_WAIT after noreply inserts -> WAIT_COMPLETE, all writes visible
+- [x] Test: 50 concurrent queries through single multiplexed connection -> all succeed, no races
+- [x] Test: kill container mid-query -> ConnManager reconnects after restart (uses `startRethinkDBForRestart`, `ctr.Stop(ctx)` + `ctr.Start(ctx)`)
+- [x] Test: ConnManager Close() with active queries -> all queries return error
+- [x] Test: insert with noreply=true -> no response, document appears in table
+- [x] Test: NOREPLY_WAIT after noreply inserts -> WAIT_COMPLETE, all writes visible
