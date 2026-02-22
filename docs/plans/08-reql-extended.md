@@ -14,12 +14,12 @@ Depends on: `04-reql-core`, `06-reql-functions-index`
 
 ### Task 1: Join operations
 
-- [ ] Test: `INNER_JOIN(48)` -> `[48,[<seq>,<seq>,<func>]]`
-- [ ] Test: `OUTER_JOIN(49)` -> `[49,[<seq>,<seq>,<func>]]`
-- [ ] Test: `EQ_JOIN(50)` with index optarg -> `[50,[<seq>,"field",<table>],{"index":"name"}]`
-- [ ] Test: `ZIP(72)` -> `[72,[<term>]]`
-- [ ] Test: eqJoin with index optarg, innerJoin with predicate function, zip after join
-- [ ] Implement: InnerJoin, OuterJoin, EqJoin, Zip methods
+- [x] Test: `INNER_JOIN(48)` -> `[48,[<seq>,<seq>,<func>]]`
+- [x] Test: `OUTER_JOIN(49)` -> `[49,[<seq>,<seq>,<func>]]`
+- [x] Test: `EQ_JOIN(50)` with index optarg -> `[50,[<seq>,"field",<table>],{"index":"name"}]`
+- [x] Test: `ZIP(72)` -> `[72,[<term>]]`
+- [x] Test: eqJoin with index optarg, innerJoin with predicate function, zip after join
+- [x] Implement: InnerJoin, OuterJoin, EqJoin, Zip methods
 
 ### Task 2: String operations
 

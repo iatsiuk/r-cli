@@ -527,6 +527,31 @@ func Do(args ...interface{}) Term {
 	return Term{termType: proto.TermFuncCall, args: wireArgs}
 }
 
+// InnerJoin creates an INNER_JOIN term ([48, [seq, other, fn]]).
+func (t Term) InnerJoin(other, fn Term) Term {
+	return Term{termType: proto.TermInnerJoin, args: []Term{t, other, fn}}
+}
+
+// OuterJoin creates an OUTER_JOIN term ([49, [seq, other, fn]]).
+func (t Term) OuterJoin(other, fn Term) Term {
+	return Term{termType: proto.TermOuterJoin, args: []Term{t, other, fn}}
+}
+
+// EqJoin creates an EQ_JOIN term ([50, [seq, field, table]], opts?).
+// Optional OptArgs can specify options like {"index": "name"}.
+func (t Term) EqJoin(field string, table Term, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermEqJoin, args: []Term{t, Datum(field), table}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
+}
+
+// Zip creates a ZIP term ([72, [term]]).
+func (t Term) Zip() Term {
+	return Term{termType: proto.TermZip, args: []Term{t}}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}

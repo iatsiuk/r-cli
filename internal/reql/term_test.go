@@ -553,6 +553,61 @@ func TestTermOptargs(t *testing.T) {
 	}
 }
 
+func TestJoinOperations(t *testing.T) {
+	t.Parallel()
+	users := DB("test").Table("users")
+	posts := DB("test").Table("posts")
+	fn := Func(Var(1).GetField("id").Eq(Var(2).GetField("user_id")), 1, 2)
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"inner_join",
+			users.InnerJoin(posts, fn),
+			`[48,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]],[69,[[2,[1,2]],[17,[[31,[[10,[1]],"id"]],[31,[[10,[2]],"user_id"]]]]]]]]`,
+		},
+		{
+			"outer_join",
+			users.OuterJoin(posts, fn),
+			`[49,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]],[69,[[2,[1,2]],[17,[[31,[[10,[1]],"id"]],[31,[[10,[2]],"user_id"]]]]]]]]`,
+		},
+		{
+			"eq_join",
+			users.EqJoin("user_id", posts),
+			`[50,[[15,[[14,["test"]],"users"]],"user_id",[15,[[14,["test"]],"posts"]]]]`,
+		},
+		{
+			"eq_join_index",
+			users.EqJoin("user_id", posts, OptArgs{"index": "name"}),
+			`[50,[[15,[[14,["test"]],"users"]],"user_id",[15,[[14,["test"]],"posts"]]],{"index":"name"}]`,
+		},
+		{
+			"zip",
+			users.Zip(),
+			`[72,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"zip_after_join",
+			users.InnerJoin(posts, fn).Zip(),
+			`[72,[[48,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]],[69,[[2,[1,2]],[17,[[31,[[10,[1]],"id"]],[31,[[10,[2]],"user_id"]]]]]]]]]]`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
