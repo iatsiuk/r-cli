@@ -172,11 +172,12 @@ func insertJSON(ctx context.Context, exec *query.Executor, cfg *rootConfig, tbl 
 
 // execInsertBatch runs a single batch insert and accumulates totals.
 func execInsertBatch(ctx context.Context, exec *query.Executor, cfg *rootConfig, tbl reql.Term, opts reql.OptArgs, batch []json.RawMessage, total *insertResult) error {
-	docs := make([]interface{}, len(batch))
+	items := make([]interface{}, len(batch))
 	for i, d := range batch {
-		docs[i] = d
+		items[i] = d
 	}
-	term := tbl.Insert(docs, opts)
+	// wrap in MAKE_ARRAY so RethinkDB treats it as a datum array, not a ReQL term array
+	term := tbl.Insert(reql.Array(items...), opts)
 	_, cur, err := exec.Run(ctx, term, buildQueryOpts(cfg))
 	if err != nil {
 		return err

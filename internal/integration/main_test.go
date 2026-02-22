@@ -64,6 +64,9 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 	_ = ctr.Terminate(ctx)
+	if cliDir != "" {
+		_ = os.RemoveAll(cliDir)
+	}
 	os.Exit(code)
 }
 
