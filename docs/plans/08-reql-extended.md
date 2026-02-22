@@ -93,15 +93,15 @@ Constants:
 
 ### Task 6: Additional sequence operations
 
-- [ ] Test: `CONCAT_MAP(40)` -> `[40,[<seq>,<func>]]`
-- [ ] Test: `NTH(45)` -> `[45,[<seq>,<index>]]`
-- [ ] Test: `UNION(44)` -> `[44,[<seq>,<seq>]]`
-- [ ] Test: `UNION(44)` with multiple sequences -> `[44,[<seq>,<seq>,<seq>]]`
-- [ ] Test: `IS_EMPTY(86)` -> `[86,[<seq>]]`
-- [ ] Test: `CONTAINS(93)` -> `[93,[<seq>,<value>]]`
-- [ ] Test: `BRACKET(170)` -> `[170,[<term>,"field"]]`
-- [ ] Test: `BRACKET(170)` chained -> `[170,[[170,[<term>,"a"]],"b"]]`
-- [ ] Implement: ConcatMap, Nth, Union, IsEmpty, Contains, Bracket methods
+- [x] Test: `CONCAT_MAP(40)` -> `[40,[<seq>,<func>]]`
+- [x] Test: `NTH(45)` -> `[45,[<seq>,<index>]]`
+- [x] Test: `UNION(44)` -> `[44,[<seq>,<seq>]]`
+- [x] Test: `UNION(44)` with multiple sequences -> `[44,[<seq>,<seq>,<seq>]]`
+- [x] Test: `IS_EMPTY(86)` -> `[86,[<seq>]]`
+- [x] Test: `CONTAINS(93)` -> `[93,[<seq>,<value>]]`
+- [x] Test: `BRACKET(170)` -> `[170,[<term>,"field"]]`
+- [x] Test: `BRACKET(170)` chained -> `[170,[[170,[<term>,"a"]],"b"]]`
+- [x] Implement: ConcatMap, Nth, Union, IsEmpty, Contains, Bracket methods
 
 ### Task 7: Additional object operations
 

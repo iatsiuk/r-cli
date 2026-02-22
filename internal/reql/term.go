@@ -830,6 +830,44 @@ func (t Term) TypeOf() Term {
 	return Term{termType: proto.TermTypeOf, args: []Term{t}}
 }
 
+// ConcatMap creates a CONCAT_MAP term ([40, [seq, fn]]).
+func (t Term) ConcatMap(fn Term) Term {
+	return Term{termType: proto.TermConcatMap, args: []Term{t, fn}}
+}
+
+// Nth creates an NTH term ([45, [seq, index]]).
+func (t Term) Nth(index int) Term {
+	return Term{termType: proto.TermNth, args: []Term{t, Datum(index)}}
+}
+
+// Union creates a UNION term ([44, [seq, seqs...]]).
+func (t Term) Union(seqs ...Term) Term {
+	args := make([]Term, 1, 1+len(seqs))
+	args[0] = t
+	args = append(args, seqs...)
+	return Term{termType: proto.TermUnion, args: args}
+}
+
+// IsEmpty creates an IS_EMPTY term ([86, [seq]]).
+func (t Term) IsEmpty() Term {
+	return Term{termType: proto.TermIsEmpty, args: []Term{t}}
+}
+
+// Contains creates a CONTAINS term ([93, [seq, values...]]).
+func (t Term) Contains(values ...interface{}) Term {
+	args := make([]Term, 1, 1+len(values))
+	args[0] = t
+	for _, v := range values {
+		args = append(args, toTerm(v))
+	}
+	return Term{termType: proto.TermContains, args: args}
+}
+
+// Bracket creates a BRACKET term ([170, [term, field]]).
+func (t Term) Bracket(field string) Term {
+	return Term{termType: proto.TermBracket, args: []Term{t, Datum(field)}}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}

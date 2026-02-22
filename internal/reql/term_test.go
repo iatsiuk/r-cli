@@ -862,3 +862,57 @@ func TestControlFlow(t *testing.T) {
 		},
 	})
 }
+
+func TestSequenceOperations(t *testing.T) {
+	t.Parallel()
+	seq := DB("test").Table("users")
+	seq2 := DB("test").Table("posts")
+	seq3 := DB("test").Table("tags")
+	fn := Func(Var(1).GetField("id"), 1)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"concat_map",
+			seq.ConcatMap(fn),
+			`[40,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[31,[[10,[1]],"id"]]]]]]`,
+		},
+		{
+			"nth",
+			seq.Nth(0),
+			`[45,[[15,[[14,["test"]],"users"]],0]]`,
+		},
+		{
+			"union_two",
+			seq.Union(seq2),
+			`[44,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]]]]`,
+		},
+		{
+			"union_three",
+			seq.Union(seq2, seq3),
+			`[44,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]],[15,[[14,["test"]],"tags"]]]]`,
+		},
+		{
+			"is_empty",
+			seq.IsEmpty(),
+			`[86,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"contains",
+			seq.Contains(Datum("alice")),
+			`[93,[[15,[[14,["test"]],"users"]],"alice"]]`,
+		},
+		{
+			"bracket",
+			seq.Bracket("name"),
+			`[170,[[15,[[14,["test"]],"users"]],"name"]]`,
+		},
+		{
+			"bracket_chained",
+			seq.Bracket("a").Bracket("b"),
+			`[170,[[170,[[15,[[14,["test"]],"users"]],"a"]],"b"]]`,
+		},
+	})
+}
