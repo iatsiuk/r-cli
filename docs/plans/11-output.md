@@ -12,10 +12,10 @@ Package: `internal/output`
 
 ### Task 1: JSON output
 
-- [ ] Test: format single document as pretty JSON
-- [ ] Test: format array of documents as streaming JSON array
-- [ ] Test: format empty result
-- [ ] Implement: `JSON(w io.Writer, iter RowIterator) error`
+- [x] Test: format single document as pretty JSON
+- [x] Test: format array of documents as streaming JSON array
+- [x] Test: format empty result
+- [x] Implement: `JSON(w io.Writer, iter RowIterator) error`
 
 ### Task 2: Raw and JSONL output
 
