@@ -52,10 +52,10 @@ Depends on: `12-cli-core`
 
 ### Task 5: `insert` command (bulk)
 
-- [ ] Test: `cat data.jsonl | r-cli insert <db.table>` -> bulk insert from stdin
-- [ ] Test: `r-cli insert <db.table> -F data.json` -> bulk insert from JSON file
-- [ ] Test: `r-cli insert <db.table> -F data.jsonl --format jsonl` -> JSONL file
-- [ ] Test: `--batch-size N` controls documents per insert (default 200)
-- [ ] Test: `--conflict replace|update|error` conflict strategy
-- [ ] Test: reports total inserted/errors on completion
-- [ ] Implement: insert command with streaming stdin reader
+- [x] Test: `cat data.jsonl | r-cli insert <db.table>` -> bulk insert from stdin
+- [x] Test: `r-cli insert <db.table> -F data.json` -> bulk insert from JSON file
+- [x] Test: `r-cli insert <db.table> -F data.jsonl --format jsonl` -> JSONL file
+- [x] Test: `--batch-size N` controls documents per insert (default 200)
+- [x] Test: `--conflict replace|update|error` conflict strategy
+- [x] Test: reports total inserted/errors on completion
+- [x] Implement: insert command with streaming stdin reader
