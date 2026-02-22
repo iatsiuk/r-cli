@@ -60,9 +60,9 @@ Depends on: `04-reql-core`, `06-reql-functions-index`
 
 ### Task 5: Error handling and fuzz testing
 
-- [ ] Test: syntax error -> descriptive error with position
-- [ ] Test: deeply nested expression (depth > 256) -> error (prevent stack overflow)
-- [ ] Implement: maxDepth=256 guard in parser
-- [ ] Fuzz: lexer does not panic on arbitrary input
-- [ ] Fuzz: parser does not panic on arbitrary token sequences
-- [ ] Implement: `func FuzzParse(f *testing.F)` with seed corpus from test cases
+- [x] Test: syntax error -> descriptive error with position
+- [x] Test: deeply nested expression (depth > 256) -> error (prevent stack overflow)
+- [x] Implement: maxDepth=256 guard in parser
+- [x] Fuzz: lexer does not panic on arbitrary input
+- [x] Fuzz: parser does not panic on arbitrary token sequences
+- [x] Implement: `func FuzzParse(f *testing.F)` with seed corpus from test cases

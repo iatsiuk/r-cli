@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"r-cli/internal/reql"
@@ -184,6 +185,48 @@ func TestParse_Default(t *testing.T) {
 	got := mustParse(t, `r.db("test").table("users").default(0)`)
 	want := reql.DB("test").Table("users").Default(0)
 	assertTermEqual(t, got, want)
+}
+
+func TestParse_SyntaxError(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.unknownThing()`, "unknown r.unknownThing"},
+		{`r.db(`, "expected token"},
+		{`r.db("test"`, "expected token"},
+		{`r.db("test").unknownMethod()`, "unknown method .unknownMethod"},
+		{`42 extra`, "unexpected token"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParse_MaxDepth(t *testing.T) {
+	t.Parallel()
+	// build 257 levels deep: r.expr(r.expr(r.expr(...)))
+	inner := `42`
+	for range 257 {
+		inner = `r.expr(` + inner + `)`
+	}
+	_, err := Parse(inner)
+	if err == nil {
+		t.Fatal("expected depth error, got nil")
+	}
+	if !strings.Contains(err.Error(), "deeply nested") {
+		t.Errorf("expected 'deeply nested' error, got: %v", err)
+	}
 }
 
 func TestParse_MethodMapping(t *testing.T) {

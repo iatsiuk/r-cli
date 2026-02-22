@@ -25,9 +25,12 @@ func Parse(input string) (reql.Term, error) {
 	return t, nil
 }
 
+const maxDepth = 256
+
 type parser struct {
 	tokens []Token
 	pos    int
+	depth  int
 }
 
 func (p *parser) peek() Token {
@@ -54,6 +57,11 @@ func (p *parser) expect(tt TokenType) (Token, error) {
 }
 
 func (p *parser) parseExpr() (reql.Term, error) {
+	p.depth++
+	if p.depth > maxDepth {
+		return reql.Term{}, fmt.Errorf("expression too deeply nested (max depth %d)", maxDepth)
+	}
+	defer func() { p.depth-- }()
 	t, err := p.parsePrimary()
 	if err != nil {
 		return reql.Term{}, err
