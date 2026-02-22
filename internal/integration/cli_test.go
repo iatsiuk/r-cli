@@ -22,6 +22,7 @@ var (
 	cliOnce sync.Once
 	cliBin  string
 	cliErr  error
+	cliDir  string
 )
 
 func buildCLIBinary() (string, error) {
@@ -46,6 +47,7 @@ func buildCLIBinary() (string, error) {
 			return
 		}
 		cliBin = bin
+		cliDir = dir
 	})
 	return cliBin, cliErr
 }

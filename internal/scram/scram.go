@@ -246,6 +246,8 @@ func decodeIter(fields map[string]string) (int, error) {
 		return 0, fmt.Errorf("scram: missing iteration count field")
 	}
 	iter, err := strconv.Atoi(iterStr)
+	// rethinkdb 2.4.4 uses an iteration count below rfc 7677's recommended minimum of 4096;
+	// we accept any positive integer to stay compatible with the server's actual value.
 	if err != nil || iter < 1 {
 		return 0, fmt.Errorf("scram: invalid iteration count %q", iterStr)
 	}

@@ -11,28 +11,23 @@ import (
 	"r-cli/internal/reql"
 )
 
-// noAuthArgs builds CLI args for the shared container (admin has no password).
-func noAuthArgs(extra ...string) []string {
-	base := []string{"-H", containerHost, "-P", strconv.Itoa(containerPort)}
-	return append(base, extra...)
-}
-
 func TestUserE2E(t *testing.T) {
+	t.Parallel()
 	// uses shared container: admin has no password, so no -p flag needed.
 	// the local --password flag on user create does not conflict with the
 	// persistent --password/-p flag because we are not passing -p here.
-	const username = "ue2e_testuser"
+	username := sanitizeID(t.Name())
 
-	_, stderr, code := cliRun(t, "", noAuthArgs("user", "create", username, "--password", "pass123")...)
+	_, stderr, code := cliRun(t, "", cliArgs("user", "create", username, "--password", "pass123")...)
 	if code != 0 {
 		t.Fatalf("user create: exit code %d, stderr: %s", code, stderr)
 	}
 	t.Cleanup(func() {
-		cliRun(t, "", noAuthArgs("user", "delete", username, "-y")...)
+		cliRun(t, "", cliArgs("user", "delete", username, "-y")...)
 	})
 
 	// list: user appears
-	stdout, _, code := cliRun(t, "", noAuthArgs("-f", "json", "user", "list")...)
+	stdout, _, code := cliRun(t, "", cliArgs("-f", "json", "user", "list")...)
 	if code != 0 {
 		t.Fatalf("user list: exit code %d", code)
 	}
@@ -41,13 +36,13 @@ func TestUserE2E(t *testing.T) {
 	}
 
 	// delete user
-	_, _, code = cliRun(t, "", noAuthArgs("user", "delete", username, "-y")...)
+	_, _, code = cliRun(t, "", cliArgs("user", "delete", username, "-y")...)
 	if code != 0 {
 		t.Fatalf("user delete: exit code %d", code)
 	}
 
 	// list: user removed
-	stdout, _, code = cliRun(t, "", noAuthArgs("-f", "json", "user", "list")...)
+	stdout, _, code = cliRun(t, "", cliArgs("-f", "json", "user", "list")...)
 	if code != 0 {
 		t.Fatalf("user list after delete: exit code %d", code)
 	}
@@ -57,28 +52,29 @@ func TestUserE2E(t *testing.T) {
 }
 
 func TestGrantE2E(t *testing.T) {
+	t.Parallel()
 	// uses shared container: create user, grant db-level read, verify via CLI and driver.
 	qexec := newExecutor(t)
 	ctx := context.Background()
 
 	dbName := sanitizeID(t.Name())
 	const tableName = "items"
-	const username = "grante2e_user"
+	username := sanitizeID(t.Name() + "user")
 
 	setupTestDB(t, qexec, dbName)
 	createTestTable(t, qexec, dbName, tableName)
 
 	// create user via CLI (no connection password needed)
-	_, stderr, code := cliRun(t, "", noAuthArgs("user", "create", username, "--password", "userpass")...)
+	_, stderr, code := cliRun(t, "", cliArgs("user", "create", username, "--password", "userpass")...)
 	if code != 0 {
 		t.Fatalf("user create: exit code %d, stderr: %s", code, stderr)
 	}
 	t.Cleanup(func() {
-		cliRun(t, "", noAuthArgs("user", "delete", username, "-y")...)
+		cliRun(t, "", cliArgs("user", "delete", username, "-y")...)
 	})
 
 	// grant read on testdb via CLI
-	_, stderr, code = cliRun(t, "", noAuthArgs("grant", username, "--read", "--db", dbName)...)
+	_, stderr, code = cliRun(t, "", cliArgs("grant", username, "--read", "--db", dbName)...)
 	if code != 0 {
 		t.Fatalf("grant read: exit code %d, stderr: %s", code, stderr)
 	}
@@ -116,7 +112,7 @@ func TestIndexE2E(t *testing.T) {
 	createTestTable(t, qexec, dbName, tableName)
 
 	args := func(extra ...string) []string {
-		return append(noAuthArgs("-d", dbName), extra...)
+		return append(cliArgs("-d", dbName), extra...)
 	}
 
 	// create index
