@@ -54,5 +54,5 @@ Depends on: `16-integration-basic`
 
 ### Task 5: Cleanup
 
-- [ ] Test: delete user -> connection with that user fails on next query or reconnect
-- [ ] Test: t.Cleanup removes all test users (no leftover state between test runs)
+- [x] Test: delete user -> connection with that user fails on next query or reconnect
+- [x] Test: t.Cleanup removes all test users (no leftover state between test runs)
