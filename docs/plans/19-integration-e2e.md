@@ -31,9 +31,9 @@ Depends on: `16-integration-basic`, `15-cli-query`, `13-cli-extended`
 
 ### Task 3: Control flow
 
-- [ ] Test: update with branch -> conditional field update
-- [ ] Test: forEach: select from table A, insert into table B
-- [ ] Test: default on missing field -> fallback value
+- [x] Test: update with branch -> conditional field update
+- [x] Test: forEach: select from table A, insert into table B
+- [x] Test: default on missing field -> fallback value
 
 ### Task 4: CLI end-to-end
 
