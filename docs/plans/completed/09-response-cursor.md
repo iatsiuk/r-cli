@@ -1,0 +1,67 @@
+# Plan: Response Parsing and Cursor
+
+## Overview
+
+Response parsing (pseudo-type conversion, error mapping) and cursor implementation for streaming results (atom, sequence, partial, changefeed).
+
+Packages: `internal/response`, `internal/cursor`
+
+Depends on: `01-proto-wire`, `03-conn`
+
+## Validation Commands
+- `go test ./internal/response/... ./internal/cursor/... -race -count=1`
+- `make build`
+
+### Task 1: Response struct and unmarshaling
+
+- [x] Test: unmarshal `{"t":1,"r":["foo"]}` -> ResponseType=SUCCESS_ATOM, results=["foo"]
+- [x] Test: unmarshal error response with `e` and `b` fields
+- [x] Test: unmarshal response with `n` (notes) field
+- [x] Test: unmarshal response with `p` (profile) field
+- [x] Implement: `Response` struct with JSON unmarshaling
+
+### Task 2: Pseudo-type conversion
+
+- [x] Test: TIME pseudo-type -> Go `time.Time`
+- [x] Test: BINARY pseudo-type -> Go `[]byte`
+- [x] Test: nested pseudo-types in result documents
+- [x] Test: GEOMETRY pseudo-type -> pass-through as GeoJSON object (no conversion needed)
+- [x] Test: nested GEOMETRY in result documents
+- [x] Test: pass-through when conversion disabled
+- [x] Implement: `ConvertPseudoTypes(v interface{}) interface{}`
+
+### Task 3: Error mapping
+
+- [x] Test: CLIENT_ERROR (16) -> ReqlClientError
+- [x] Test: COMPILE_ERROR (17) -> ReqlCompileError
+- [x] Test: RUNTIME_ERROR (18) -> ReqlRuntimeError
+- [x] Test: RUNTIME_ERROR with ErrorType NON_EXISTENCE -> ReqlNonExistenceError
+- [x] Test: RUNTIME_ERROR with ErrorType PERMISSION_ERROR -> ReqlPermissionError
+- [x] Test: backtrace included in error message
+- [x] Implement: error types and mapping function
+
+### Task 4: Atom and sequence cursors
+
+- [x] Test: create from SUCCESS_ATOM response, read single value, then EOF
+- [x] Test: `All()` returns single-element slice
+- [x] Implement: atom cursor
+- [x] Test: create from SUCCESS_SEQUENCE, iterate all items
+- [x] Test: `All()` collects everything
+- [x] Implement: sequence cursor
+
+### Task 5: Streaming cursor (partial results)
+
+Cursor receives data from `conn` via a response channel tied to the query token. For streaming cursors, `conn` keeps the dispatch map entry alive until SUCCESS_SEQUENCE, error, or explicit STOP.
+
+- [x] Test: SUCCESS_PARTIAL triggers CONTINUE, next batch arrives, ends with SUCCESS_SEQUENCE
+- [x] Test: premature `Close()` sends STOP
+- [x] Test: context cancellation sends STOP
+- [x] Test: concurrent `Next()` calls are safe
+- [x] Implement: streaming cursor with CONTINUE/STOP lifecycle
+
+### Task 6: Changefeed cursor
+
+- [x] Test: infinite SUCCESS_PARTIAL stream, values arrive incrementally
+- [x] Test: `Close()` sends STOP and terminates
+- [x] Test: connection drop -> error on next `Next()`
+- [x] Implement: changefeed cursor (never auto-completes)
