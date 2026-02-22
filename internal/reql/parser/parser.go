@@ -274,28 +274,22 @@ func parseRDBDrop(p *parser) (reql.Term, error) {
 }
 
 func parseRDBList(p *parser) (reql.Term, error) {
-	if p.peek().Type == tokenLParen {
-		if err := p.parseNoArgs(); err != nil {
-			return reql.Term{}, err
-		}
+	if err := p.parseNoArgs(); err != nil {
+		return reql.Term{}, err
 	}
 	return reql.DBList(), nil
 }
 
 func parseRNow(p *parser) (reql.Term, error) {
-	if p.peek().Type == tokenLParen {
-		if err := p.parseNoArgs(); err != nil {
-			return reql.Term{}, err
-		}
+	if err := p.parseNoArgs(); err != nil {
+		return reql.Term{}, err
 	}
 	return reql.Now(), nil
 }
 
 func parseRUUID(p *parser) (reql.Term, error) {
-	if p.peek().Type == tokenLParen {
-		if err := p.parseNoArgs(); err != nil {
-			return reql.Term{}, err
-		}
+	if err := p.parseNoArgs(); err != nil {
+		return reql.Term{}, err
 	}
 	return reql.UUID(), nil
 }
@@ -949,6 +943,9 @@ func (p *parser) parseArgList() ([]reql.Term, error) {
 			return nil, err
 		}
 		args = append(args, arg)
+		if p.peek().Type == tokenEOF {
+			break
+		}
 		if p.peek().Type != tokenRParen {
 			if _, err := p.expect(tokenComma); err != nil {
 				return nil, err
@@ -987,6 +984,9 @@ func (p *parser) parseStringList() ([]string, error) {
 			return nil, err
 		}
 		strs = append(strs, tok.Value)
+		if p.peek().Type == tokenEOF {
+			break
+		}
 		if p.peek().Type != tokenRParen {
 			if _, err := p.expect(tokenComma); err != nil {
 				return nil, err
