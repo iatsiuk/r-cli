@@ -235,9 +235,9 @@ func TestEqJoinSecondaryIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cursor all: %v", err)
 	}
-	// 2 users, each matched to one order via secondary index (eqJoin returns first match per left row)
-	if len(rows) != 2 {
-		t.Fatalf("eqJoin got %d rows, want 2", len(rows))
+	// u1 matches o1 and o3, u2 matches o2: eqJoin on secondary index returns all matches
+	if len(rows) != 3 {
+		t.Fatalf("eqJoin got %d rows, want 3", len(rows))
 	}
 	for _, raw := range rows {
 		var pair struct {
