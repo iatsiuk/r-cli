@@ -82,14 +82,14 @@ Constants:
 
 ### Task 5: Control flow
 
-- [ ] Test: `BRANCH(65)` -> `[65,[<cond>,<true_val>,<false_val>]]`
-- [ ] Test: `BRANCH(65)` with multiple condition pairs -> `[65,[<c1>,<v1>,<c2>,<v2>,<else>]]`
-- [ ] Test: `FOR_EACH(68)` -> `[68,[<seq>,<func>]]`
-- [ ] Test: `DEFAULT(92)` -> `[92,[<term>,<default_val>]]`
-- [ ] Test: `ERROR(12)` -> `[12,["message"]]`
-- [ ] Test: `COERCE_TO(51)` -> `[51,[<term>,"string"]]`
-- [ ] Test: `TYPE_OF(52)` -> `[52,[<term>]]`
-- [ ] Implement: Branch, ForEach, Default, Error, CoerceTo, TypeOf methods
+- [x] Test: `BRANCH(65)` -> `[65,[<cond>,<true_val>,<false_val>]]`
+- [x] Test: `BRANCH(65)` with multiple condition pairs -> `[65,[<c1>,<v1>,<c2>,<v2>,<else>]]`
+- [x] Test: `FOR_EACH(68)` -> `[68,[<seq>,<func>]]`
+- [x] Test: `DEFAULT(92)` -> `[92,[<term>,<default_val>]]`
+- [x] Test: `ERROR(12)` -> `[12,["message"]]`
+- [x] Test: `COERCE_TO(51)` -> `[51,[<term>,"string"]]`
+- [x] Test: `TYPE_OF(52)` -> `[52,[<term>]]`
+- [x] Implement: Branch, ForEach, Default, Error, CoerceTo, TypeOf methods
 
 ### Task 6: Additional sequence operations
 

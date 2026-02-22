@@ -814,3 +814,51 @@ func TestSetOperations(t *testing.T) {
 		{"set_difference", arr.SetDifference(other), `[91,[[2,[1,2,3]],[2,[3,4,5]]]]`},
 	})
 }
+
+func TestControlFlow(t *testing.T) {
+	t.Parallel()
+	cond := DB("test").Table("users").Count().Gt(0)
+	seq := DB("test").Table("users")
+	fn := Func(Var(1).GetField("active"), 1)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"branch_simple",
+			Branch(cond, Datum("yes"), Datum("no")),
+			`[65,[[21,[[43,[[15,[[14,["test"]],"users"]]]],0]],"yes","no"]]`,
+		},
+		{
+			"branch_multi",
+			Branch(Datum(true), Datum(1), Datum(false), Datum(2), Datum(3)),
+			`[65,[true,1,false,2,3]]`,
+		},
+		{
+			"for_each",
+			seq.ForEach(fn),
+			`[68,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[31,[[10,[1]],"active"]]]]]]`,
+		},
+		{
+			"default",
+			seq.Count().Default(0),
+			`[92,[[43,[[15,[[14,["test"]],"users"]]]],0]]`,
+		},
+		{
+			"error",
+			Error("something went wrong"),
+			`[12,["something went wrong"]]`,
+		},
+		{
+			"coerce_to",
+			seq.Count().CoerceTo("string"),
+			`[51,[[43,[[15,[[14,["test"]],"users"]]]],"string"]]`,
+		},
+		{
+			"type_of",
+			seq.TypeOf(),
+			`[52,[[15,[[14,["test"]],"users"]]]]`,
+		},
+	})
+}

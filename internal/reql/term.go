@@ -795,6 +795,41 @@ func (t Term) SetDifference(other Term) Term {
 	return Term{termType: proto.TermSetDifference, args: []Term{t, other}}
 }
 
+// Branch creates a BRANCH term ([65, [cond, true_val, false_val, ...]]).
+// Accepts 3+ arguments: cond1, val1, ..., else_val (supports multi-condition form).
+func Branch(args ...interface{}) Term {
+	termArgs := make([]Term, len(args))
+	for i, a := range args {
+		termArgs[i] = toTerm(a)
+	}
+	return Term{termType: proto.TermBranch, args: termArgs}
+}
+
+// ForEach creates a FOR_EACH term ([68, [seq, fn]]).
+func (t Term) ForEach(fn Term) Term {
+	return Term{termType: proto.TermForEach, args: []Term{t, fn}}
+}
+
+// Default creates a DEFAULT term ([92, [term, default_val]]).
+func (t Term) Default(val interface{}) Term {
+	return Term{termType: proto.TermDefault, args: []Term{t, toTerm(val)}}
+}
+
+// Error creates an ERROR term ([12, [message]]).
+func Error(msg string) Term {
+	return Term{termType: proto.TermError, args: []Term{Datum(msg)}}
+}
+
+// CoerceTo creates a COERCE_TO term ([51, [term, type_name]]).
+func (t Term) CoerceTo(typeName string) Term {
+	return Term{termType: proto.TermCoerceTo, args: []Term{t, Datum(typeName)}}
+}
+
+// TypeOf creates a TYPE_OF term ([52, [term]]).
+func (t Term) TypeOf() Term {
+	return Term{termType: proto.TermTypeOf, args: []Term{t}}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}
