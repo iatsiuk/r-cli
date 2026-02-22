@@ -192,7 +192,7 @@ func TestAuthHandshake(t *testing.T) {
 		ctx := context.Background()
 		exec := execAs(t, host, port, "admin", "testpass")
 
-		specialPass := `p@$$w0rd",'unicode`
+		specialPass := "p@$$w0rd\",'\u00e9caf\u00e9"
 		_, cur, err := exec.Run(ctx,
 			reql.DB("rethinkdb").Table("users").Insert(
 				map[string]interface{}{"id": "charlie_auth", "password": specialPass},
