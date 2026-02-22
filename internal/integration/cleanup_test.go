@@ -14,7 +14,7 @@ import (
 
 func TestUserCleanup(t *testing.T) {
 	host, port := startRethinkDBWithPassword(t, "testpass")
-	admin := adminExecAt(t, host, port, "testpass")
+	admin := execAs(t, host, port, "admin", "testpass")
 	ctx := context.Background()
 
 	t.Run("DeletedUserCannotConnect", func(t *testing.T) {

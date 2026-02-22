@@ -12,7 +12,7 @@ import (
 
 func TestDBPermissions(t *testing.T) {
 	host, port := startRethinkDBWithPassword(t, "testpass")
-	admin := adminExecAt(t, host, port, "testpass")
+	admin := execAs(t, host, port, "admin", "testpass")
 	ctx := context.Background()
 
 	const (
@@ -22,7 +22,6 @@ func TestDBPermissions(t *testing.T) {
 	)
 
 	for _, db := range []string{allowedDB, restrictedDB} {
-		db := db
 		_, cur, err := admin.Run(ctx, reql.DBCreate(db), nil)
 		closeCursor(cur)
 		if err != nil {
@@ -154,7 +153,7 @@ func TestDBPermissions(t *testing.T) {
 		})
 	})
 
-	t.Run("DBConfigFalseDeniesTabelCreate", func(t *testing.T) {
+	t.Run("DBConfigFalseDeniesTableCreate", func(t *testing.T) {
 		t.Parallel()
 		createUser(t, admin, "dp_noconfig", "pass")
 		// grant read but not config

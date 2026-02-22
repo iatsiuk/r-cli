@@ -53,7 +53,7 @@ func isPermissionError(err error) bool {
 
 func TestGlobalPermissions(t *testing.T) {
 	host, port := startRethinkDBWithPassword(t, "testpass")
-	admin := adminExecAt(t, host, port, "testpass")
+	admin := execAs(t, host, port, "admin", "testpass")
 	ctx := context.Background()
 
 	const (

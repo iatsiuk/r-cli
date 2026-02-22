@@ -13,8 +13,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"r-cli/internal/conn"
-	"r-cli/internal/connmgr"
-	"r-cli/internal/query"
 	"r-cli/internal/reql"
 )
 
@@ -53,15 +51,6 @@ func startRethinkDBWithPassword(t *testing.T, password string) (string, int) {
 func dialAs(ctx context.Context, host string, port int, user, password string) (*conn.Conn, error) {
 	cfg := conn.Config{Host: host, Port: port, User: user, Password: password}
 	return conn.Dial(ctx, fmt.Sprintf("%s:%d", host, port), cfg, nil)
-}
-
-// adminExecAt creates a query.Executor authenticated as admin with the given password.
-func adminExecAt(t *testing.T, host string, port int, password string) *query.Executor {
-	t.Helper()
-	cfg := conn.Config{Host: host, Port: port, User: "admin", Password: password}
-	mgr := connmgr.NewFromConfig(cfg, nil)
-	t.Cleanup(func() { _ = mgr.Close() })
-	return query.New(mgr)
 }
 
 // TestAuthHandshake covers SCRAM-SHA-256 handshake scenarios using a single
@@ -113,7 +102,7 @@ func TestAuthHandshake(t *testing.T) {
 	t.Run("CreateUserAndConnect", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
-		exec := adminExecAt(t, host, port, "testpass")
+		exec := execAs(t, host, port, "admin", "testpass")
 
 		_, cur, err := exec.Run(ctx,
 			reql.DB("rethinkdb").Table("users").Insert(
@@ -143,7 +132,7 @@ func TestAuthHandshake(t *testing.T) {
 	t.Run("ChangePassword", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
-		exec := adminExecAt(t, host, port, "testpass")
+		exec := execAs(t, host, port, "admin", "testpass")
 
 		_, cur, err := exec.Run(ctx,
 			reql.DB("rethinkdb").Table("users").Insert(
@@ -161,10 +150,9 @@ func TestAuthHandshake(t *testing.T) {
 			closeCursor(c2)
 		})
 
-		dialCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
-		defer cancel()
-
-		c1, err := dialAs(dialCtx, host, port, "bob_auth", "bobpass1")
+		dial1Ctx, cancel1 := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel1()
+		c1, err := dialAs(dial1Ctx, host, port, "bob_auth", "bobpass1")
 		if err != nil {
 			t.Fatalf("connect with initial password: %v", err)
 		}
@@ -181,14 +169,18 @@ func TestAuthHandshake(t *testing.T) {
 			t.Fatalf("change password: %v", err)
 		}
 
-		_, errOld := dialAs(dialCtx, host, port, "bob_auth", "bobpass1")
+		dial2Ctx, cancel2 := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel2()
+		_, errOld := dialAs(dial2Ctx, host, port, "bob_auth", "bobpass1")
 		if errOld == nil {
 			t.Error("expected auth error with old password, got nil")
 		} else if !errors.Is(errOld, conn.ErrReqlAuth) {
 			t.Errorf("expected ErrReqlAuth for old password, got %v", errOld)
 		}
 
-		c2, err := dialAs(dialCtx, host, port, "bob_auth", "bobpass2")
+		dial3Ctx, cancel3 := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel3()
+		c2, err := dialAs(dial3Ctx, host, port, "bob_auth", "bobpass2")
 		if err != nil {
 			t.Fatalf("connect with new password: %v", err)
 		}
@@ -198,7 +190,7 @@ func TestAuthHandshake(t *testing.T) {
 	t.Run("SpecialCharPassword", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
-		exec := adminExecAt(t, host, port, "testpass")
+		exec := execAs(t, host, port, "admin", "testpass")
 
 		specialPass := `p@$$w0rd",'unicode`
 		_, cur, err := exec.Run(ctx,
@@ -229,7 +221,7 @@ func TestAuthHandshake(t *testing.T) {
 	t.Run("EmptyPassword", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
-		exec := adminExecAt(t, host, port, "testpass")
+		exec := execAs(t, host, port, "admin", "testpass")
 
 		// password: false means no password required in RethinkDB
 		_, cur, err := exec.Run(ctx,
@@ -252,10 +244,8 @@ func TestAuthHandshake(t *testing.T) {
 		defer cancel()
 		c, err := dialAs(dialCtx, host, port, "emptypass_auth", "")
 		if err != nil {
-			// some servers may reject empty-string SCRAM with a no-password account
-			t.Logf("empty password connection: %v (server may require non-empty)", err)
-		} else {
-			_ = c.Close()
+			t.Fatalf("connect with empty password (password: false): %v", err)
 		}
+		_ = c.Close()
 	})
 }
