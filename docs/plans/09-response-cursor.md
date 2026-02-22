@@ -42,12 +42,12 @@ Depends on: `01-proto-wire`, `03-conn`
 
 ### Task 4: Atom and sequence cursors
 
-- [ ] Test: create from SUCCESS_ATOM response, read single value, then EOF
-- [ ] Test: `All()` returns single-element slice
-- [ ] Implement: atom cursor
-- [ ] Test: create from SUCCESS_SEQUENCE, iterate all items
-- [ ] Test: `All()` collects everything
-- [ ] Implement: sequence cursor
+- [x] Test: create from SUCCESS_ATOM response, read single value, then EOF
+- [x] Test: `All()` returns single-element slice
+- [x] Implement: atom cursor
+- [x] Test: create from SUCCESS_SEQUENCE, iterate all items
+- [x] Test: `All()` collects everything
+- [x] Implement: sequence cursor
 
 ### Task 5: Streaming cursor (partial results)
 
