@@ -61,7 +61,7 @@ Cursor receives data from `conn` via a response channel tied to the query token.
 
 ### Task 6: Changefeed cursor
 
-- [ ] Test: infinite SUCCESS_PARTIAL stream, values arrive incrementally
-- [ ] Test: `Close()` sends STOP and terminates
-- [ ] Test: connection drop -> error on next `Next()`
-- [ ] Implement: changefeed cursor (never auto-completes)
+- [x] Test: infinite SUCCESS_PARTIAL stream, values arrive incrementally
+- [x] Test: `Close()` sends STOP and terminates
+- [x] Test: connection drop -> error on next `Next()`
+- [x] Implement: changefeed cursor (never auto-completes)

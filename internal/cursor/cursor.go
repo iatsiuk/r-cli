@@ -229,3 +229,131 @@ func (c *streamCursor) Close() error {
 	})
 	return c.stopErr
 }
+
+// changefeedCursor handles infinite SUCCESS_PARTIAL streams (changefeeds).
+// It never auto-completes; only Close() or a connection drop terminates it.
+type changefeedCursor struct {
+	ch     <-chan *response.Response
+	send   func(qt proto.QueryType) error
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	mu       sync.Mutex
+	cond     *sync.Cond
+	buf      []json.RawMessage
+	pos      int
+	err      error
+	fetching bool
+
+	closeOnce sync.Once
+	stopErr   error
+}
+
+// NewChangefeed creates a cursor for infinite changefeed streams.
+// It always sends CONTINUE after each batch and never terminates automatically.
+func NewChangefeed(ctx context.Context, initial *response.Response, ch <-chan *response.Response, send func(proto.QueryType) error) Cursor {
+	ctx2, cancel := context.WithCancel(ctx)
+	c := &changefeedCursor{
+		ch:     ch,
+		send:   send,
+		ctx:    ctx2,
+		cancel: cancel,
+		buf:    initial.Results,
+		pos:    0,
+	}
+	c.cond = sync.NewCond(&c.mu)
+	return c
+}
+
+func (c *changefeedCursor) Next() (json.RawMessage, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for {
+		if c.err != nil {
+			return nil, c.err
+		}
+		if c.pos < len(c.buf) {
+			item := c.buf[c.pos]
+			c.pos++
+			return item, nil
+		}
+		if c.fetching {
+			c.cond.Wait()
+			continue
+		}
+		if err := c.fetchNextBatch(); err != nil {
+			return nil, err
+		}
+	}
+}
+
+// fetchNextBatch is called with mu held; releases and reacquires mu around I/O.
+func (c *changefeedCursor) fetchNextBatch() error {
+	c.fetching = true
+	if err := c.send(proto.QueryContinue); err != nil {
+		c.fetching = false
+		c.err = err
+		c.cond.Broadcast()
+		return err
+	}
+
+	c.mu.Unlock()
+	resp, fetchErr := c.waitForChangefeedResponse()
+	c.mu.Lock()
+	c.fetching = false
+
+	if fetchErr != nil {
+		c.err = fetchErr
+		c.cond.Broadcast()
+		return fetchErr
+	}
+
+	c.buf = resp.Results
+	c.pos = 0
+
+	if resp.Type.IsError() {
+		c.err = response.MapError(resp)
+	} else if resp.Type != proto.ResponseSuccessPartial {
+		c.err = fmt.Errorf("cursor: unexpected response type %d", resp.Type)
+	}
+	c.cond.Broadcast()
+	return c.err
+}
+
+func (c *changefeedCursor) waitForChangefeedResponse() (*response.Response, error) {
+	select {
+	case resp, ok := <-c.ch:
+		if !ok {
+			return nil, fmt.Errorf("cursor: connection closed")
+		}
+		return resp, nil
+	case <-c.ctx.Done():
+		c.closeOnce.Do(func() {
+			c.stopErr = c.send(proto.QueryStop)
+		})
+		return nil, c.ctx.Err()
+	}
+}
+
+func (c *changefeedCursor) All() ([]json.RawMessage, error) {
+	var all []json.RawMessage
+	for {
+		item, err := c.Next()
+		if errors.Is(err, io.EOF) {
+			return all, nil
+		}
+		if err != nil {
+			return all, err
+		}
+		all = append(all, item)
+	}
+}
+
+func (c *changefeedCursor) Close() error {
+	c.closeOnce.Do(func() {
+		c.cancel()
+		c.stopErr = c.send(proto.QueryStop)
+	})
+	return c.stopErr
+}

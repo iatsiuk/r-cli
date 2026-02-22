@@ -286,6 +286,130 @@ func TestStreamCursor_ContextCancel_SendsStop(t *testing.T) {
 	}
 }
 
+// --- Task 6: changefeed cursor tests ---
+
+func TestChangefeedCursor_InfiniteStream(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *response.Response, 2)
+
+	ch <- &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: []json.RawMessage{rawMsg(`2`), rawMsg(`3`)},
+	}
+	ch <- &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: []json.RawMessage{rawMsg(`4`)},
+	}
+
+	var continueMu sync.Mutex
+	continueCount := 0
+	send := func(qt proto.QueryType) error {
+		if qt == proto.QueryContinue {
+			continueMu.Lock()
+			continueCount++
+			continueMu.Unlock()
+		}
+		return nil
+	}
+
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: []json.RawMessage{rawMsg(`1`)},
+	}
+	c := NewChangefeed(context.Background(), initial, ch, send)
+
+	for i := 1; i <= 4; i++ {
+		item, err := c.Next()
+		if err != nil {
+			t.Fatalf("item %d: unexpected error: %v", i, err)
+		}
+		want := string(rune('0' + i))
+		if string(item) != want {
+			t.Fatalf("item %d: got %s, want %s", i, item, want)
+		}
+	}
+
+	continueMu.Lock()
+	count := continueCount
+	continueMu.Unlock()
+	if count < 2 {
+		t.Fatalf("expected >= 2 CONTINUE sends, got %d", count)
+	}
+
+	if err := c.Close(); err != nil {
+		t.Fatalf("Close() error: %v", err)
+	}
+}
+
+func TestChangefeedCursor_Close_SendsStop(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *response.Response) // never receives
+
+	var mu sync.Mutex
+	var sent []proto.QueryType
+	send := func(qt proto.QueryType) error {
+		mu.Lock()
+		sent = append(sent, qt)
+		mu.Unlock()
+		return nil
+	}
+
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: []json.RawMessage{rawMsg(`1`)},
+	}
+	c := NewChangefeed(context.Background(), initial, ch, send)
+
+	item, err := c.Next()
+	if err != nil {
+		t.Fatalf("Next() error: %v", err)
+	}
+	if string(item) != `1` {
+		t.Fatalf("got %s, want 1", item)
+	}
+
+	if err := c.Close(); err != nil {
+		t.Fatalf("Close() error: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(sent) != 1 || sent[0] != proto.QueryStop {
+		t.Fatalf("expected [STOP], got %v", sent)
+	}
+}
+
+func TestChangefeedCursor_ConnectionDrop(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *response.Response)
+
+	send := func(qt proto.QueryType) error { return nil }
+
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: nil,
+	}
+	c := NewChangefeed(context.Background(), initial, ch, send)
+
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := c.Next()
+		errCh <- err
+	}()
+
+	// simulate connection drop
+	close(ch)
+
+	select {
+	case err := <-errCh:
+		if err == nil || errors.Is(err, io.EOF) {
+			t.Fatalf("expected connection error, got %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for Next() on connection drop")
+	}
+}
+
 func TestStreamCursor_ConcurrentNext(t *testing.T) {
 	t.Parallel()
 	ch := make(chan *response.Response, 1)
