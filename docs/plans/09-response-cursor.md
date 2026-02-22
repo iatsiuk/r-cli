@@ -14,11 +14,11 @@ Depends on: `01-proto-wire`, `03-conn`
 
 ### Task 1: Response struct and unmarshaling
 
-- [ ] Test: unmarshal `{"t":1,"r":["foo"]}` -> ResponseType=SUCCESS_ATOM, results=["foo"]
-- [ ] Test: unmarshal error response with `e` and `b` fields
-- [ ] Test: unmarshal response with `n` (notes) field
-- [ ] Test: unmarshal response with `p` (profile) field
-- [ ] Implement: `Response` struct with JSON unmarshaling
+- [x] Test: unmarshal `{"t":1,"r":["foo"]}` -> ResponseType=SUCCESS_ATOM, results=["foo"]
+- [x] Test: unmarshal error response with `e` and `b` fields
+- [x] Test: unmarshal response with `n` (notes) field
+- [x] Test: unmarshal response with `p` (profile) field
+- [x] Implement: `Response` struct with JSON unmarshaling
 
 ### Task 2: Pseudo-type conversion
 
