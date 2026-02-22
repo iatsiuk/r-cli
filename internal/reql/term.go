@@ -77,6 +77,7 @@ func replaceImplicit(t Term, inFunc bool) (Term, bool, error) {
 		datum:    t.datum,
 		args:     newArgs,
 		opts:     t.opts,
+		err:      t.err,
 	}, true, nil
 }
 
@@ -595,13 +596,13 @@ func (t Term) Downcase() Term {
 	return Term{termType: proto.TermDowncase, args: []Term{t}}
 }
 
-// ToJsonString creates a TO_JSON_STRING term ([172, [term]]).
-func (t Term) ToJsonString() Term {
+// ToJSONString creates a TO_JSON_STRING term ([172, [term]]).
+func (t Term) ToJSONString() Term {
 	return Term{termType: proto.TermToJSONString, args: []Term{t}}
 }
 
-// Json creates a JSON term ([98, ["json_string"]]).
-func Json(s string) Term {
+// JSON creates a JSON term ([98, ["json_string"]]).
+func JSON(s string) Term {
 	return Term{termType: proto.TermJSON, args: []Term{Datum(s)}}
 }
 
@@ -818,6 +819,9 @@ func (t Term) SetDifference(other Term) Term {
 // Branch creates a BRANCH term ([65, [cond, true_val, false_val, ...]]).
 // Accepts 3+ arguments: cond1, val1, ..., else_val (supports multi-condition form).
 func Branch(args ...interface{}) Term {
+	if len(args) < 3 {
+		return errTerm(errors.New("reql: Branch requires at least 3 arguments"))
+	}
 	termArgs := make([]Term, len(args))
 	for i, a := range args {
 		termArgs[i] = toTerm(a)
@@ -952,13 +956,13 @@ func MaxVal() Term {
 	return Term{termType: proto.TermMaxVal}
 }
 
-// GeoJson creates a GEOJSON term ([157, [obj]]).
-func GeoJson(obj interface{}) Term {
+// GeoJSON creates a GEOJSON term ([157, [obj]]).
+func GeoJSON(obj interface{}) Term {
 	return Term{termType: proto.TermGeoJSON, args: []Term{toTerm(obj)}}
 }
 
-// ToGeoJson creates a TO_GEOJSON term ([158, [geo_term]]).
-func (t Term) ToGeoJson() Term {
+// ToGeoJSON creates a TO_GEOJSON term ([158, [geo_term]]).
+func (t Term) ToGeoJSON() Term {
 	return Term{termType: proto.TermToGeoJSON, args: []Term{t}}
 }
 
@@ -968,13 +972,25 @@ func Point(lon, lat float64) Term {
 }
 
 // Line creates a LINE term ([160, [point1, point2, ...]]).
+// Requires at least 2 points.
 func Line(points ...Term) Term {
-	return Term{termType: proto.TermLine, args: points}
+	if len(points) < 2 {
+		return errTerm(errors.New("reql: Line requires at least 2 points"))
+	}
+	args := make([]Term, len(points))
+	copy(args, points)
+	return Term{termType: proto.TermLine, args: args}
 }
 
 // Polygon creates a POLYGON term ([161, [point1, point2, ...]]).
+// Requires at least 3 points.
 func Polygon(points ...Term) Term {
-	return Term{termType: proto.TermPolygon, args: points}
+	if len(points) < 3 {
+		return errTerm(errors.New("reql: Polygon requires at least 3 points"))
+	}
+	args := make([]Term, len(points))
+	copy(args, points)
+	return Term{termType: proto.TermPolygon, args: args}
 }
 
 // Circle creates a CIRCLE term ([165, [center, radius]], opts?).

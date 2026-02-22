@@ -647,12 +647,12 @@ func TestStringOperations(t *testing.T) {
 		},
 		{
 			"to_json_string",
-			str.ToJsonString(),
+			str.ToJSONString(),
 			`[172,["hello world"]]`,
 		},
 		{
 			"json",
-			Json(`{"a":1}`),
+			JSON(`{"a":1}`),
 			`[98,["{\"a\":1}"]]`,
 		},
 	}
@@ -974,12 +974,12 @@ func TestGeospatialOperations(t *testing.T) {
 	}{
 		{
 			"geojson",
-			GeoJson(geojsonObj),
+			GeoJSON(geojsonObj),
 			`[157,[{"coordinates":[-122.4,37.7],"type":"Point"}]]`,
 		},
 		{
 			"to_geojson",
-			p1.ToGeoJson(),
+			p1.ToGeoJSON(),
 			`[158,[[159,[-122.4,37.7]]]]`,
 		},
 		{
@@ -1090,4 +1090,30 @@ func TestAdminOperations(t *testing.T) {
 			`[182,[[15,[[14,["test"]],"users"]],[180,[]],[181,[]]]]`,
 		},
 	})
+}
+
+func TestValidationErrors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		term Term
+	}{
+		{"branch_no_args", Branch()},
+		{"branch_one_arg", Branch(Datum(true))},
+		{"branch_two_args", Branch(Datum(true), Datum("yes"))},
+		{"line_zero_points", Line()},
+		{"line_one_point", Line(Point(0, 0))},
+		{"polygon_zero_points", Polygon()},
+		{"polygon_one_point", Polygon(Point(0, 0))},
+		{"polygon_two_points", Polygon(Point(0, 0), Point(1, 1))},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := json.Marshal(tc.term)
+			if err == nil {
+				t.Errorf("expected error, got nil")
+			}
+		})
+	}
 }
