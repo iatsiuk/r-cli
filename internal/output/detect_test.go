@@ -54,7 +54,15 @@ func TestNoColor(t *testing.T) {
 }
 
 func TestNoColorUnset(t *testing.T) {
-	os.Unsetenv("NO_COLOR") //nolint:errcheck
+	prev, exists := os.LookupEnv("NO_COLOR")
+	if err := os.Unsetenv("NO_COLOR"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if exists {
+			os.Setenv("NO_COLOR", prev) //nolint:errcheck
+		}
+	})
 	if NoColor() {
 		t.Error("expected NoColor() false when NO_COLOR env var is not set")
 	}

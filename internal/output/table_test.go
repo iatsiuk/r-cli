@@ -127,13 +127,7 @@ func TestTable_NonObjectFallback(t *testing.T) {
 func TestTable_MaxRowsTruncation(t *testing.T) {
 	t.Parallel()
 	const testMax = 3
-	// build testMax+1 rows
-	items := make([]string, testMax+1)
-	for i := range items {
-		items[i] = `{"n":` + strings.Repeat("1", i+1) + `}`
-	}
-	// use actual valid numbers
-	items = []string{
+	items := []string{
 		`{"n":1}`, `{"n":2}`, `{"n":3}`, `{"n":4}`,
 	}
 	iter := newIter(items...)

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -130,7 +131,7 @@ func objectKeysInOrder(data json.RawMessage) ([]string, error) {
 func computeWidths(cols []string, rows []json.RawMessage) []int {
 	widths := make([]int, len(cols))
 	for i, col := range cols {
-		widths[i] = len(col)
+		widths[i] = utf8.RuneCountInString(col)
 	}
 	for _, row := range rows {
 		var obj map[string]json.RawMessage
@@ -139,8 +140,8 @@ func computeWidths(cols []string, rows []json.RawMessage) []int {
 		}
 		for i, col := range cols {
 			v := cellValue(obj[col])
-			if len(v) > widths[i] {
-				widths[i] = len(v)
+			if n := utf8.RuneCountInString(v); n > widths[i] {
+				widths[i] = n
 			}
 		}
 	}
@@ -188,8 +189,8 @@ func printTableRow(w io.Writer, cols []string, widths []int, row json.RawMessage
 	parts := make([]string, len(cols))
 	for i, col := range cols {
 		v := cellValue(obj[col])
-		if len(v) > widths[i] {
-			v = v[:widths[i]-1] + "~"
+		if runes := []rune(v); widths[i] > 0 && len(runes) > widths[i] {
+			v = string(runes[:widths[i]-1]) + "~"
 		}
 		parts[i] = padRight(v, widths[i])
 	}
@@ -198,10 +199,11 @@ func printTableRow(w io.Writer, cols []string, widths []int, row json.RawMessage
 }
 
 func padRight(s string, width int) string {
-	if len(s) >= width {
+	n := utf8.RuneCountInString(s)
+	if n >= width {
 		return s
 	}
-	return s + strings.Repeat(" ", width-len(s))
+	return s + strings.Repeat(" ", width-n)
 }
 
 func rawSlice(w io.Writer, rows []json.RawMessage) error {

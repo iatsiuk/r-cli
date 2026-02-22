@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -66,5 +67,15 @@ func TestJSONL_StreamingOutput(t *testing.T) {
 		if err := json.Unmarshal([]byte(line), &v); err != nil {
 			t.Errorf("line %d invalid JSON: %v", i, err)
 		}
+	}
+}
+
+func TestJSONL_IteratorError(t *testing.T) {
+	t.Parallel()
+	errStream := errors.New("stream error")
+	iter := &mockIter{items: []json.RawMessage{json.RawMessage(`{"a":1}`)}, err: errStream}
+	var buf bytes.Buffer
+	if err := JSONL(&buf, iter); !errors.Is(err, errStream) {
+		t.Errorf("expected stream error, got %v", err)
 	}
 }

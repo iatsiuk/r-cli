@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -99,5 +100,27 @@ func TestJSON_EmptyResult(t *testing.T) {
 	got := strings.TrimSpace(buf.String())
 	if got != "[]" {
 		t.Errorf("expected [], got: %q", got)
+	}
+}
+
+func TestJSON_IteratorError(t *testing.T) {
+	t.Parallel()
+	errStream := errors.New("stream error")
+	iter := &mockIter{items: []json.RawMessage{json.RawMessage(`{"a":1}`)}, err: errStream}
+	var buf bytes.Buffer
+	if err := JSON(&buf, iter); !errors.Is(err, errStream) {
+		t.Errorf("expected stream error, got %v", err)
+	}
+}
+
+func TestJSON_InvalidJSONFallback(t *testing.T) {
+	t.Parallel()
+	iter := &mockIter{items: []json.RawMessage{json.RawMessage("not-valid-json")}}
+	var buf bytes.Buffer
+	if err := JSON(&buf, iter); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(buf.String()); got != "not-valid-json" {
+		t.Errorf("expected raw fallback for invalid JSON, got: %q", got)
 	}
 }

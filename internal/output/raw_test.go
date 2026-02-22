@@ -2,6 +2,8 @@ package output
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -45,5 +47,15 @@ func TestRaw_NonStringValue(t *testing.T) {
 	got := strings.TrimSpace(buf.String())
 	if got != `{"key":"val"}` {
 		t.Errorf("expected raw JSON, got: %q", got)
+	}
+}
+
+func TestRaw_IteratorError(t *testing.T) {
+	t.Parallel()
+	errStream := errors.New("stream error")
+	iter := &mockIter{items: []json.RawMessage{json.RawMessage(`"hello"`)}, err: errStream}
+	var buf bytes.Buffer
+	if err := Raw(&buf, iter); !errors.Is(err, errStream) {
+		t.Errorf("expected stream error, got %v", err)
 	}
 }
