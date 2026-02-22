@@ -17,12 +17,12 @@ Depends on: all internal packages (01-11)
 
 Set up TestMain with shared container, `setupTestDB`, `createTestTable` helpers.
 
-- [ ] Test: connect with default credentials (admin, no password) -> handshake succeeds
-- [ ] Test: verify server version is returned in handshake response
-- [ ] Test: connect to non-existent host -> dial error with timeout
-- [ ] Test: open connection, close it, verify TCP socket released
-- [ ] Test: concurrent Dial from multiple goroutines -> all succeed
-- [ ] Implement: TestMain, setupTestDB, createTestTable helpers
+- [x] Test: connect with default credentials (admin, no password) -> handshake succeeds
+- [x] Test: verify server version is returned in handshake response
+- [x] Test: connect to non-existent host -> dial error with timeout
+- [x] Test: open connection, close it, verify TCP socket released
+- [x] Test: concurrent Dial from multiple goroutines -> all succeed
+- [x] Implement: TestMain, setupTestDB, createTestTable helpers
 
 ### Task 2: Server info and database operations
 

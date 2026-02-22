@@ -246,7 +246,7 @@ func decodeIter(fields map[string]string) (int, error) {
 		return 0, fmt.Errorf("scram: missing iteration count field")
 	}
 	iter, err := strconv.Atoi(iterStr)
-	if err != nil || iter < 4096 {
+	if err != nil || iter <= 0 {
 		return 0, fmt.Errorf("scram: invalid iteration count %q", iterStr)
 	}
 	return iter, nil
