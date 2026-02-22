@@ -105,11 +105,13 @@ func runInsert(ctx context.Context, cfg *rootConfig, ic *insertConfig, dbName, t
 	opts := reql.OptArgs{"conflict": ic.conflict}
 	tbl := reql.DB(dbName).Table(tableName)
 
-	exec, cleanup := newExecutor(cfg)
+	exec, cleanup, err := newExecutor(cfg)
+	if err != nil {
+		return err
+	}
 	defer cleanup()
 
 	var total insertResult
-	var err error
 	if format == "json" {
 		err = insertJSON(ctx, exec, cfg, tbl, opts, ic.batchSize, r, &total)
 	} else {

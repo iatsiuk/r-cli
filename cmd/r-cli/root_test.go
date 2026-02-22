@@ -2,8 +2,15 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"os/signal"
 	"strings"
@@ -498,5 +505,189 @@ func TestVersionFlag(t *testing.T) {
 	out := buf.String()
 	if !strings.Contains(out, "r-cli") {
 		t.Errorf("version output does not contain 'r-cli': %q", out)
+	}
+}
+
+// generateTestCert creates a self-signed ECDSA certificate and returns
+// (certPEM, keyPEM) as byte slices.
+func generateTestCert(t *testing.T) (certPEM, keyPEM []byte) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "test"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("create cert: %v", err)
+	}
+	certPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		t.Fatalf("marshal key: %v", err)
+	}
+	keyPEM = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	return certPEM, keyPEM
+}
+
+func TestTLSCertFlagDefault(t *testing.T) {
+	t.Parallel()
+	cmd := newRootCmd()
+	v, err := cmd.PersistentFlags().GetString("tls-cert")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "" {
+		t.Errorf("tls-cert: got %q, want empty", v)
+	}
+}
+
+// TestTLSCertFlagSetsCACert verifies that --tls-cert sets the CA certificate path
+// and buildTLSConfig loads it into RootCAs.
+func TestTLSCertFlagSetsCACert(t *testing.T) {
+	t.Parallel()
+	certPEM, _ := generateTestCert(t)
+	dir := t.TempDir()
+	certPath := dir + "/ca.pem"
+	if err := os.WriteFile(certPath, certPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &rootConfig{tlsCACert: certPath}
+	tlsCfg, err := cfg.buildTLSConfig()
+	if err != nil {
+		t.Fatalf("buildTLSConfig: %v", err)
+	}
+	if tlsCfg == nil {
+		t.Fatal("buildTLSConfig: got nil, want *tls.Config")
+	}
+	if tlsCfg.RootCAs == nil {
+		t.Error("RootCAs: got nil, want non-nil pool")
+	}
+}
+
+// TestTLSClientCertAndKeyFlags verifies that --tls-client-cert + --tls-key
+// configure client certificate authentication in the TLS config.
+func TestTLSClientCertAndKeyFlags(t *testing.T) {
+	t.Parallel()
+	certPEM, keyPEM := generateTestCert(t)
+	dir := t.TempDir()
+	certPath := dir + "/client.pem"
+	keyPath := dir + "/client-key.pem"
+	if err := os.WriteFile(certPath, certPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, keyPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &rootConfig{tlsClientCert: certPath, tlsKey: keyPath}
+	tlsCfg, err := cfg.buildTLSConfig()
+	if err != nil {
+		t.Fatalf("buildTLSConfig: %v", err)
+	}
+	if tlsCfg == nil {
+		t.Fatal("buildTLSConfig: got nil, want *tls.Config")
+	}
+	if len(tlsCfg.Certificates) != 1 {
+		t.Errorf("Certificates: got %d, want 1", len(tlsCfg.Certificates))
+	}
+}
+
+// TestInsecureSkipVerifyFlag verifies that --insecure-skip-verify sets
+// InsecureSkipVerify=true in the resulting TLS config.
+func TestInsecureSkipVerifyFlag(t *testing.T) {
+	t.Parallel()
+	cmd := newRootCmd()
+	if err := cmd.ParseFlags([]string{"--insecure-skip-verify"}); err != nil {
+		t.Fatal(err)
+	}
+	v, err := cmd.PersistentFlags().GetBool("insecure-skip-verify")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !v {
+		t.Error("insecure-skip-verify: expected true after flag set")
+	}
+
+	cfg := &rootConfig{insecureSkipVerify: true}
+	tlsCfg, err := cfg.buildTLSConfig()
+	if err != nil {
+		t.Fatalf("buildTLSConfig: %v", err)
+	}
+	if tlsCfg == nil {
+		t.Fatal("buildTLSConfig: got nil, want *tls.Config")
+	}
+	if !tlsCfg.InsecureSkipVerify { //nolint:gosec
+		t.Error("InsecureSkipVerify: expected true")
+	}
+}
+
+func TestBuildTLSConfigNilWhenNoFlags(t *testing.T) {
+	t.Parallel()
+	cfg := &rootConfig{}
+	tlsCfg, err := cfg.buildTLSConfig()
+	if err != nil {
+		t.Fatalf("buildTLSConfig: unexpected error: %v", err)
+	}
+	if tlsCfg != nil {
+		t.Errorf("buildTLSConfig: got non-nil config when no TLS flags set")
+	}
+}
+
+func TestBuildTLSConfigClientCertMissingKey(t *testing.T) {
+	t.Parallel()
+	cfg := &rootConfig{tlsClientCert: "/some/cert.pem"}
+	_, err := cfg.buildTLSConfig()
+	if err == nil {
+		t.Error("expected error when --tls-client-cert set without --tls-key")
+	}
+	if !strings.Contains(err.Error(), "--tls-client-cert and --tls-key must be used together") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestBuildTLSConfigKeyMissingClientCert(t *testing.T) {
+	t.Parallel()
+	cfg := &rootConfig{tlsKey: "/some/key.pem"}
+	_, err := cfg.buildTLSConfig()
+	if err == nil {
+		t.Error("expected error when --tls-key set without --tls-client-cert")
+	}
+	if !strings.Contains(err.Error(), "--tls-client-cert and --tls-key must be used together") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestBuildTLSConfigCACertNotFound(t *testing.T) {
+	t.Parallel()
+	cfg := &rootConfig{tlsCACert: "/nonexistent/ca.pem"}
+	_, err := cfg.buildTLSConfig()
+	if err == nil {
+		t.Error("expected error for missing CA cert file")
+	}
+}
+
+func TestBuildTLSConfigCACertInvalidPEM(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	certPath := dir + "/invalid.pem"
+	if err := os.WriteFile(certPath, []byte("not a valid PEM certificate"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &rootConfig{tlsCACert: certPath}
+	_, err := cfg.buildTLSConfig()
+	if err == nil {
+		t.Error("expected error for invalid PEM content")
+	}
+	if !strings.Contains(err.Error(), "no valid PEM certificate found") {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }

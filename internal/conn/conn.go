@@ -81,6 +81,19 @@ func Dial(ctx context.Context, addr string, cfg Config, tlsCfg *tls.Config) (*Co
 	return newConn(nc), nil
 }
 
+// DialTLS establishes a TLS TCP connection to addr using tlsCfg without performing
+// the RethinkDB handshake. If tlsCfg is nil, a default tls.Config is used.
+func DialTLS(ctx context.Context, addr string, tlsCfg *tls.Config) (net.Conn, error) {
+	if tlsCfg == nil {
+		tlsCfg = &tls.Config{} //nolint:gosec
+	}
+	nc, err := dialNet(ctx, addr, tlsCfg)
+	if err != nil {
+		return nil, fmt.Errorf("dial tls %s: %w", addr, err)
+	}
+	return nc, nil
+}
+
 // dialNet establishes a TCP or TLS connection.
 func dialNet(ctx context.Context, addr string, tlsCfg *tls.Config) (net.Conn, error) {
 	d := &net.Dialer{}
@@ -171,14 +184,9 @@ func (c *Conn) sendStop(token uint64) {
 	c.writeMu.Unlock()
 }
 
-// nextToken returns the next unique query token, incrementing atomically.
-func (c *Conn) nextToken() uint64 {
-	return c.token.Add(1)
-}
-
-// NextToken returns the next unique query token for external callers.
+// NextToken returns the next unique query token, incrementing atomically.
 func (c *Conn) NextToken() uint64 {
-	return c.nextToken()
+	return c.token.Add(1)
 }
 
 // WriteFrame writes a wire frame to the connection without registering a

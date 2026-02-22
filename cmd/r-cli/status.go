@@ -42,7 +42,10 @@ func runStatus(ctx context.Context, cfg *rootConfig, w io.Writer) error {
 		_, _ = fmt.Fprintf(os.Stderr, "connecting to %s:%d\n", cfg.host, cfg.port)
 	}
 
-	exec, cleanup := newExecutor(cfg)
+	exec, cleanup, err := newExecutor(cfg)
+	if err != nil {
+		return err
+	}
 	defer cleanup()
 
 	start := time.Now()
