@@ -128,16 +128,16 @@ func TestParseServerFirst(t *testing.T) {
 
 func TestParseServerFirstLowIterations(t *testing.T) {
 	t.Parallel()
-	// rethinkdb 2.4.4 uses an iteration count below the rfc 7677 recommended minimum;
-	// verify we accept any positive integer including values below 4096.
+	// rethinkdb 2.4.4 sends i=1 (one PBKDF2 iteration), well below rfc 7677's
+	// recommended minimum of 4096; we accept any positive integer to stay compatible.
 	clientNonce := "fyko+d2lbbFgONRv9qkxdawL"
-	msg := "r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j,s=QSXCR+Q6sek8bf92,i=1000"
+	msg := "r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j,s=QSXCR+Q6sek8bf92,i=1"
 	sf, err := ParseServerFirst(msg, clientNonce)
 	if err != nil {
-		t.Fatalf("unexpected error for i=1000: %v", err)
+		t.Fatalf("unexpected error for i=1: %v", err)
 	}
-	if sf.Iterations != 1000 {
-		t.Errorf("iterations=%d, want 1000", sf.Iterations)
+	if sf.Iterations != 1 {
+		t.Errorf("iterations=%d, want 1", sf.Iterations)
 	}
 }
 
