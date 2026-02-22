@@ -139,6 +139,25 @@ func TestMapError_BacktraceInMessage(t *testing.T) {
 	}
 }
 
+func TestMapError_EmptyResults(t *testing.T) {
+	t.Parallel()
+	resp := &Response{
+		Type:    proto.ResponseClientError,
+		Results: nil,
+	}
+	err := MapError(resp)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	var e *ReqlClientError
+	if !errors.As(err, &e) {
+		t.Fatalf("expected *ReqlClientError, got %T", err)
+	}
+	if e.Msg != "" {
+		t.Errorf("expected empty message for nil results, got %q", e.Msg)
+	}
+}
+
 func TestMapError_NonError(t *testing.T) {
 	t.Parallel()
 	resp := &Response{

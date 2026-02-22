@@ -43,9 +43,10 @@ func (c *atomCursor) Next() (json.RawMessage, error) {
 }
 
 func (c *atomCursor) All() ([]json.RawMessage, error) {
-	if !c.hasItem {
+	if c.done || !c.hasItem {
 		return nil, nil
 	}
+	c.done = true
 	return []json.RawMessage{c.item}, nil
 }
 
@@ -149,17 +150,18 @@ func (c *streamCursor) Next() (json.RawMessage, error) {
 // fetchBatch is called with mu held; it releases and reacquires mu around I/O.
 func (c *streamCursor) fetchBatch() error {
 	c.fetching = true
-	if c.partial {
-		if err := c.send(proto.QueryContinue); err != nil {
-			c.fetching = false
-			c.err = err
-			c.cond.Broadcast()
-			return err
-		}
+	needContinue := c.partial
+	c.mu.Unlock()
+
+	var fetchErr error
+	if needContinue {
+		fetchErr = c.send(proto.QueryContinue)
+	}
+	var resp *response.Response
+	if fetchErr == nil {
+		resp, fetchErr = c.waitForResponse()
 	}
 
-	c.mu.Unlock()
-	resp, fetchErr := c.waitForResponse()
 	c.mu.Lock()
 	c.fetching = false
 
@@ -291,15 +293,14 @@ func (c *changefeedCursor) Next() (json.RawMessage, error) {
 // fetchNextBatch is called with mu held; releases and reacquires mu around I/O.
 func (c *changefeedCursor) fetchNextBatch() error {
 	c.fetching = true
-	if err := c.send(proto.QueryContinue); err != nil {
-		c.fetching = false
-		c.err = err
-		c.cond.Broadcast()
-		return err
+	c.mu.Unlock()
+
+	fetchErr := c.send(proto.QueryContinue)
+	var resp *response.Response
+	if fetchErr == nil {
+		resp, fetchErr = c.waitForChangefeedResponse()
 	}
 
-	c.mu.Unlock()
-	resp, fetchErr := c.waitForChangefeedResponse()
 	c.mu.Lock()
 	c.fetching = false
 
@@ -337,17 +338,7 @@ func (c *changefeedCursor) waitForChangefeedResponse() (*response.Response, erro
 }
 
 func (c *changefeedCursor) All() ([]json.RawMessage, error) {
-	var all []json.RawMessage
-	for {
-		item, err := c.Next()
-		if errors.Is(err, io.EOF) {
-			return all, nil
-		}
-		if err != nil {
-			return all, err
-		}
-		all = append(all, item)
-	}
+	return nil, fmt.Errorf("cursor: All() not supported for changefeed; use Next()")
 }
 
 func (c *changefeedCursor) Close() error {

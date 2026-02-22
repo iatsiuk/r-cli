@@ -168,6 +168,56 @@ func TestConvertPseudoTypes_PassThrough(t *testing.T) {
 	}
 }
 
+func TestConvertPseudoTypes_TimeNoEpoch(t *testing.T) {
+	t.Parallel()
+	v := map[string]interface{}{
+		"$reql_type$": "TIME",
+		"timezone":    "+00:00",
+		// no epoch_time field
+	}
+	result := ConvertPseudoTypes(v)
+	// missing epoch_time -> pass-through as original map
+	m, ok := result.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected map passthrough, got %T", result)
+	}
+	if m["$reql_type$"] != "TIME" {
+		t.Errorf("expected original map preserved, got %v", m)
+	}
+}
+
+func TestConvertPseudoTypes_BinaryInvalidBase64(t *testing.T) {
+	t.Parallel()
+	v := map[string]interface{}{
+		"$reql_type$": "BINARY",
+		"data":        "!!!not valid base64!!!",
+	}
+	result := ConvertPseudoTypes(v)
+	// invalid base64 -> pass-through as original map
+	m, ok := result.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected map passthrough, got %T", result)
+	}
+	if m["$reql_type$"] != "BINARY" {
+		t.Errorf("expected original map preserved, got %v", m)
+	}
+}
+
+func TestParseTimezone_Invalid(t *testing.T) {
+	t.Parallel()
+	cases := []string{
+		"invalid", // non-numeric, wrong length
+		"05:30",   // missing sign prefix
+		"+5:30",   // wrong length (5 chars instead of 6)
+	}
+	for _, tz := range cases {
+		_, err := parseTimezone(tz)
+		if err == nil {
+			t.Errorf("expected error for timezone %q, got nil", tz)
+		}
+	}
+}
+
 func TestConvertPseudoTypes_SliceNested(t *testing.T) {
 	t.Parallel()
 	v := []interface{}{

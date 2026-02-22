@@ -275,14 +275,14 @@ func TestStreamCursor_ContextCancel_SendsStop(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	hasStop := false
+	stopCount := 0
 	for _, qt := range sent {
 		if qt == proto.QueryStop {
-			hasStop = true
+			stopCount++
 		}
 	}
-	if !hasStop {
-		t.Fatalf("expected STOP to be sent, got %v", sent)
+	if stopCount != 1 {
+		t.Fatalf("expected exactly 1 STOP, got %d in %v", stopCount, sent)
 	}
 }
 
@@ -332,8 +332,8 @@ func TestChangefeedCursor_InfiniteStream(t *testing.T) {
 	continueMu.Lock()
 	count := continueCount
 	continueMu.Unlock()
-	if count < 2 {
-		t.Fatalf("expected >= 2 CONTINUE sends, got %d", count)
+	if count != 2 {
+		t.Fatalf("expected exactly 2 CONTINUE sends, got %d", count)
 	}
 
 	if err := c.Close(); err != nil {
@@ -410,6 +410,99 @@ func TestChangefeedCursor_ConnectionDrop(t *testing.T) {
 	}
 }
 
+func TestAtomCursor_All_AfterNext(t *testing.T) {
+	t.Parallel()
+	resp := &response.Response{
+		Type:    proto.ResponseSuccessAtom,
+		Results: []json.RawMessage{rawMsg(`99`)},
+	}
+	c := NewAtom(resp)
+
+	// consume with Next
+	_, err := c.Next()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// All() must return nothing after Next consumed the item
+	all, err := c.All()
+	if err != nil {
+		t.Fatalf("unexpected error from All(): %v", err)
+	}
+	if len(all) != 0 {
+		t.Fatalf("expected empty All() after Next consumed item, got %v", all)
+	}
+}
+
+func TestChangefeedCursor_All_ReturnsError(t *testing.T) {
+	t.Parallel()
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: nil,
+	}
+	c := NewChangefeed(context.Background(), initial, make(chan *response.Response), func(proto.QueryType) error { return nil })
+	_, err := c.All()
+	if err == nil {
+		t.Fatal("expected error from changefeed All(), got nil")
+	}
+}
+
+func TestStreamCursor_ServerError(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *response.Response, 1)
+	send := func(qt proto.QueryType) error {
+		if qt == proto.QueryContinue {
+			ch <- &response.Response{
+				Type:    proto.ResponseRuntimeError,
+				Results: []json.RawMessage{rawMsg(`"query failed"`)},
+			}
+		}
+		return nil
+	}
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: []json.RawMessage{rawMsg(`1`)},
+	}
+	c := NewStream(context.Background(), initial, ch, send)
+
+	_, err := c.Next() // consume initial item
+	if err != nil {
+		t.Fatalf("unexpected error on first item: %v", err)
+	}
+	_, err = c.Next() // triggers fetchBatch -> server returns error
+	if err == nil {
+		t.Fatal("expected error from server, got nil")
+	}
+	var re *response.ReqlRuntimeError
+	if !errors.As(err, &re) {
+		t.Fatalf("expected *ReqlRuntimeError, got %T: %v", err, err)
+	}
+}
+
+func TestStreamCursor_UnexpectedResponseType(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *response.Response, 1)
+	send := func(qt proto.QueryType) error {
+		if qt == proto.QueryContinue {
+			ch <- &response.Response{Type: proto.ResponseWaitComplete}
+		}
+		return nil
+	}
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: []json.RawMessage{rawMsg(`1`)},
+	}
+	c := NewStream(context.Background(), initial, ch, send)
+
+	_, err := c.Next() // consume initial item
+	if err != nil {
+		t.Fatalf("unexpected error on first item: %v", err)
+	}
+	_, err = c.Next() // triggers fetchBatch -> unexpected response type
+	if err == nil {
+		t.Fatal("expected error for unexpected response type, got nil")
+	}
+}
+
 func TestStreamCursor_ConcurrentNext(t *testing.T) {
 	t.Parallel()
 	ch := make(chan *response.Response, 1)
@@ -454,5 +547,13 @@ func TestStreamCursor_ConcurrentNext(t *testing.T) {
 	wg.Wait()
 	if len(results) != 5 {
 		t.Fatalf("expected 5 results, got %d: %v", len(results), results)
+	}
+	// verify each goroutine got a distinct value
+	seen := make(map[string]bool, 5)
+	for _, r := range results {
+		if seen[r] {
+			t.Fatalf("duplicate result %q in concurrent Next()", r)
+		}
+		seen[r] = true
 	}
 }
