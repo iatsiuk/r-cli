@@ -1,9 +1,55 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"strings"
 	"testing"
 )
+
+// stubIter is a minimal RowIterator for testing writeOutput.
+type stubIter struct {
+	rows []json.RawMessage
+	i    int
+}
+
+func (s *stubIter) Next() (json.RawMessage, error) {
+	if s.i >= len(s.rows) {
+		return nil, io.EOF
+	}
+	row := s.rows[s.i]
+	s.i++
+	return row, nil
+}
+
+func TestWriteOutput(t *testing.T) {
+	t.Parallel()
+	row := json.RawMessage(`{"key":"val"}`)
+	tests := []struct {
+		format string
+		check  func(string) bool
+	}{
+		{"json", func(s string) bool { return strings.Contains(s, `"key"`) }},
+		{"jsonl", func(s string) bool { return strings.TrimSpace(s) == `{"key":"val"}` }},
+		{"raw", func(s string) bool { return strings.Contains(s, "val") }},
+		{"unknown", func(s string) bool { return strings.Contains(s, `"key"`) }}, // falls to default JSON
+		{"", func(s string) bool { return strings.Contains(s, `"key"`) }},        // falls to default JSON
+	}
+	for _, tc := range tests {
+		t.Run(tc.format, func(t *testing.T) {
+			t.Parallel()
+			var buf bytes.Buffer
+			iter := &stubIter{rows: []json.RawMessage{row}}
+			if err := writeOutput(&buf, tc.format, iter); err != nil {
+				t.Fatalf("writeOutput(%q): %v", tc.format, err)
+			}
+			if !tc.check(buf.String()) {
+				t.Errorf("writeOutput(%q): unexpected output: %q", tc.format, buf.String())
+			}
+		})
+	}
+}
 
 func TestReadTermFromArg(t *testing.T) {
 	t.Parallel()

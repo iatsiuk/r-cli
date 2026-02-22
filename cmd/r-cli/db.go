@@ -76,5 +76,8 @@ func confirmDrop(kind, name string, r io.Reader) error {
 			return nil
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("reading input: %w", err)
+	}
 	return fmt.Errorf("aborted")
 }

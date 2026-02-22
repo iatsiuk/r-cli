@@ -2,16 +2,11 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"os"
 
 	"github.com/spf13/cobra"
-
-	"r-cli/internal/conn"
-	"r-cli/internal/connmgr"
-	"r-cli/internal/query"
 )
 
 func newStatusCmd(cfg *rootConfig) *cobra.Command {
@@ -35,15 +30,15 @@ type statusInfo struct {
 }
 
 func runStatus(ctx context.Context, cfg *rootConfig, w io.Writer) error {
-	mgr := connmgr.NewFromConfig(conn.Config{
-		Host:     cfg.host,
-		Port:     cfg.port,
-		User:     cfg.user,
-		Password: cfg.password,
-	}, (*tls.Config)(nil))
-	defer func() { _ = mgr.Close() }()
+	if cfg.timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, cfg.timeout)
+		defer cancel()
+	}
 
-	exec := query.New(mgr)
+	exec, cleanup := newExecutor(cfg)
+	defer cleanup()
+
 	info, err := exec.ServerInfo(ctx)
 	if err != nil {
 		return err

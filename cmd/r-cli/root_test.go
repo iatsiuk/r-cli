@@ -93,8 +93,8 @@ func TestRootFormatDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if format != "json" {
-		t.Errorf("got %q, want %q", format, "json")
+	if format != "" {
+		t.Errorf("got %q, want empty (auto-detect)", format)
 	}
 }
 

@@ -77,6 +77,9 @@ func TestDBDropExactArgs(t *testing.T) {
 	if err := cmd.Args(cmd, []string{"mydb"}); err != nil {
 		t.Errorf("db drop: expected no error for one arg, got %v", err)
 	}
+	if err := cmd.Args(cmd, []string{"mydb", "extra"}); err == nil {
+		t.Error("db drop: expected error for two args, got nil")
+	}
 }
 
 func TestDBDropYesFlag(t *testing.T) {

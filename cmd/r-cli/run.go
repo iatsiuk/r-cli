@@ -28,7 +28,7 @@ func newRunCmd(cfg *rootConfig) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return runQuery(cmd.Context(), cfg, termBytes, os.Stdout)
+			return execTerm(cmd.Context(), cfg, reql.Datum(json.RawMessage(termBytes)), os.Stdout)
 		},
 	}
 }
@@ -54,21 +54,29 @@ func readTerm(args []string, stdin io.Reader) ([]byte, error) {
 	return data, nil
 }
 
-func runQuery(ctx context.Context, cfg *rootConfig, termJSON []byte, w io.Writer) error {
-	return execTerm(ctx, cfg, reql.Datum(json.RawMessage(termJSON)), w)
-}
-
-// execTerm builds a connection, runs the given ReQL term, and writes output.
-func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer) error {
+// newExecutor creates a connection manager and query executor from the given config.
+// The returned cleanup func must be called to close the manager.
+func newExecutor(cfg *rootConfig) (exec *query.Executor, cleanup func()) {
 	mgr := connmgr.NewFromConfig(conn.Config{
 		Host:     cfg.host,
 		Port:     cfg.port,
 		User:     cfg.user,
 		Password: cfg.password,
 	}, (*tls.Config)(nil))
-	defer func() { _ = mgr.Close() }()
+	return query.New(mgr), func() { _ = mgr.Close() }
+}
 
-	exec := query.New(mgr)
+// execTerm builds a connection, runs the given ReQL term, and writes output.
+func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer) error {
+	if cfg.timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, cfg.timeout)
+		defer cancel()
+	}
+
+	exec, cleanup := newExecutor(cfg)
+	defer cleanup()
+
 	opts := reql.OptArgs{}
 	if cfg.database != "" {
 		opts["db"] = cfg.database
@@ -83,7 +91,7 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 	}
 	defer func() { _ = cur.Close() }()
 
-	return writeOutput(w, cfg.format, cur)
+	return writeOutput(w, output.DetectFormat(os.Stdout, cfg.format), cur)
 }
 
 func writeOutput(w io.Writer, format string, iter output.RowIterator) error {

@@ -70,7 +70,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	f.StringVarP(&cfg.password, "password", "p", "", "RethinkDB password (or RETHINKDB_PASSWORD env)")
 	f.StringVar(&cfg.passwordFile, "password-file", "", "read password from file")
 	f.DurationVarP(&cfg.timeout, "timeout", "t", 30*time.Second, "connection timeout")
-	f.StringVarP(&cfg.format, "format", "f", "json", "output format: json, jsonl, raw, table")
+	f.StringVarP(&cfg.format, "format", "f", "", "output format: json, jsonl, raw, table (default: json on TTY, jsonl when piped)")
 	f.BoolVar(&cfg.profile, "profile", false, "enable query profiling output")
 	f.StringVar(&cfg.timeFormat, "time-format", "native", "time format: native (convert pseudo-types), raw (pass-through)")
 	f.StringVar(&cfg.binaryFormat, "binary-format", "native", "binary format: native (convert pseudo-types), raw (pass-through)")
@@ -138,6 +138,6 @@ func (c *rootConfig) resolvePassword() error {
 	if err != nil {
 		return fmt.Errorf("reading password file: %w", err)
 	}
-	c.password = strings.TrimRight(string(data), "\r\n")
+	c.password = strings.TrimSpace(string(data))
 	return nil
 }

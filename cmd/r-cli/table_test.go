@@ -76,6 +76,9 @@ func TestTableDropExactArgs(t *testing.T) {
 	if err := cmd.Args(cmd, []string{"users"}); err != nil {
 		t.Errorf("table drop: expected no error for one arg, got %v", err)
 	}
+	if err := cmd.Args(cmd, []string{"users", "extra"}); err == nil {
+		t.Error("table drop: expected error for two args, got nil")
+	}
 }
 
 func TestTableInfoExactArgs(t *testing.T) {
