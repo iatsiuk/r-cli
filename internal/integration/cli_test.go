@@ -38,6 +38,7 @@ func buildCLIBinary() (string, error) {
 			cliErr = fmt.Errorf("mktemp: %w", err)
 			return
 		}
+		cliDir = dir
 		bin := filepath.Join(dir, "r-cli")
 		cmd := exec.Command("go", "build", "-o", bin, "./cmd/r-cli")
 		cmd.Dir = root
@@ -47,7 +48,6 @@ func buildCLIBinary() (string, error) {
 			return
 		}
 		cliBin = bin
-		cliDir = dir
 	})
 	return cliBin, cliErr
 }
@@ -256,6 +256,9 @@ func TestCLIDbRoundtrip(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("db create exit code %d", code)
 	}
+	t.Cleanup(func() {
+		cliRun(t, "", cliArgs("db", "drop", dbName, "-y")...)
+	})
 	stdout, _, code := cliRun(t, "", cliArgs("db", "list")...)
 	if code != 0 {
 		t.Fatalf("db list exit code %d", code)
