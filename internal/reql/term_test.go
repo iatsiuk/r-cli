@@ -192,6 +192,10 @@ func TestArithmeticOperators(t *testing.T) {
 		{"sub", base.Sub(3), `[25,[10,3]]`},
 		{"mul", base.Mul(2), `[26,[10,2]]`},
 		{"div", base.Div(2), `[27,[10,2]]`},
+		{"mod", base.Mod(3), `[28,[10,3]]`},
+		{"floor", base.Floor(), `[183,[10]]`},
+		{"ceil", base.Ceil(), `[184,[10]]`},
+		{"round", base.Round(), `[185,[10]]`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -553,6 +557,187 @@ func TestTermOptargs(t *testing.T) {
 	}
 }
 
+func TestJoinOperations(t *testing.T) {
+	t.Parallel()
+	users := DB("test").Table("users")
+	posts := DB("test").Table("posts")
+	fn := Func(Var(1).GetField("id").Eq(Var(2).GetField("user_id")), 1, 2)
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"inner_join",
+			users.InnerJoin(posts, fn),
+			`[48,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]],[69,[[2,[1,2]],[17,[[31,[[10,[1]],"id"]],[31,[[10,[2]],"user_id"]]]]]]]]`,
+		},
+		{
+			"outer_join",
+			users.OuterJoin(posts, fn),
+			`[49,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]],[69,[[2,[1,2]],[17,[[31,[[10,[1]],"id"]],[31,[[10,[2]],"user_id"]]]]]]]]`,
+		},
+		{
+			"eq_join",
+			users.EqJoin("user_id", posts),
+			`[50,[[15,[[14,["test"]],"users"]],"user_id",[15,[[14,["test"]],"posts"]]]]`,
+		},
+		{
+			"eq_join_index",
+			users.EqJoin("user_id", posts, OptArgs{"index": "name"}),
+			`[50,[[15,[[14,["test"]],"users"]],"user_id",[15,[[14,["test"]],"posts"]]],{"index":"name"}]`,
+		},
+		{
+			"zip",
+			users.Zip(),
+			`[72,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"zip_after_join",
+			users.InnerJoin(posts, fn).Zip(),
+			`[72,[[48,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]],[69,[[2,[1,2]],[17,[[31,[[10,[1]],"id"]],[31,[[10,[2]],"user_id"]]]]]]]]]]`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestStringOperations(t *testing.T) {
+	t.Parallel()
+	str := Datum("hello world")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"match",
+			str.Match(`\w+`),
+			`[97,["hello world","\\w+"]]`,
+		},
+		{
+			"split_with_delim",
+			str.Split(" "),
+			`[149,["hello world"," "]]`,
+		},
+		{
+			"split_no_delim",
+			str.Split(),
+			`[149,["hello world"]]`,
+		},
+		{
+			"upcase",
+			str.Upcase(),
+			`[141,["hello world"]]`,
+		},
+		{
+			"downcase",
+			str.Downcase(),
+			`[142,["hello world"]]`,
+		},
+		{
+			"to_json_string",
+			str.ToJSONString(),
+			`[172,["hello world"]]`,
+		},
+		{
+			"json",
+			JSON(`{"a":1}`),
+			`[98,["{\"a\":1}"]]`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTimeOperations(t *testing.T) {
+	t.Parallel()
+	ts := Now()
+	start := EpochTime(0)
+	end := EpochTime(1000000)
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		// construction
+		{"iso8601", ISO8601("2024-01-01T00:00:00Z"), `[99,["2024-01-01T00:00:00Z"]]`},
+		{"epoch_time", EpochTime(1234567890), `[101,[1234567890]]`},
+		{"time", Time(2024, 1, 1, "Z"), `[136,[2024,1,1,"Z"]]`},
+		{"now", Now(), `[103,[]]`},
+		// extraction
+		{"to_iso8601", ts.ToISO8601(), `[100,[[103,[]]]]`},
+		{"to_epoch_time", ts.ToEpochTime(), `[102,[[103,[]]]]`},
+		{"date", ts.Date(), `[106,[[103,[]]]]`},
+		{"time_of_day", ts.TimeOfDay(), `[126,[[103,[]]]]`},
+		{"timezone", ts.Timezone(), `[127,[[103,[]]]]`},
+		{"year", ts.Year(), `[128,[[103,[]]]]`},
+		{"month", ts.Month(), `[129,[[103,[]]]]`},
+		{"day", ts.Day(), `[130,[[103,[]]]]`},
+		{"day_of_week", ts.DayOfWeek(), `[131,[[103,[]]]]`},
+		{"day_of_year", ts.DayOfYear(), `[132,[[103,[]]]]`},
+		{"hours", ts.Hours(), `[133,[[103,[]]]]`},
+		{"minutes", ts.Minutes(), `[134,[[103,[]]]]`},
+		{"seconds", ts.Seconds(), `[135,[[103,[]]]]`},
+		// operations
+		{"in_timezone", ts.InTimezone("+02:00"), `[104,[[103,[]],"+02:00"]]`},
+		{"during", ts.During(start, end), `[105,[[103,[]],[101,[0]],[101,[1000000]]]]`},
+		// day-of-week constants
+		{"monday", Monday(), `[107,[]]`},
+		{"tuesday", Tuesday(), `[108,[]]`},
+		{"wednesday", Wednesday(), `[109,[]]`},
+		{"thursday", Thursday(), `[110,[]]`},
+		{"friday", Friday(), `[111,[]]`},
+		{"saturday", Saturday(), `[112,[]]`},
+		{"sunday", Sunday(), `[113,[]]`},
+		// month constants
+		{"january", January(), `[114,[]]`},
+		{"february", February(), `[115,[]]`},
+		{"march", March(), `[116,[]]`},
+		{"april", April(), `[117,[]]`},
+		{"may", May(), `[118,[]]`},
+		{"june", June(), `[119,[]]`},
+		{"july", July(), `[120,[]]`},
+		{"august", August(), `[121,[]]`},
+		{"september", September(), `[122,[]]`},
+		{"october", October(), `[123,[]]`},
+		{"november", November(), `[124,[]]`},
+		{"december", December(), `[125,[]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -573,6 +758,365 @@ func TestArray(t *testing.T) {
 			}
 			if string(got) != tc.want {
 				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func runTermTests(t *testing.T, tests []struct {
+	name string
+	term Term
+	want string
+}) {
+	t.Helper()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestArrayMutations(t *testing.T) {
+	t.Parallel()
+	arr := Array(1, 2, 3)
+	other := Array(3, 4, 5)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"append", arr.Append(4), `[29,[[2,[1,2,3]],4]]`},
+		{"prepend", arr.Prepend(0), `[80,[[2,[1,2,3]],0]]`},
+		{"slice", arr.Slice(1, 3), `[30,[[2,[1,2,3]],1,3]]`},
+		{"difference", arr.Difference(other), `[95,[[2,[1,2,3]],[2,[3,4,5]]]]`},
+		{"insert_at", arr.InsertAt(1, 99), `[82,[[2,[1,2,3]],1,99]]`},
+		{"delete_at", arr.DeleteAt(1), `[83,[[2,[1,2,3]],1]]`},
+		{"change_at", arr.ChangeAt(1, 99), `[84,[[2,[1,2,3]],1,99]]`},
+		{"splice_at", arr.SpliceAt(1, Array(10, 11)), `[85,[[2,[1,2,3]],1,[2,[10,11]]]]`},
+	})
+}
+
+func TestSetOperations(t *testing.T) {
+	t.Parallel()
+	arr := Array(1, 2, 3)
+	other := Array(3, 4, 5)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"set_insert", arr.SetInsert(4), `[88,[[2,[1,2,3]],4]]`},
+		{"set_intersection", arr.SetIntersection(other), `[89,[[2,[1,2,3]],[2,[3,4,5]]]]`},
+		{"set_union", arr.SetUnion(other), `[90,[[2,[1,2,3]],[2,[3,4,5]]]]`},
+		{"set_difference", arr.SetDifference(other), `[91,[[2,[1,2,3]],[2,[3,4,5]]]]`},
+	})
+}
+
+func TestControlFlow(t *testing.T) {
+	t.Parallel()
+	cond := DB("test").Table("users").Count().Gt(0)
+	seq := DB("test").Table("users")
+	fn := Func(Var(1).GetField("active"), 1)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"branch_simple",
+			Branch(cond, Datum("yes"), Datum("no")),
+			`[65,[[21,[[43,[[15,[[14,["test"]],"users"]]]],0]],"yes","no"]]`,
+		},
+		{
+			"branch_multi",
+			Branch(Datum(true), Datum(1), Datum(false), Datum(2), Datum(3)),
+			`[65,[true,1,false,2,3]]`,
+		},
+		{
+			"for_each",
+			seq.ForEach(fn),
+			`[68,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[31,[[10,[1]],"active"]]]]]]`,
+		},
+		{
+			"default",
+			seq.Count().Default(0),
+			`[92,[[43,[[15,[[14,["test"]],"users"]]]],0]]`,
+		},
+		{
+			"error",
+			Error("something went wrong"),
+			`[12,["something went wrong"]]`,
+		},
+		{
+			"coerce_to",
+			seq.Count().CoerceTo("string"),
+			`[51,[[43,[[15,[[14,["test"]],"users"]]]],"string"]]`,
+		},
+		{
+			"type_of",
+			seq.TypeOf(),
+			`[52,[[15,[[14,["test"]],"users"]]]]`,
+		},
+	})
+}
+
+func TestSequenceOperations(t *testing.T) {
+	t.Parallel()
+	seq := DB("test").Table("users")
+	seq2 := DB("test").Table("posts")
+	seq3 := DB("test").Table("tags")
+	fn := Func(Var(1).GetField("id"), 1)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"concat_map",
+			seq.ConcatMap(fn),
+			`[40,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[31,[[10,[1]],"id"]]]]]]`,
+		},
+		{
+			"nth",
+			seq.Nth(0),
+			`[45,[[15,[[14,["test"]],"users"]],0]]`,
+		},
+		{
+			"union_two",
+			seq.Union(seq2),
+			`[44,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]]]]`,
+		},
+		{
+			"union_three",
+			seq.Union(seq2, seq3),
+			`[44,[[15,[[14,["test"]],"users"]],[15,[[14,["test"]],"posts"]],[15,[[14,["test"]],"tags"]]]]`,
+		},
+		{
+			"is_empty",
+			seq.IsEmpty(),
+			`[86,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"contains",
+			seq.Contains(Datum("alice")),
+			`[93,[[15,[[14,["test"]],"users"]],"alice"]]`,
+		},
+		{
+			"bracket",
+			seq.Bracket("name"),
+			`[170,[[15,[[14,["test"]],"users"]],"name"]]`,
+		},
+		{
+			"bracket_chained",
+			seq.Bracket("a").Bracket("b"),
+			`[170,[[170,[[15,[[14,["test"]],"users"]],"a"]],"b"]]`,
+		},
+	})
+}
+
+func TestObjectExtendedOperations(t *testing.T) {
+	t.Parallel()
+	seq := DB("test").Table("users")
+	obj := DB("test").Table("users").Get("id1")
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"with_fields",
+			seq.WithFields("field1", "field2"),
+			`[96,[[15,[[14,["test"]],"users"]],"field1","field2"]]`,
+		},
+		{
+			"keys",
+			obj.Keys(),
+			`[94,[[16,[[15,[[14,["test"]],"users"]],"id1"]]]]`,
+		},
+		{
+			"values",
+			obj.Values(),
+			`[186,[[16,[[15,[[14,["test"]],"users"]],"id1"]]]]`,
+		},
+		{
+			"literal",
+			Literal(map[string]interface{}{"a": 1}),
+			`[137,[{"a":1}]]`,
+		},
+		{
+			"literal_in_merge",
+			obj.Merge(map[string]interface{}{"nested": Literal(map[string]interface{}{"x": 2})}),
+			`[35,[[16,[[15,[[14,["test"]],"users"]],"id1"]],{"nested":[137,[{"x":2}]]}]]`,
+		},
+	})
+}
+
+func TestGeospatialOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("places")
+	p1 := Point(-122.4, 37.7)
+	p2 := Point(-122.3, 37.8)
+	p3 := Point(-122.2, 37.9)
+	line := Line(p1, p2)
+	poly := Polygon(p1, p2, p3)
+	geojsonObj := map[string]interface{}{"type": "Point", "coordinates": []interface{}{-122.4, 37.7}}
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"geojson",
+			GeoJSON(geojsonObj),
+			`[157,[{"coordinates":[-122.4,37.7],"type":"Point"}]]`,
+		},
+		{
+			"to_geojson",
+			p1.ToGeoJSON(),
+			`[158,[[159,[-122.4,37.7]]]]`,
+		},
+		{
+			"point",
+			p1,
+			`[159,[-122.4,37.7]]`,
+		},
+		{
+			"line",
+			line,
+			`[160,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]]]`,
+		},
+		{
+			"polygon",
+			poly,
+			`[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]]`,
+		},
+		{
+			"circle",
+			Circle(p1, 1000, OptArgs{"unit": "m"}),
+			`[165,[[159,[-122.4,37.7]],1000],{"unit":"m"}]`,
+		},
+		{
+			"distance",
+			p1.Distance(p2, OptArgs{"unit": "km"}),
+			`[162,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]],{"unit":"km"}]`,
+		},
+		{
+			"intersects",
+			p1.Intersects(p2),
+			`[163,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]]]`,
+		},
+		{
+			"includes",
+			poly.Includes(p1),
+			`[164,[[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]],[159,[-122.4,37.7]]]]`,
+		},
+		{
+			"get_intersecting",
+			table.GetIntersecting(poly, OptArgs{"index": "location"}),
+			`[166,[[15,[[14,["test"]],"places"]],[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]]],{"index":"location"}]`,
+		},
+		{
+			"get_nearest",
+			table.GetNearest(p1, OptArgs{"index": "location"}),
+			`[168,[[15,[[14,["test"]],"places"]],[159,[-122.4,37.7]]],{"index":"location"}]`,
+		},
+		{
+			"fill",
+			line.Fill(),
+			`[167,[[160,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]]]]]`,
+		},
+		{
+			"polygon_sub",
+			poly.PolygonSub(Polygon(p1, p2, p3)),
+			`[171,[[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]],[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]]]]`,
+		},
+	})
+}
+
+func TestAdminOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	arr := Array(Datum(1), Datum(2))
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"sync",
+			table.Sync(),
+			`[138,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"reconfigure",
+			table.Reconfigure(OptArgs{"shards": 2, "replicas": 1}),
+			`[176,[[15,[[14,["test"]],"users"]]],{"replicas":1,"shards":2}]`,
+		},
+		{
+			"rebalance",
+			table.Rebalance(),
+			`[179,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"wait",
+			table.Wait(),
+			`[177,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"args",
+			Args(arr),
+			`[154,[[2,[1,2]]]]`,
+		},
+		{
+			"minval",
+			MinVal(),
+			`[180,[]]`,
+		},
+		{
+			"maxval",
+			MaxVal(),
+			`[181,[]]`,
+		},
+		{
+			"between_minval_maxval",
+			table.Between(MinVal(), MaxVal()),
+			`[182,[[15,[[14,["test"]],"users"]],[180,[]],[181,[]]]]`,
+		},
+	})
+}
+
+func TestValidationErrors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		term Term
+	}{
+		{"branch_no_args", Branch()},
+		{"branch_one_arg", Branch(Datum(true))},
+		{"branch_two_args", Branch(Datum(true), Datum("yes"))},
+		{"branch_four_args", Branch(Datum(true), Datum(1), Datum(false), Datum(2))},
+		{"contains_no_args", DB("test").Table("x").Contains()},
+		{"line_zero_points", Line()},
+		{"line_one_point", Line(Point(0, 0))},
+		{"polygon_zero_points", Polygon()},
+		{"polygon_one_point", Polygon(Point(0, 0))},
+		{"polygon_two_points", Polygon(Point(0, 0), Point(1, 1))},
+		{"getall_no_keys", DB("test").Table("users").GetAll()},
+		{"getall_only_opts", DB("test").Table("users").GetAll(OptArgs{"index": "name"})},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := json.Marshal(tc.term)
+			if err == nil {
+				t.Errorf("expected error, got nil")
 			}
 		})
 	}
