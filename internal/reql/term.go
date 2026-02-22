@@ -175,8 +175,12 @@ func (t Term) Insert(doc interface{}, opts ...OptArgs) Term {
 }
 
 // Update creates an UPDATE term ([53, [table, doc]]).
-func (t Term) Update(doc interface{}) Term {
-	return Term{termType: proto.TermUpdate, args: []Term{t, toTerm(doc)}}
+func (t Term) Update(doc interface{}, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermUpdate, args: []Term{t, toTerm(doc)}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
 }
 
 // Delete creates a DELETE term ([54, [table]]).

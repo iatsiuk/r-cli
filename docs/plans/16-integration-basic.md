@@ -70,14 +70,14 @@ Set up TestMain with shared container, `setupTestDB`, `createTestTable` helpers.
 
 ### Task 6: Update, Replace and Delete
 
-- [ ] Test: update single document by GET -> replaced=1, verify field changed
-- [ ] Test: update all documents in table (no filter) -> replaced=N
-- [ ] Test: update with merge (add new field) -> field appears in document
-- [ ] Test: update non-existent document via GET -> skipped=1
-- [ ] Test: update with return_changes=true -> old_val and new_val present
-- [ ] Test: replace document by GET -> replaced=1, old fields gone
-- [ ] Test: replace must include primary key -> RUNTIME_ERROR if missing
-- [ ] Test: delete single document by GET -> deleted=1
-- [ ] Test: delete with filter -> deleted=N (matching count)
-- [ ] Test: delete all from table -> deleted=total
-- [ ] Test: delete non-existent document -> deleted=0
+- [x] Test: update single document by GET -> replaced=1, verify field changed
+- [x] Test: update all documents in table (no filter) -> replaced=N
+- [x] Test: update with merge (add new field) -> field appears in document
+- [x] Test: update non-existent document via GET -> skipped=1
+- [x] Test: update with return_changes=true -> old_val and new_val present
+- [x] Test: replace document by GET -> replaced=1, old fields gone
+- [x] Test: replace must include primary key -> RUNTIME_ERROR if missing
+- [x] Test: delete single document by GET -> deleted=1
+- [x] Test: delete with filter -> deleted=N (matching count)
+- [x] Test: delete all from table -> deleted=total
+- [x] Test: delete non-existent document -> deleted=0
