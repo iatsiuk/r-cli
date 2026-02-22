@@ -129,7 +129,12 @@ func (l *Lexer) readString(quote rune) (Token, error) {
 			if l.pos >= len(l.input) {
 				return Token{}, fmt.Errorf("unterminated string at position %d", start)
 			}
-			sb.WriteRune(unescapeChar(l.input[l.pos]))
+			esc := l.input[l.pos]
+			r, ok := unescapeChar(esc)
+			if !ok {
+				return Token{}, fmt.Errorf("unknown escape sequence '\\%c' at position %d", esc, l.pos-1)
+			}
+			sb.WriteRune(r)
 			l.pos++
 		case quote:
 			l.pos++
@@ -142,22 +147,22 @@ func (l *Lexer) readString(quote rune) (Token, error) {
 	return Token{}, fmt.Errorf("unterminated string at position %d", start)
 }
 
-func unescapeChar(ch rune) rune {
+func unescapeChar(ch rune) (rune, bool) {
 	switch ch {
 	case '"':
-		return '"'
+		return '"', true
 	case '\'':
-		return '\''
+		return '\'', true
 	case '\\':
-		return '\\'
+		return '\\', true
 	case 'n':
-		return '\n'
+		return '\n', true
 	case 't':
-		return '\t'
+		return '\t', true
 	case 'r':
-		return '\r'
+		return '\r', true
 	default:
-		return ch
+		return 0, false
 	}
 }
 

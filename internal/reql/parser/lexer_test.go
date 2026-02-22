@@ -184,6 +184,59 @@ func TestLexer_MinvalMaxval(t *testing.T) {
 	}
 }
 
+func TestLexer_SignedExponents(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"1e+10", "1e+10"},
+		{"1e-10", "1e-10"},
+		{"2.5e+3", "2.5e+3"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			got := tokenizeOrFail(t, tc.input)
+			if len(got) != 2 || got[0].t != tokenNumber || got[0].v != tc.want {
+				t.Errorf("tokenize(%q): got %v, want first token {number %q}", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLexer_EscapeSequences(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{`"\n"`, "\n"},
+		{`"\t"`, "\t"},
+		{`"\r"`, "\r"},
+		{`"\\"`, "\\"},
+		{`"\""`, `"`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			got := tokenizeOrFail(t, tc.input)
+			if len(got) != 2 || got[0].t != tokenString || got[0].v != tc.want {
+				t.Errorf("tokenize(%q): got %v, want string %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLexer_UnknownEscapeError(t *testing.T) {
+	t.Parallel()
+	l := newLexer(`"\q"`)
+	_, err := l.tokenize()
+	if err == nil {
+		t.Fatal("expected error for unknown escape '\\q', got nil")
+	}
+}
+
 func TestLexer_UnexpectedCharError(t *testing.T) {
 	t.Parallel()
 	l := newLexer("@foo")

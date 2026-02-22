@@ -9,6 +9,22 @@ import (
 	"r-cli/internal/reql"
 )
 
+type parseTest struct {
+	name  string
+	input string
+	want  reql.Term
+}
+
+func runParseTests(t *testing.T, tests []parseTest) {
+	t.Helper()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assertTermEqual(t, mustParse(t, tt.input), tt.want)
+		})
+	}
+}
+
 func assertTermEqual(t *testing.T, got, want reql.Term) {
 	t.Helper()
 	g, err := json.Marshal(got)
@@ -198,6 +214,13 @@ func TestParse_SyntaxError(t *testing.T) {
 		{`r.db("test"`, "expected token"},
 		{`r.db("test").unknownMethod()`, "unknown method .unknownMethod"},
 		{`42 extra`, "unexpected token"},
+		// comma required in arg list
+		{`r.db("test").table("users").getAll("a" "b")`, "expected token"},
+		// branch requires odd arg count >= 3
+		{`r.branch(true, "x")`, "r.branch requires"},
+		{`r.branch(true)`, "r.branch requires"},
+		// comma required in string list
+		{`r.db("test").table("users").pluck("a" "b")`, "expected token"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
@@ -229,31 +252,26 @@ func TestParse_MaxDepth(t *testing.T) {
 	}
 }
 
-func TestParse_MethodMapping(t *testing.T) {
+func TestParse_CoreMethodMapping(t *testing.T) {
 	t.Parallel()
 	db := `r.db("test").table("users")`
 	dbterm := reql.DB("test").Table("users")
-	tests := []struct {
-		name  string
-		input string
-		want  reql.Term
-	}{
-		// core sequence ops
+	runParseTests(t, []parseTest{
 		{"update", db + `.update({a: 1})`, dbterm.Update(reql.Datum(map[string]interface{}{"a": 1}))},
 		{"delete", db + `.delete()`, dbterm.Delete()},
 		{"skip", db + `.skip(5)`, dbterm.Skip(5)},
 		{"count", db + `.count()`, dbterm.Count()},
 		{"distinct", db + `.distinct()`, dbterm.Distinct()},
 		{"replace", db + `.replace({a: 2})`, dbterm.Replace(reql.Datum(map[string]interface{}{"a": 2}))},
-		// field ops
 		{"group", db + `.group("age")`, dbterm.Group("age")},
 		{"keys", db + `.keys()`, dbterm.Keys()},
 		{"values", db + `.values()`, dbterm.Values()},
 		{"sum", db + `.sum("score")`, dbterm.Sum("score")},
 		{"avg", db + `.avg("score")`, dbterm.Avg("score")},
+		{"min", db + `.min("score")`, dbterm.Min("score")},
+		{"max", db + `.max("score")`, dbterm.Max("score")},
 		{"typeOf", db + `.typeOf()`, dbterm.TypeOf()},
 		{"map", db + `.map(r.row)`, dbterm.Map(reql.Row())},
-		// comparisons
 		{"eq", `r.row("x").eq(1)`, reql.Row().Bracket("x").Eq(1)},
 		{"ne", `r.row("x").ne(0)`, reql.Row().Bracket("x").Ne(0)},
 		{"lt", `r.row("x").lt(10)`, reql.Row().Bracket("x").Lt(10)},
@@ -262,7 +280,6 @@ func TestParse_MethodMapping(t *testing.T) {
 		{"not", `r.row("x").not()`, reql.Row().Bracket("x").Not()},
 		{"and", `r.row("x").gt(0).and(r.row("x").lt(10))`, reql.Row().Bracket("x").Gt(0).And(reql.Row().Bracket("x").Lt(10))},
 		{"or", `r.row("x").lt(0).or(r.row("x").gt(10))`, reql.Row().Bracket("x").Lt(0).Or(reql.Row().Bracket("x").Gt(10))},
-		// arithmetic
 		{"add", `r.row("x").add(1)`, reql.Row().Bracket("x").Add(1)},
 		{"sub", `r.row("x").sub(1)`, reql.Row().Bracket("x").Sub(1)},
 		{"mul", `r.row("x").mul(2)`, reql.Row().Bracket("x").Mul(2)},
@@ -271,18 +288,52 @@ func TestParse_MethodMapping(t *testing.T) {
 		{"floor", `r.row("x").floor()`, reql.Row().Bracket("x").Floor()},
 		{"ceil", `r.row("x").ceil()`, reql.Row().Bracket("x").Ceil()},
 		{"round", `r.row("x").round()`, reql.Row().Bracket("x").Round()},
-		// strings
+	})
+}
+
+func TestParse_ChainMethodMapping(t *testing.T) {
+	t.Parallel()
+	db := `r.db("test").table("users")`
+	dbterm := reql.DB("test").Table("users")
+	runParseTests(t, []parseTest{
+		{"pluck", db + `.pluck("a", "b")`, dbterm.Pluck("a", "b")},
+		{"without", db + `.without("x")`, dbterm.Without("x")},
+		{"hasFields", db + `.hasFields("a")`, dbterm.HasFields("a")},
+		{"withFields", db + `.withFields("a")`, dbterm.WithFields("a")},
+		{"getAll", db + `.getAll("a", "b")`, dbterm.GetAll("a", "b")},
+		{"contains", db + `.contains("val")`, dbterm.Contains("val")},
+		{"between", db + `.between(r.minval, r.maxval)`, dbterm.Between(reql.MinVal(), reql.MaxVal())},
+		{"union", db + `.union(r.db("test").table("z"))`, dbterm.Union(reql.DB("test").Table("z"))},
+		{"split_noarg", `r.row("s").split()`, reql.Row().Bracket("s").Split()},
+		{"split_sep", `r.row("s").split(",")`, reql.Row().Bracket("s").Split(",")},
+		{"insertAt", db + `.insertAt(0, "val")`, dbterm.InsertAt(0, reql.Datum("val"))},
+		{"deleteAt", db + `.deleteAt(2)`, dbterm.DeleteAt(2)},
+		{"changeAt", db + `.changeAt(1, "new")`, dbterm.ChangeAt(1, reql.Datum("new"))},
+		{"spliceAt", db + `.spliceAt(0, [1, 2])`, dbterm.SpliceAt(0, reql.Array(1, 2))},
+		{"slice", db + `.slice(0, 5)`, dbterm.Slice(0, 5)},
+		{"indexWait", db + `.indexWait("idx")`, dbterm.IndexWait("idx")},
+		{"indexStatus", db + `.indexStatus("idx")`, dbterm.IndexStatus("idx")},
+		{"indexRename", db + `.indexRename("old", "new")`, dbterm.IndexRename("old", "new")},
+		{"innerJoin", db + `.innerJoin(r.db("test").table("z"), r.row)`, dbterm.InnerJoin(reql.DB("test").Table("z"), reql.Row())},
+		{"outerJoin", db + `.outerJoin(r.db("test").table("z"), r.row)`, dbterm.OuterJoin(reql.DB("test").Table("z"), reql.Row())},
+		{"during", `r.now().during(r.epochTime(0), r.epochTime(1))`, reql.Now().During(reql.EpochTime(0), reql.EpochTime(1))},
+		{"grant", db + `.grant("user", {read: true})`, dbterm.Grant("user", reql.Datum(map[string]interface{}{"read": true}))},
 		{"upcase", `r.row("name").upcase()`, reql.Row().Bracket("name").Upcase()},
 		{"downcase", `r.row("name").downcase()`, reql.Row().Bracket("name").Downcase()},
-		// time
 		{"date", `r.now().date()`, reql.Now().Date()},
 		{"year", `r.now().year()`, reql.Now().Year()},
 		{"inTimezone", `r.now().inTimezone("UTC")`, reql.Now().InTimezone("UTC")},
-		// arrays
 		{"append", db + `.append(1)`, dbterm.Append(1)},
 		{"prepend", db + `.prepend(1)`, dbterm.Prepend(1)},
 		{"setInsert", db + `.setInsert("x")`, dbterm.SetInsert("x")},
-		// admin
+	})
+}
+
+func TestParse_AdminMethodMapping(t *testing.T) {
+	t.Parallel()
+	db := `r.db("test").table("users")`
+	dbterm := reql.DB("test").Table("users")
+	runParseTests(t, []parseTest{
 		{"changes", db + `.changes()`, dbterm.Changes()},
 		{"config", db + `.config()`, dbterm.Config()},
 		{"tableList", `r.db("test").tableList()`, reql.DB("test").TableList()},
@@ -291,7 +342,7 @@ func TestParse_MethodMapping(t *testing.T) {
 		{"indexCreate", db + `.indexCreate("idx")`, dbterm.IndexCreate("idx")},
 		{"indexDrop", db + `.indexDrop("idx")`, dbterm.IndexDrop("idx")},
 		{"indexList", db + `.indexList()`, dbterm.IndexList()},
-		// r.* builders
+		{"r.asc", `r.asc("name")`, reql.Asc("name")},
 		{"r.now", `r.now()`, reql.Now()},
 		{"r.uuid", `r.uuid()`, reql.UUID()},
 		{"r.dbCreate", `r.dbCreate("newdb")`, reql.DBCreate("newdb")},
@@ -300,12 +351,42 @@ func TestParse_MethodMapping(t *testing.T) {
 		{"r.table", `r.table("users")`, reql.Table("users")},
 		{"r.epochTime", `r.epochTime(1000)`, reql.EpochTime(1000)},
 		{"r.literal", `r.literal(42)`, reql.Literal(42)},
+		{"r.json", `r.json("{\"a\":1}")`, reql.JSON(`{"a":1}`)},
+		{"r.iso8601", `r.iso8601("2015-01-01T12:00:00+00:00")`, reql.ISO8601("2015-01-01T12:00:00+00:00")},
+		{"r.geoJSON", `r.geoJSON({type: "Point"})`, reql.GeoJSON(reql.Datum(map[string]interface{}{"type": "Point"}))},
+	})
+}
+
+func TestParse_DatumBoolNull(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input string
+		want  reql.Term
+	}{
+		{"true", reql.Datum(true)},
+		{"false", reql.Datum(false)},
+		{"null", reql.Datum(nil)},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
-			got := mustParse(t, tt.input)
-			assertTermEqual(t, got, tt.want)
+			got := mustParse(t, tc.input)
+			assertTermEqual(t, got, tc.want)
 		})
+	}
+}
+
+func TestParse_StringKeyedObject(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("test").table("users").filter({"name": "foo"})`)
+	want := reql.DB("test").Table("users").Filter(reql.Datum(map[string]interface{}{"name": "foo"}))
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_IntArgError(t *testing.T) {
+	t.Parallel()
+	_, err := Parse(`r.db("test").table("users").limit(3.14)`)
+	if err == nil {
+		t.Fatal("expected error for float arg to limit(), got nil")
 	}
 }

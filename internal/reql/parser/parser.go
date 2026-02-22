@@ -187,6 +187,9 @@ func parseRBranch(p *parser) (reql.Term, error) {
 	if err != nil {
 		return reql.Term{}, err
 	}
+	if len(args) < 3 || len(args)%2 == 0 {
+		return reql.Term{}, fmt.Errorf("r.branch requires an odd number of arguments (at least 3), got %d", len(args))
+	}
 	iargs := make([]interface{}, len(args))
 	for i, a := range args {
 		iargs[i] = a
@@ -363,14 +366,6 @@ func chainLimit(p *parser, t reql.Term) (reql.Term, error) {
 		return reql.Term{}, err
 	}
 	return t.Limit(n), nil
-}
-
-func chainGt(p *parser, t reql.Term) (reql.Term, error) {
-	arg, err := p.parseOneArg()
-	if err != nil {
-		return reql.Term{}, err
-	}
-	return t.Gt(arg), nil
 }
 
 func chainEqJoin(p *parser, t reql.Term) (reql.Term, error) {
@@ -764,7 +759,7 @@ func registerCompareChain(m map[string]chainFn) {
 	m["ne"] = oneArgChain(func(t, v reql.Term) reql.Term { return t.Ne(v) })
 	m["lt"] = oneArgChain(func(t, v reql.Term) reql.Term { return t.Lt(v) })
 	m["le"] = oneArgChain(func(t, v reql.Term) reql.Term { return t.Le(v) })
-	m["gt"] = chainGt
+	m["gt"] = oneArgChain(func(t, v reql.Term) reql.Term { return t.Gt(v) })
 	m["ge"] = oneArgChain(func(t, v reql.Term) reql.Term { return t.Ge(v) })
 	m["not"] = noArgChain(func(t reql.Term) reql.Term { return t.Not() })
 	m["and"] = oneArgChain(func(t, other reql.Term) reql.Term { return t.And(other) })
@@ -914,8 +909,10 @@ func (p *parser) parseArgList() ([]reql.Term, error) {
 			return nil, err
 		}
 		args = append(args, arg)
-		if p.peek().Type == tokenComma {
-			p.advance()
+		if p.peek().Type != tokenRParen {
+			if _, err := p.expect(tokenComma); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if _, err := p.expect(tokenRParen); err != nil {
@@ -947,8 +944,10 @@ func (p *parser) parseStringList() ([]string, error) {
 			return nil, err
 		}
 		strs = append(strs, tok.Value)
-		if p.peek().Type == tokenComma {
-			p.advance()
+		if p.peek().Type != tokenRParen {
+			if _, err := p.expect(tokenComma); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if _, err := p.expect(tokenRParen); err != nil {
@@ -1195,5 +1194,5 @@ func parseNumberValue(s string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return int(n), nil
+	return n, nil
 }
