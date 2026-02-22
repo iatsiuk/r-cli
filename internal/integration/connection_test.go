@@ -47,6 +47,9 @@ func TestConnectionServerVersion(t *testing.T) {
 		t.Fatalf("dial: %v", err)
 	}
 	defer func() { _ = nc.Close() }()
+	if err := nc.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
+		t.Fatalf("set deadline: %v", err)
+	}
 
 	// build step1 (magic) + step3 (client-first-message) pipelined
 	conv := scram.NewConversation("admin", "")
