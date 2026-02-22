@@ -14,15 +14,15 @@ Depends on: `12-cli-core`
 
 ### Task 1: `index` subcommands
 
-- [ ] Test: `r-cli index list <table>` -> list secondary indexes
-- [ ] Test: `r-cli index create <table> <name>` -> create secondary index
-- [ ] Test: `r-cli index create <table> <name> --geo` -> create geo index
-- [ ] Test: `r-cli index create <table> <name> --multi` -> create multi index
-- [ ] Test: `r-cli index drop <table> <name>` -> drop index
-- [ ] Test: `r-cli index rename <table> <old> <new>` -> rename index
-- [ ] Test: `r-cli index status <table> [name]` -> show index status
-- [ ] Test: `r-cli index wait <table> [name]` -> wait for index readiness
-- [ ] Implement: index command group
+- [x] Test: `r-cli index list <table>` -> list secondary indexes
+- [x] Test: `r-cli index create <table> <name>` -> create secondary index
+- [x] Test: `r-cli index create <table> <name> --geo` -> create geo index
+- [x] Test: `r-cli index create <table> <name> --multi` -> create multi index
+- [x] Test: `r-cli index drop <table> <name>` -> drop index
+- [x] Test: `r-cli index rename <table> <old> <new>` -> rename index
+- [x] Test: `r-cli index status <table> [name]` -> show index status
+- [x] Test: `r-cli index wait <table> [name]` -> wait for index readiness
+- [x] Implement: index command group
 
 ### Task 2: `user` subcommands
 

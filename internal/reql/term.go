@@ -443,9 +443,14 @@ func (t Term) Round() Term {
 	return Term{termType: proto.TermRound, args: []Term{t}}
 }
 
-// IndexCreate creates an INDEX_CREATE term ([75, [table, name]]).
-func (t Term) IndexCreate(name string) Term {
-	return Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
+// IndexCreate creates an INDEX_CREATE term ([75, [table, name]], opts?).
+// Optional OptArgs can specify options like {"geo": true, "multi": true}.
+func (t Term) IndexCreate(name string, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
 }
 
 // IndexDrop creates an INDEX_DROP term ([76, [table, name]]).
