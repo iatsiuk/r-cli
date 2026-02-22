@@ -105,6 +105,7 @@ func splitQueries(r io.Reader) ([]string, error) {
 	var queries []string
 	var cur strings.Builder
 	sc := bufio.NewScanner(r)
+	sc.Buffer(make([]byte, bufio.MaxScanTokenSize), 64*1024*1024) // match max payload 64MB
 	for sc.Scan() {
 		line := sc.Text()
 		if strings.TrimSpace(line) == "---" {
