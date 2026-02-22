@@ -131,12 +131,12 @@ func isIdentByte(b byte) bool {
 	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9') || b == '_'
 }
 
-// filterCompletions returns candidates that start with prefix, as []rune slices.
+// filterCompletions returns suffix completions (readline appends them to what's already typed).
 func filterCompletions(candidates []string, prefix string) [][]rune {
 	var result [][]rune
 	for _, c := range candidates {
 		if strings.HasPrefix(c, prefix) {
-			result = append(result, []rune(c))
+			result = append(result, []rune(c[len(prefix):]))
 		}
 	}
 	return result

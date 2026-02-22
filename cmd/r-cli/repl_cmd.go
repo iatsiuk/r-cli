@@ -30,7 +30,7 @@ func newReplCmd(cfg *rootConfig) *cobra.Command {
 		Short: "Start an interactive REPL",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return replStart(cmd.Context(), cfg, os.Stdout, os.Stderr)
+			return replStart(cmd.Context(), cfg, cmd.OutOrStdout(), cmd.ErrOrStderr())
 		},
 	}
 }

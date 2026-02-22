@@ -2,7 +2,6 @@ package repl
 
 import (
 	"context"
-	"strings"
 	"testing"
 )
 
@@ -23,30 +22,30 @@ func TestCompleterTopLevelMethods(t *testing.T) {
 		t.Errorf("r.: got %d completions, want %d", len(got), len(topLevelMethods))
 	}
 
-	// "r.db" -> methods starting with "db", length 2
+	// "r.db" -> suffixes for methods starting with "db", length 2
 	line = []rune("r.db")
 	got, length = c.Do(line, len(line))
 	if length != 2 {
 		t.Errorf("r.db: length = %d, want 2", length)
 	}
-	wantDB := []string{"db", "dbCreate", "dbDrop", "dbList"}
+	wantDB := []string{"", "Create", "Drop", "List"}
 	for _, w := range wantDB {
 		if !containsCompletion(got, w) {
-			t.Errorf("r.db: missing %q in %v", w, toStringSlice(got))
+			t.Errorf("r.db: missing suffix %q in %v", w, toStringSlice(got))
 		}
 	}
 	if len(got) != len(wantDB) {
 		t.Errorf("r.db: got %d completions, want %d: %v", len(got), len(wantDB), toStringSlice(got))
 	}
 
-	// "r.now" -> exactly "now"
+	// "r.now" -> exact match, returns empty suffix
 	line = []rune("r.now")
 	got, length = c.Do(line, len(line))
 	if length != 3 {
 		t.Errorf("r.now: length = %d, want 3", length)
 	}
-	if len(got) != 1 || string(got[0]) != "now" {
-		t.Errorf("r.now: got %v, want [now]", toStringSlice(got))
+	if len(got) != 1 || string(got[0]) != "" {
+		t.Errorf("r.now: got %v, want empty suffix", toStringSlice(got))
 	}
 }
 
@@ -69,19 +68,14 @@ func TestCompleterChainMethods(t *testing.T) {
 		}
 	}
 
-	// "r.table(\"t\").fil" -> methods starting with "fil", length 3
+	// "r.table(\"t\").fil" -> suffix for "filter" is "ter", length 3
 	line = []rune(`r.table("t").fil`)
 	got, length = c.Do(line, len(line))
 	if length != 3 {
 		t.Errorf("chain fil: length = %d, want 3", length)
 	}
-	if !containsCompletion(got, "filter") {
-		t.Errorf("chain fil: missing 'filter' in %v", toStringSlice(got))
-	}
-	for _, g := range got {
-		if !strings.HasPrefix(string(g), "fil") {
-			t.Errorf("chain fil: completion %q does not start with 'fil'", string(g))
-		}
+	if !containsCompletion(got, "ter") {
+		t.Errorf("chain fil: missing suffix 'ter' (for 'filter') in %v", toStringSlice(got))
 	}
 }
 
@@ -108,14 +102,14 @@ func TestCompleterDBNames(t *testing.T) {
 		t.Errorf(`r.db(": got %d completions, want 3`, len(got))
 	}
 
-	// `r.db("tes` -> only "test", length 3
+	// `r.db("tes` -> suffix "t" for "test", length 3
 	line = []rune(`r.db("tes`)
 	got, length = c.Do(line, len(line))
 	if length != 3 {
 		t.Errorf(`r.db("tes: length = %d, want 3`, length)
 	}
-	if len(got) != 1 || string(got[0]) != "test" {
-		t.Errorf(`r.db("tes: got %v, want [test]`, toStringSlice(got))
+	if len(got) != 1 || string(got[0]) != "t" {
+		t.Errorf(`r.db("tes: got %v, want ["t"]`, toStringSlice(got))
 	}
 
 	// `r.db("test")` -> no completion (string is closed)
@@ -148,14 +142,14 @@ func TestCompleterTableNames(t *testing.T) {
 		t.Errorf(`.table(": got %d completions, want 3: %v`, len(got), toStringSlice(got))
 	}
 
-	// `r.db("test").table("her` -> filtered, length 3
+	// `r.db("test").table("her` -> suffix "oes" for "heroes", length 3
 	line = []rune(`r.db("test").table("her`)
 	got, length = c.Do(line, len(line))
 	if length != 3 {
 		t.Errorf(`table("her: length = %d, want 3`, length)
 	}
-	if len(got) != 1 || string(got[0]) != "heroes" {
-		t.Errorf(`table("her: got %v, want [heroes]`, toStringSlice(got))
+	if len(got) != 1 || string(got[0]) != "oes" {
+		t.Errorf(`table("her: got %v, want ["oes"]`, toStringSlice(got))
 	}
 
 	// `r.table("` -> also matches table string arg
