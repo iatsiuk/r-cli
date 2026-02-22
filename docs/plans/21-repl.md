@@ -14,12 +14,12 @@ Depends on: `14-parser`, `12-cli-core`
 
 ### Task 1: Basic REPL loop
 
-- [ ] Test: start REPL, send query, receive output, prompt reappears
-- [ ] Test: empty input (just Enter) -> no query executed, new prompt
-- [ ] Test: Ctrl+D (EOF) -> clean exit
-- [ ] Test: Ctrl+C during input -> cancel current line, new prompt
-- [ ] Test: Ctrl+C during query execution -> cancel query (send STOP), new prompt
-- [ ] Implement: REPL loop with github.com/chzyer/readline
+- [x] Test: start REPL, send query, receive output, prompt reappears
+- [x] Test: empty input (just Enter) -> no query executed, new prompt
+- [x] Test: Ctrl+D (EOF) -> clean exit
+- [x] Test: Ctrl+C during input -> cancel current line, new prompt
+- [x] Test: Ctrl+C during query execution -> cancel query (send STOP), new prompt
+- [x] Implement: REPL loop with github.com/chzyer/readline
 
 ### Task 2: History
 
