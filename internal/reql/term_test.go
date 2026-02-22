@@ -1108,6 +1108,8 @@ func TestValidationErrors(t *testing.T) {
 		{"polygon_zero_points", Polygon()},
 		{"polygon_one_point", Polygon(Point(0, 0))},
 		{"polygon_two_points", Polygon(Point(0, 0), Point(1, 1))},
+		{"getall_no_keys", DB("test").Table("users").GetAll()},
+		{"getall_only_opts", DB("test").Table("users").GetAll(OptArgs{"index": "name"})},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

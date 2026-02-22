@@ -207,6 +207,9 @@ func (t Term) GetAll(args ...interface{}) Term {
 		}
 	}
 
+	if len(keys) == 0 {
+		return errTerm(errors.New("reql: GetAll requires at least one key"))
+	}
 	termArgs := []Term{t}
 	for _, k := range keys {
 		if kt, ok := k.(Term); ok {
