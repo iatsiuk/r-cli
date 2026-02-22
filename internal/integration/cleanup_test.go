@@ -52,8 +52,11 @@ func TestUserCleanup(t *testing.T) {
 			t.Fatalf("delete user cleanup_del: %v", err)
 		}
 
-		// reconnect attempt must fail with auth error
-		_, err = dialAs(dialCtx, host, port, "cleanup_del", "pass")
+		// reconnect attempt must fail with auth error; use a fresh context so expiry
+		// of the initial dialCtx does not mask the expected ErrReqlAuth
+		reconnCtx, reconnCancel := context.WithTimeout(ctx, 30*time.Second)
+		defer reconnCancel()
+		_, err = dialAs(reconnCtx, host, port, "cleanup_del", "pass")
 		if err == nil {
 			t.Error("expected auth error after user deletion, got nil")
 		} else if !errors.Is(err, conn.ErrReqlAuth) {
