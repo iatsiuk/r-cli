@@ -126,12 +126,13 @@ func exitCode(err error) int {
 }
 
 func isQueryError(err error) bool {
+	var qe *queryError
 	var c *response.ReqlCompileError
 	var r *response.ReqlRuntimeError
 	var cl *response.ReqlClientError
 	var ne *response.ReqlNonExistenceError
 	var pe *response.ReqlPermissionError
-	return errors.As(err, &c) || errors.As(err, &r) || errors.As(err, &cl) ||
+	return errors.As(err, &qe) || errors.As(err, &c) || errors.As(err, &r) || errors.As(err, &cl) ||
 		errors.As(err, &ne) || errors.As(err, &pe)
 }
 

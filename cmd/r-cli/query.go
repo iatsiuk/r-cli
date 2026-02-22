@@ -12,6 +12,12 @@ import (
 	"r-cli/internal/reql/parser"
 )
 
+// queryError wraps errors that should map to exitQuery (2) exit code.
+type queryError struct{ err error }
+
+func (e *queryError) Error() string { return e.err.Error() }
+func (e *queryError) Unwrap() error { return e.err }
+
 func newQueryCmd(cfg *rootConfig) *cobra.Command {
 	var filePath string
 	var stopOnError bool
@@ -57,7 +63,7 @@ func readQueryExpr(args []string, stdin io.Reader) (string, error) {
 func runQueryExpr(cmd *cobra.Command, cfg *rootConfig, expr string) error {
 	term, err := parser.Parse(expr)
 	if err != nil {
-		return fmt.Errorf("query: %w", err)
+		return &queryError{err: fmt.Errorf("query: %w", err)}
 	}
 	return execTerm(cmd.Context(), cfg, term, cmd.OutOrStdout())
 }
@@ -87,7 +93,11 @@ func runQueryFile(cmd *cobra.Command, cfg *rootConfig, path string, stopOnError 
 			}
 		}
 	}
-	return firstErr
+	if firstErr != nil {
+		// individual errors already printed to stderr; return summary to signal non-zero exit
+		return &queryError{err: fmt.Errorf("query: one or more queries failed")}
+	}
+	return nil
 }
 
 // splitQueries reads r and splits on lines containing only "---".
