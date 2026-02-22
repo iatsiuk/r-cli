@@ -26,13 +26,13 @@ Set up TestMain with shared container, `setupTestDB`, `createTestTable` helpers.
 
 ### Task 2: Server info and database operations
 
-- [ ] Test: SERVER_INFO query returns valid server name and id (non-empty strings)
-- [ ] Test: server id is a valid UUID format
-- [ ] Test: DB_LIST returns array containing "rethinkdb" and "test" (default system dbs)
-- [ ] Test: DB_CREATE creates a new database, DB_LIST now includes it
-- [ ] Test: DB_CREATE with existing name -> RUNTIME_ERROR (OP_FAILED)
-- [ ] Test: DB_DROP removes database, DB_LIST no longer includes it
-- [ ] Test: DB_DROP non-existent database -> RUNTIME_ERROR (OP_FAILED)
+- [x] Test: SERVER_INFO query returns valid server name and id (non-empty strings)
+- [x] Test: server id is a valid UUID format
+- [x] Test: DB_LIST returns array containing "rethinkdb" and "test" (default system dbs)
+- [x] Test: DB_CREATE creates a new database, DB_LIST now includes it
+- [x] Test: DB_CREATE with existing name -> RUNTIME_ERROR (OP_FAILED)
+- [x] Test: DB_DROP removes database, DB_LIST no longer includes it
+- [x] Test: DB_DROP non-existent database -> RUNTIME_ERROR (OP_FAILED)
 
 ### Task 3: Table operations
 
