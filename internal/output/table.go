@@ -56,14 +56,6 @@ func tableWriter(w, errOut io.Writer, iter RowIterator, maxRows int) error {
 	return nil
 }
 
-func drainIter(iter RowIterator) {
-	for {
-		if _, err := iter.Next(); err != nil {
-			return
-		}
-	}
-}
-
 func collectRows(iter RowIterator, maxRows int) ([]json.RawMessage, bool, error) {
 	var rows []json.RawMessage
 	for {
@@ -75,7 +67,6 @@ func collectRows(iter RowIterator, maxRows int) ([]json.RawMessage, bool, error)
 			return nil, false, err
 		}
 		if len(rows) >= maxRows {
-			drainIter(iter)
 			return rows, true, nil
 		}
 		rows = append(rows, row)
@@ -167,6 +158,9 @@ func cellValue(raw json.RawMessage) string {
 func printTableHeader(w io.Writer, cols []string, widths []int) error {
 	parts := make([]string, len(cols))
 	for i, col := range cols {
+		if runes := []rune(col); widths[i] > 0 && len(runes) > widths[i] {
+			col = string(runes[:widths[i]-1]) + "~"
+		}
 		parts[i] = padRight(col, widths[i])
 	}
 	if _, err := fmt.Fprintln(w, strings.Join(parts, " | ")); err != nil {

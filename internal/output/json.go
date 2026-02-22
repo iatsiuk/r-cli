@@ -36,7 +36,7 @@ func writeIndented(w io.Writer, data json.RawMessage) error {
 	var buf bytes.Buffer
 	if err := json.Indent(&buf, data, "", "  "); err != nil {
 		buf.Reset()
-		buf.Write(data)
+		_, _ = buf.Write(data)
 	}
 	_, err := fmt.Fprintln(w, buf.String())
 	return err
@@ -55,7 +55,7 @@ func writeJSONArray(w io.Writer, first, second json.RawMessage, iter RowIterator
 		var buf bytes.Buffer
 		if err := json.Indent(&buf, cur, "  ", "  "); err != nil {
 			buf.Reset()
-			buf.Write(cur)
+			_, _ = buf.Write(cur)
 		}
 
 		suffix := ""
