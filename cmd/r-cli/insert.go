@@ -90,6 +90,11 @@ func runInsert(ctx context.Context, cfg *rootConfig, ic *insertConfig, dbName, t
 	if ic.batchSize < 1 {
 		return fmt.Errorf("--batch-size must be >= 1")
 	}
+	switch ic.conflict {
+	case "error", "replace", "update":
+	default:
+		return fmt.Errorf("--conflict: invalid value %q, must be error, replace, or update", ic.conflict)
+	}
 	if cfg.timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, cfg.timeout)

@@ -111,8 +111,8 @@ func newTableReconfigureCmd(cfg *rootConfig) *cobra.Command {
 		Short: "Reconfigure table shards and replicas",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if shards == 0 && replicas == 0 {
-				return fmt.Errorf("reconfigure requires --shards and/or --replicas")
+			if shards == 0 && replicas == 0 && !dryRun {
+				return fmt.Errorf("reconfigure requires --shards, --replicas, or --dry-run")
 			}
 			db, err := tableDB(cfg)
 			if err != nil {

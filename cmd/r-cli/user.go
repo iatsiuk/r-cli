@@ -111,7 +111,10 @@ func promptPassword(w io.Writer, r io.Reader) (string, error) {
 	// non-TTY: read one line
 	scanner := bufio.NewScanner(r)
 	if scanner.Scan() {
-		return scanner.Text(), nil
+		if text := scanner.Text(); text != "" {
+			return text, nil
+		}
+		return "", fmt.Errorf("password cannot be empty")
 	}
 	if err := scanner.Err(); err != nil {
 		return "", fmt.Errorf("reading password: %w", err)
