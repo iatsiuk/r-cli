@@ -72,6 +72,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	cmd.AddCommand(newTableCmd(cfg))
 	cmd.AddCommand(newIndexCmd(cfg))
 	cmd.AddCommand(newUserCmd(cfg))
+	cmd.AddCommand(newGrantCmd(cfg))
 	cmd.AddCommand(newStatusCmd(cfg))
 
 	f := cmd.PersistentFlags()

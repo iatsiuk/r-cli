@@ -35,11 +35,11 @@ Depends on: `12-cli-core`
 
 ### Task 3: `grant` command
 
-- [ ] Test: `r-cli grant <user> --read --write` -> global permissions
-- [ ] Test: `r-cli grant <user> --read --db test` -> database permissions
-- [ ] Test: `r-cli grant <user> --read --db test --table users` -> table permissions
-- [ ] Test: `r-cli grant <user> --read=false` -> revoke permission
-- [ ] Implement: grant command with scope flags
+- [x] Test: `r-cli grant <user> --read --write` -> global permissions
+- [x] Test: `r-cli grant <user> --read --db test` -> database permissions
+- [x] Test: `r-cli grant <user> --read --db test --table users` -> table permissions
+- [x] Test: `r-cli grant <user> --read=false` -> revoke permission
+- [x] Implement: grant command with scope flags
 
 ### Task 4: `table reconfigure`, `rebalance`, `wait`, `sync`
 

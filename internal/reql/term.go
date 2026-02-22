@@ -540,6 +540,11 @@ func (t Term) Grant(user string, perms interface{}) Term {
 	return Term{termType: proto.TermGrant, args: []Term{t, Datum(user), toTerm(perms)}}
 }
 
+// Grant creates a global GRANT term ([188, [user, perms]]) with no scope.
+func Grant(user string, perms interface{}) Term {
+	return Term{termType: proto.TermGrant, args: []Term{Datum(user), toTerm(perms)}}
+}
+
 // Do creates a FUNCALL term ([64, [fn, args...]]).
 // API order: Do(arg1, arg2, ..., fn) - function is the last argument.
 // Wire order: [64, [fn, arg1, arg2, ...]] - function goes first on the wire.
