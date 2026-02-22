@@ -247,5 +247,8 @@ func TestUngroup(t *testing.T) {
 		if obj.Group == "" {
 			t.Errorf("row %d: ungroup row missing group field", i)
 		}
+		if obj.Reduction <= 0 {
+			t.Errorf("row %d: reduction=%v, want > 0", i, obj.Reduction)
+		}
 	}
 }

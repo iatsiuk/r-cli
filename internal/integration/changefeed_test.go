@@ -40,18 +40,23 @@ func TestChangefeedInsert(t *testing.T) {
 	defer closeCursor(cur)
 
 	// insert a doc after changefeed is listening
+	writeErrCh := make(chan error, 1)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
 		bgCtx := context.Background()
-		_, c, _ := exec.Run(bgCtx, reql.DB(dbName).Table("docs").Insert(
+		_, c, err := exec.Run(bgCtx, reql.DB(dbName).Table("docs").Insert(
 			map[string]interface{}{"id": "d1", "v": 1},
 		), nil)
 		closeCursor(c)
+		writeErrCh <- err
 	}()
 
 	raw, err := cur.Next()
 	if err != nil {
 		t.Fatalf("cursor next: %v", err)
+	}
+	if writeErr := <-writeErrCh; writeErr != nil {
+		t.Fatalf("triggering insert: %v", writeErr)
 	}
 
 	var ch changeDoc
@@ -100,17 +105,22 @@ func TestChangefeedUpdate(t *testing.T) {
 	}
 	defer closeCursor(cur)
 
+	writeErrCh := make(chan error, 1)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		_, c2, _ := exec.Run(bgCtx, reql.DB(dbName).Table("docs").Get("d1").Update(
+		_, c2, err := exec.Run(bgCtx, reql.DB(dbName).Table("docs").Get("d1").Update(
 			map[string]interface{}{"v": 2},
 		), nil)
 		closeCursor(c2)
+		writeErrCh <- err
 	}()
 
 	raw, err := cur.Next()
 	if err != nil {
 		t.Fatalf("cursor next: %v", err)
+	}
+	if writeErr := <-writeErrCh; writeErr != nil {
+		t.Fatalf("triggering update: %v", writeErr)
 	}
 
 	var ch changeDoc
@@ -159,15 +169,20 @@ func TestChangefeedDelete(t *testing.T) {
 	}
 	defer closeCursor(cur)
 
+	writeErrCh := make(chan error, 1)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		_, c2, _ := exec.Run(bgCtx, reql.DB(dbName).Table("docs").Get("d1").Delete(), nil)
+		_, c2, err := exec.Run(bgCtx, reql.DB(dbName).Table("docs").Get("d1").Delete(), nil)
 		closeCursor(c2)
+		writeErrCh <- err
 	}()
 
 	raw, err := cur.Next()
 	if err != nil {
 		t.Fatalf("cursor next: %v", err)
+	}
+	if writeErr := <-writeErrCh; writeErr != nil {
+		t.Fatalf("triggering delete: %v", writeErr)
 	}
 
 	var ch changeDoc

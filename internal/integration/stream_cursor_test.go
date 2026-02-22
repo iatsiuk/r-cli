@@ -178,11 +178,16 @@ func TestCursorContextCancel(t *testing.T) {
 	cancel()
 
 	// drain until error; context cancellation should propagate
+	var lastErr error
 	for {
 		_, err := cur.Next()
 		if err != nil {
+			lastErr = err
 			break
 		}
+	}
+	if !errors.Is(lastErr, context.Canceled) {
+		t.Errorf("expected context.Canceled after cancel, got %v (type %T)", lastErr, lastErr)
 	}
 }
 

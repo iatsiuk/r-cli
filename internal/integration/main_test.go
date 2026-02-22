@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 
 	req := testcontainers.ContainerRequest{
-		Image:        "rethinkdb:latest",
+		Image:        "rethinkdb:2.4.4",
 		ExposedPorts: []string{"28015/tcp"},
 		WaitingFor:   wait.ForLog("Server ready").WithStartupTimeout(2 * time.Minute),
 	}

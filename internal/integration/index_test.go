@@ -24,10 +24,7 @@ func waitForIndex(t *testing.T, exec *query.Executor, dbName, tableName, indexNa
 	if err != nil {
 		t.Fatalf("indexWait %s: %v", indexName, err)
 	}
-	if cur != nil {
-		_, _ = cur.All()
-		_ = cur.Close()
-	}
+	closeCursor(cur)
 }
 
 func TestIndexCreate(t *testing.T) {
