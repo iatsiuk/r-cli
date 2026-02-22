@@ -19,13 +19,13 @@ Package: `internal/output`
 
 ### Task 2: Raw and JSONL output
 
-- [ ] Test: format single value as plain string
-- [ ] Test: format each row on separate line (streaming)
-- [ ] Implement: `Raw(w io.Writer, iter RowIterator) error`
-- [ ] Test: format single document as compact single-line JSON
-- [ ] Test: format sequence as one JSON object per line (no wrapping array)
-- [ ] Test: format streaming (changefeed) output as continuous JSONL
-- [ ] Implement: `JSONL(w io.Writer, iter RowIterator) error`
+- [x] Test: format single value as plain string
+- [x] Test: format each row on separate line (streaming)
+- [x] Implement: `Raw(w io.Writer, iter RowIterator) error`
+- [x] Test: format single document as compact single-line JSON
+- [x] Test: format sequence as one JSON object per line (no wrapping array)
+- [x] Test: format streaming (changefeed) output as continuous JSONL
+- [x] Implement: `JSONL(w io.Writer, iter RowIterator) error`
 
 ### Task 3: Table output
 
