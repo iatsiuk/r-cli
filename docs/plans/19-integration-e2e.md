@@ -71,5 +71,5 @@ Uses shared container (admin has no password; avoids local --password flag confl
 
 ### Task 7: Bulk insert e2e
 
-- [ ] Test: generate JSONL file, pipe to `r-cli insert <db.table>` -> documents in table
-- [ ] Test: bulk insert with --conflict replace -> existing docs replaced
+- [x] Test: generate JSONL file, pipe to `r-cli insert <db.table>` -> documents in table
+- [x] Test: bulk insert with --conflict replace -> existing docs replaced
