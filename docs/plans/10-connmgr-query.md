@@ -28,11 +28,11 @@ Depends on: `03-conn`, `04-reql-core`, `09-response-cursor`
 
 ### Task 3: Query executor
 
-- [ ] Test: execute `r.db("test").table("users")` against mock server, get cursor
-- [ ] Test: execute with `db` option
-- [ ] Test: execute with timeout
-- [ ] Test: execute with noreply
-- [ ] Implement: `Executor` struct with `Run(ctx, term, opts) (*Cursor, error)`
+- [x] Test: execute `r.db("test").table("users")` against mock server, get cursor
+- [x] Test: execute with `db` option
+- [x] Test: execute with timeout
+- [x] Test: execute with noreply
+- [x] Implement: `Executor` struct with `Run(ctx, term, opts) (*Cursor, error)`
 
 ### Task 4: Server info
 

@@ -176,6 +176,20 @@ func (c *Conn) nextToken() uint64 {
 	return c.token.Add(1)
 }
 
+// NextToken returns the next unique query token for external callers.
+func (c *Conn) NextToken() uint64 {
+	return c.nextToken()
+}
+
+// WriteFrame writes a wire frame to the connection without registering a
+// response waiter. Used for noreply queries and STOP frames.
+func (c *Conn) WriteFrame(token uint64, payload []byte) error {
+	c.writeMu.Lock()
+	err := wire.WriteQuery(c.nc, token, payload)
+	c.writeMu.Unlock()
+	return err
+}
+
 // readLoop continuously reads wire frames and dispatches them to pending Send callers.
 func (c *Conn) readLoop() {
 	defer close(c.done)
