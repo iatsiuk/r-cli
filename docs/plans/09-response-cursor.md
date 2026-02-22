@@ -53,11 +53,11 @@ Depends on: `01-proto-wire`, `03-conn`
 
 Cursor receives data from `conn` via a response channel tied to the query token. For streaming cursors, `conn` keeps the dispatch map entry alive until SUCCESS_SEQUENCE, error, or explicit STOP.
 
-- [ ] Test: SUCCESS_PARTIAL triggers CONTINUE, next batch arrives, ends with SUCCESS_SEQUENCE
-- [ ] Test: premature `Close()` sends STOP
-- [ ] Test: context cancellation sends STOP
-- [ ] Test: concurrent `Next()` calls are safe
-- [ ] Implement: streaming cursor with CONTINUE/STOP lifecycle
+- [x] Test: SUCCESS_PARTIAL triggers CONTINUE, next batch arrives, ends with SUCCESS_SEQUENCE
+- [x] Test: premature `Close()` sends STOP
+- [x] Test: context cancellation sends STOP
+- [x] Test: concurrent `Next()` calls are safe
+- [x] Implement: streaming cursor with CONTINUE/STOP lifecycle
 
 ### Task 6: Changefeed cursor
 

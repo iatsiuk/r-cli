@@ -1,9 +1,14 @@
 package cursor
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
+	"sync"
 
+	"r-cli/internal/proto"
 	"r-cli/internal/response"
 )
 
@@ -71,3 +76,156 @@ func (c *seqCursor) All() ([]json.RawMessage, error) {
 }
 
 func (c *seqCursor) Close() error { return nil }
+
+// streamCursor handles paginated SUCCESS_PARTIAL responses by sending CONTINUE.
+type streamCursor struct {
+	ch     <-chan *response.Response
+	send   func(qt proto.QueryType) error
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	mu       sync.Mutex
+	cond     *sync.Cond
+	buf      []json.RawMessage
+	pos      int
+	partial  bool // last response was PARTIAL; CONTINUE needed when buf exhausted
+	done     bool
+	err      error
+	fetching bool
+
+	closeOnce sync.Once
+	stopErr   error
+}
+
+// NewStream creates a streaming cursor for SUCCESS_PARTIAL responses.
+// initial is the first response; ch receives subsequent batches.
+// send transmits CONTINUE or STOP queries back to the server.
+func NewStream(ctx context.Context, initial *response.Response, ch <-chan *response.Response, send func(proto.QueryType) error) Cursor {
+	ctx2, cancel := context.WithCancel(ctx)
+	c := &streamCursor{
+		ch:     ch,
+		send:   send,
+		ctx:    ctx2,
+		cancel: cancel,
+		buf:    initial.Results,
+		pos:    0,
+	}
+	c.cond = sync.NewCond(&c.mu)
+	switch initial.Type {
+	case proto.ResponseSuccessSequence:
+		c.done = true
+	case proto.ResponseSuccessPartial:
+		c.partial = true
+	}
+	return c
+}
+
+func (c *streamCursor) Next() (json.RawMessage, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for {
+		if c.err != nil {
+			return nil, c.err
+		}
+		if c.pos < len(c.buf) {
+			item := c.buf[c.pos]
+			c.pos++
+			return item, nil
+		}
+		if c.done {
+			return nil, io.EOF
+		}
+		if c.fetching {
+			c.cond.Wait()
+			continue
+		}
+		if err := c.fetchBatch(); err != nil {
+			return nil, err
+		}
+	}
+}
+
+// fetchBatch is called with mu held; it releases and reacquires mu around I/O.
+func (c *streamCursor) fetchBatch() error {
+	c.fetching = true
+	if c.partial {
+		if err := c.send(proto.QueryContinue); err != nil {
+			c.fetching = false
+			c.err = err
+			c.cond.Broadcast()
+			return err
+		}
+	}
+
+	c.mu.Unlock()
+	resp, fetchErr := c.waitForResponse()
+	c.mu.Lock()
+	c.fetching = false
+
+	if fetchErr != nil {
+		c.err = fetchErr
+		c.cond.Broadcast()
+		return fetchErr
+	}
+
+	c.buf = resp.Results
+	c.pos = 0
+	c.partial = false
+
+	switch {
+	case resp.Type == proto.ResponseSuccessSequence:
+		c.done = true
+	case resp.Type == proto.ResponseSuccessPartial:
+		c.partial = true
+	case resp.Type.IsError():
+		c.err = response.MapError(resp)
+	default:
+		c.err = fmt.Errorf("cursor: unexpected response type %d", resp.Type)
+	}
+	c.cond.Broadcast()
+	return c.err
+}
+
+func (c *streamCursor) waitForResponse() (*response.Response, error) {
+	select {
+	case resp, ok := <-c.ch:
+		if !ok {
+			return nil, io.EOF
+		}
+		return resp, nil
+	case <-c.ctx.Done():
+		// send STOP exactly once (guards against concurrent Close())
+		c.closeOnce.Do(func() {
+			c.stopErr = c.send(proto.QueryStop)
+		})
+		return nil, c.ctx.Err()
+	}
+}
+
+func (c *streamCursor) All() ([]json.RawMessage, error) {
+	var all []json.RawMessage
+	for {
+		item, err := c.Next()
+		if errors.Is(err, io.EOF) {
+			return all, nil
+		}
+		if err != nil {
+			return all, err
+		}
+		all = append(all, item)
+	}
+}
+
+func (c *streamCursor) Close() error {
+	c.closeOnce.Do(func() {
+		c.mu.Lock()
+		needStop := !c.done && c.err == nil
+		c.mu.Unlock()
+		c.cancel()
+		if needStop {
+			c.stopErr = c.send(proto.QueryStop)
+		}
+	})
+	return c.stopErr
+}

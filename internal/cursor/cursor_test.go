@@ -1,10 +1,13 @@
 package cursor
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"sync"
 	"testing"
+	"time"
 
 	"r-cli/internal/proto"
 	"r-cli/internal/response"
@@ -140,5 +143,192 @@ func TestSeqCursor_Empty(t *testing.T) {
 	}
 	if len(all) != 0 {
 		t.Fatalf("expected empty slice, got %v", all)
+	}
+}
+
+// --- Task 5: streaming cursor tests ---
+
+func TestStreamCursor_PartialThenSequence(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *response.Response, 1)
+
+	var continueSent bool
+	send := func(qt proto.QueryType) error {
+		if qt == proto.QueryContinue {
+			continueSent = true
+			ch <- &response.Response{
+				Type:    proto.ResponseSuccessSequence,
+				Results: []json.RawMessage{rawMsg(`3`), rawMsg(`4`)},
+			}
+		}
+		return nil
+	}
+
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: []json.RawMessage{rawMsg(`1`), rawMsg(`2`)},
+	}
+	c := NewStream(context.Background(), initial, ch, send)
+
+	for i := 1; i <= 4; i++ {
+		item, err := c.Next()
+		if err != nil {
+			t.Fatalf("item %d: unexpected error: %v", i, err)
+		}
+		want := string(rune('0' + i))
+		if string(item) != want {
+			t.Fatalf("item %d: got %s, want %s", i, item, want)
+		}
+	}
+
+	_, err := c.Next()
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("expected EOF after last item, got %v", err)
+	}
+	if !continueSent {
+		t.Fatal("expected CONTINUE to be sent")
+	}
+}
+
+func TestStreamCursor_Close_SendsStop(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *response.Response)
+
+	var mu sync.Mutex
+	var sent []proto.QueryType
+	send := func(qt proto.QueryType) error {
+		mu.Lock()
+		sent = append(sent, qt)
+		mu.Unlock()
+		return nil
+	}
+
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: []json.RawMessage{rawMsg(`1`)},
+	}
+	c := NewStream(context.Background(), initial, ch, send)
+
+	item, err := c.Next()
+	if err != nil {
+		t.Fatalf("Next() error: %v", err)
+	}
+	if string(item) != `1` {
+		t.Fatalf("got %s, want 1", item)
+	}
+
+	if err := c.Close(); err != nil {
+		t.Fatalf("Close() error: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(sent) != 1 || sent[0] != proto.QueryStop {
+		t.Fatalf("expected [STOP], got %v", sent)
+	}
+}
+
+func TestStreamCursor_ContextCancel_SendsStop(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *response.Response) // never receives
+
+	waiting := make(chan struct{})
+	var mu sync.Mutex
+	var sent []proto.QueryType
+	send := func(qt proto.QueryType) error {
+		mu.Lock()
+		sent = append(sent, qt)
+		mu.Unlock()
+		if qt == proto.QueryContinue {
+			close(waiting) // signal: about to block in waitForResponse
+		}
+		return nil
+	}
+
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: nil,
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c := NewStream(ctx, initial, ch, send)
+
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := c.Next()
+		errCh <- err
+	}()
+
+	// wait until CONTINUE was sent, then cancel
+	<-waiting
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected context.Canceled, got %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for Next() to return")
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	hasStop := false
+	for _, qt := range sent {
+		if qt == proto.QueryStop {
+			hasStop = true
+		}
+	}
+	if !hasStop {
+		t.Fatalf("expected STOP to be sent, got %v", sent)
+	}
+}
+
+func TestStreamCursor_ConcurrentNext(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *response.Response, 1)
+
+	send := func(qt proto.QueryType) error {
+		if qt == proto.QueryContinue {
+			ch <- &response.Response{
+				Type: proto.ResponseSuccessSequence,
+				Results: []json.RawMessage{
+					rawMsg(`"b"`), rawMsg(`"c"`), rawMsg(`"d"`), rawMsg(`"e"`),
+				},
+			}
+		}
+		return nil
+	}
+
+	initial := &response.Response{
+		Type:    proto.ResponseSuccessPartial,
+		Results: []json.RawMessage{rawMsg(`"a"`)},
+	}
+	c := NewStream(context.Background(), initial, ch, send)
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var results []string
+
+	for range 5 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			item, err := c.Next()
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+			mu.Lock()
+			results = append(results, string(item))
+			mu.Unlock()
+		}()
+	}
+
+	wg.Wait()
+	if len(results) != 5 {
+		t.Fatalf("expected 5 results, got %d: %v", len(results), results)
 	}
 }
