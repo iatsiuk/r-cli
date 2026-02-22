@@ -59,6 +59,10 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 			if err := cfg.resolveEnvVars(cmd.Flags().Changed); err != nil {
 				return err
 			}
+			// -p/--password flag takes precedence over --password-file
+			if cmd.Flags().Changed("password") {
+				return nil
+			}
 			return cfg.resolvePassword()
 		},
 	}

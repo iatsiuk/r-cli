@@ -198,7 +198,7 @@ func TestParseStep6(t *testing.T) {
 		}
 	})
 
-	t.Run("failure returns error", func(t *testing.T) {
+	t.Run("failure wraps ErrReqlAuth", func(t *testing.T) {
 		t.Parallel()
 		data, _ := json.Marshal(map[string]interface{}{
 			"success": false,
@@ -207,6 +207,9 @@ func TestParseStep6(t *testing.T) {
 		_, err := parseStep6(data)
 		if err == nil {
 			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, ErrReqlAuth) {
+			t.Errorf("expected ErrReqlAuth, got %v", err)
 		}
 	})
 }
