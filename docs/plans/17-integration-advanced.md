@@ -77,11 +77,11 @@ Depends on: `16-integration-basic`
 
 ### Task 8: Error handling
 
-- [ ] Test: query non-existent table -> RUNTIME_ERROR with NON_EXISTENCE
-- [ ] Test: query non-existent database -> RUNTIME_ERROR with NON_EXISTENCE
-- [ ] Test: malformed ReQL JSON -> COMPILE_ERROR
-- [ ] Test: type mismatch (e.g. add string + number) -> RUNTIME_ERROR
-- [ ] Test: query timeout via context -> context.DeadlineExceeded, no dangling connection
+- [x] Test: query non-existent table -> RUNTIME_ERROR with NON_EXISTENCE
+- [x] Test: query non-existent database -> RUNTIME_ERROR with NON_EXISTENCE
+- [x] Test: malformed ReQL JSON -> COMPILE_ERROR
+- [x] Test: type mismatch (e.g. add string + number) -> RUNTIME_ERROR
+- [x] Test: query timeout via context -> context.DeadlineExceeded, no dangling connection
 
 ### Task 9: Connection manager, reconnect and noreply
 
