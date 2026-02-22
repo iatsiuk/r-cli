@@ -31,6 +31,8 @@ type Config struct {
 	ErrOut      io.Writer
 	InterruptCh <-chan struct{} // receives when user interrupts during query execution
 	Prompt      string
+	OnUseDB     func(db string)     // called when .use <db> is executed
+	OnFormat    func(format string) // called when .format <fmt> is executed
 }
 
 // Repl is the interactive REPL.
@@ -41,6 +43,8 @@ type Repl struct {
 	errOut      io.Writer
 	interruptCh <-chan struct{}
 	prompt      string
+	onUseDB     func(db string)
+	onFormat    func(format string)
 }
 
 // New creates a Repl from Config.
@@ -57,6 +61,14 @@ func New(cfg *Config) *Repl {
 	if errOut == nil {
 		errOut = io.Discard
 	}
+	onUseDB := cfg.OnUseDB
+	if onUseDB == nil {
+		onUseDB = func(string) {}
+	}
+	onFormat := cfg.OnFormat
+	if onFormat == nil {
+		onFormat = func(string) {}
+	}
 	return &Repl{
 		reader:      cfg.Reader,
 		exec:        cfg.Exec,
@@ -64,6 +76,8 @@ func New(cfg *Config) *Repl {
 		errOut:      errOut,
 		interruptCh: cfg.InterruptCh,
 		prompt:      prompt,
+		onUseDB:     onUseDB,
+		onFormat:    onFormat,
 	}
 }
 
@@ -90,6 +104,12 @@ func (r *Repl) Run(ctx context.Context) error {
 		if len(lines) == 0 {
 			line = strings.TrimSpace(line)
 			if line == "" {
+				continue
+			}
+			if strings.HasPrefix(line, ".") {
+				if r.dotCommand(line) {
+					return nil
+				}
 				continue
 			}
 		}
@@ -140,6 +160,36 @@ func isComplete(s string) bool {
 		}
 	}
 	return depth <= 0
+}
+
+// dotCommand dispatches a REPL dot-command. Returns true if the REPL should exit.
+func (r *Repl) dotCommand(line string) bool {
+	parts := strings.Fields(line)
+	switch parts[0] {
+	case ".exit", ".quit":
+		return true
+	case ".use":
+		if len(parts) < 2 {
+			_, _ = fmt.Fprintln(r.errOut, "usage: .use <database>")
+			return false
+		}
+		r.onUseDB(parts[1])
+	case ".format":
+		if len(parts) < 2 {
+			_, _ = fmt.Fprintln(r.errOut, "usage: .format <json|jsonl|raw|table>")
+			return false
+		}
+		r.onFormat(parts[1])
+	case ".help":
+		_, _ = fmt.Fprintln(r.out, "Available commands:")
+		_, _ = fmt.Fprintln(r.out, "  .exit, .quit          exit the REPL")
+		_, _ = fmt.Fprintln(r.out, "  .use <database>       change current database")
+		_, _ = fmt.Fprintln(r.out, "  .format <fmt>         set output format (json|jsonl|raw|table)")
+		_, _ = fmt.Fprintln(r.out, "  .help                 show this help")
+	default:
+		_, _ = fmt.Fprintf(r.errOut, "unknown command: %s\n", parts[0])
+	}
+	return false
 }
 
 func (r *Repl) runQuery(ctx context.Context, expr string) {

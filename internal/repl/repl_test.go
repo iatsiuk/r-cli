@@ -263,6 +263,106 @@ func TestReplMultilineCompleteQueryExecutes(t *testing.T) {
 	}
 }
 
+func TestReplDotExit(t *testing.T) {
+	t.Parallel()
+	called := 0
+	r := New(&Config{
+		Reader: &fakeReader{lines: []string{".exit", "r.now()"}},
+		Exec: func(_ context.Context, _ string, _ io.Writer) error {
+			called++
+			return nil
+		},
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called != 0 {
+		t.Errorf("exec called %d times after .exit, want 0", called)
+	}
+}
+
+func TestReplDotQuit(t *testing.T) {
+	t.Parallel()
+	called := 0
+	r := New(&Config{
+		Reader: &fakeReader{lines: []string{".quit", "r.now()"}},
+		Exec: func(_ context.Context, _ string, _ io.Writer) error {
+			called++
+			return nil
+		},
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called != 0 {
+		t.Errorf("exec called %d times after .quit, want 0", called)
+	}
+}
+
+func TestReplDotUse(t *testing.T) {
+	t.Parallel()
+	var usedDB string
+	r := New(&Config{
+		Reader: &fakeReader{lines: []string{".use mydb"}},
+		Exec:   func(_ context.Context, _ string, _ io.Writer) error { return nil },
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+		OnUseDB: func(db string) {
+			usedDB = db
+		},
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if usedDB != "mydb" {
+		t.Errorf("OnUseDB called with %q, want %q", usedDB, "mydb")
+	}
+}
+
+func TestReplDotFormat(t *testing.T) {
+	t.Parallel()
+	var setFmt string
+	r := New(&Config{
+		Reader: &fakeReader{lines: []string{".format jsonl"}},
+		Exec:   func(_ context.Context, _ string, _ io.Writer) error { return nil },
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+		OnFormat: func(format string) {
+			setFmt = format
+		},
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if setFmt != "jsonl" {
+		t.Errorf("OnFormat called with %q, want %q", setFmt, "jsonl")
+	}
+}
+
+func TestReplDotHelp(t *testing.T) {
+	t.Parallel()
+	var out bytes.Buffer
+	r := New(&Config{
+		Reader: &fakeReader{lines: []string{".help"}},
+		Exec:   func(_ context.Context, _ string, _ io.Writer) error { return nil },
+		Out:    &out,
+		ErrOut: io.Discard,
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	output := out.String()
+	for _, want := range []string{".exit", ".quit", ".use", ".format", ".help"} {
+		if !strings.Contains(output, want) {
+			t.Errorf(".help output missing %q; got: %q", want, output)
+		}
+	}
+}
+
 func TestReplCtrlCDuringExecution(t *testing.T) {
 	t.Parallel()
 

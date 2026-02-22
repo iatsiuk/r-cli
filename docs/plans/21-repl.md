@@ -45,11 +45,11 @@ Depends on: `14-parser`, `12-cli-core`
 
 ### Task 5: REPL-specific commands
 
-- [ ] Test: `.exit` or `.quit` -> exit REPL
-- [ ] Test: `.use <db>` -> change default database
-- [ ] Test: `.format <fmt>` -> change output format for session
-- [ ] Test: `.help` -> show available commands
-- [ ] Implement: dot-command dispatcher
+- [x] Test: `.exit` or `.quit` -> exit REPL
+- [x] Test: `.use <db>` -> change default database
+- [x] Test: `.format <fmt>` -> change output format for session
+- [x] Test: `.help` -> show available commands
+- [x] Implement: dot-command dispatcher
 
 ### Task 6: CLI integration
 
