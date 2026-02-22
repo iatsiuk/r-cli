@@ -60,6 +60,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	cmd.AddCommand(newRunCmd(cfg))
 	cmd.AddCommand(newDBCmd(cfg))
+	cmd.AddCommand(newTableCmd(cfg))
 
 	f := cmd.PersistentFlags()
 	f.StringVarP(&cfg.host, "host", "H", "localhost", "RethinkDB host")

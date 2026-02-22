@@ -66,11 +66,11 @@ Execute a raw ReQL JSON term directly (pre-serialized).
 
 ### Task 6: `table` subcommands
 
-- [ ] Test: `r-cli table list` -> list tables in current db
-- [ ] Test: `r-cli table create <name>` -> create table
-- [ ] Test: `r-cli table drop <name>` -> drop table (with confirmation)
-- [ ] Test: `r-cli table info <name>` -> table status/config
-- [ ] Implement: table command group
+- [x] Test: `r-cli table list` -> list tables in current db
+- [x] Test: `r-cli table create <name>` -> create table
+- [x] Test: `r-cli table drop <name>` -> drop table (with confirmation)
+- [x] Test: `r-cli table info <name>` -> table status/config
+- [x] Implement: table command group
 
 ### Task 7: `status` and `completion` commands
 
