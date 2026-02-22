@@ -110,12 +110,8 @@ func runInsert(ctx context.Context, cfg *rootConfig, ic *insertConfig, dbName, t
 	} else {
 		err = insertJSONL(ctx, exec, cfg, tbl, opts, ic.batchSize, r, &total)
 	}
-	if err != nil {
-		return err
-	}
-
 	data, _ := json.Marshal(total)
-	_, err = fmt.Fprintf(out, "%s\n", data)
+	_, _ = fmt.Fprintf(out, "%s\n", data)
 	return err
 }
 
