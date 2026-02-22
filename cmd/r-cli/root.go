@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,6 +35,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		SilenceErrors:     true,
 		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			cfg.resolveEnvVars(cmd.Flags().Changed)
 			return cfg.resolvePassword()
 		},
 	}
@@ -50,6 +52,31 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	f.StringVarP(&cfg.format, "format", "f", "json", "output format: json, jsonl, raw, table")
 
 	return cmd
+}
+
+// resolveEnvVars applies env var values for flags not explicitly set via CLI.
+func (c *rootConfig) resolveEnvVars(changed func(string) bool) {
+	applyEnvStr(&c.host, changed("host"), "RETHINKDB_HOST")
+	applyEnvStr(&c.user, changed("user"), "RETHINKDB_USER")
+	applyEnvStr(&c.password, changed("password"), "RETHINKDB_PASSWORD")
+	applyEnvStr(&c.database, changed("db"), "RETHINKDB_DATABASE")
+	if !changed("port") {
+		if v := os.Getenv("RETHINKDB_PORT"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				c.port = n
+			}
+		}
+	}
+}
+
+// applyEnvStr sets *dst to the env var value when the flag was not explicitly set.
+func applyEnvStr(dst *string, flagChanged bool, key string) {
+	if flagChanged {
+		return
+	}
+	if v := os.Getenv(key); v != "" {
+		*dst = v
+	}
 }
 
 // resolvePassword loads the password from --password-file if set.

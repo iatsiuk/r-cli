@@ -27,12 +27,12 @@ Depends on: `10-connmgr-query`, `11-output`
 
 ### Task 2: Environment variables and precedence
 
-- [ ] Test: `RETHINKDB_HOST` env var overrides default host
-- [ ] Test: `RETHINKDB_PORT` env var overrides default port
-- [ ] Test: `RETHINKDB_USER` env var overrides default user
-- [ ] Test: `RETHINKDB_PASSWORD` env var overrides default password
-- [ ] Test: `RETHINKDB_DATABASE` env var overrides default db
-- [ ] Test: CLI flag takes precedence over env var
+- [x] Test: `RETHINKDB_HOST` env var overrides default host
+- [x] Test: `RETHINKDB_PORT` env var overrides default port
+- [x] Test: `RETHINKDB_USER` env var overrides default user
+- [x] Test: `RETHINKDB_PASSWORD` env var overrides default password
+- [x] Test: `RETHINKDB_DATABASE` env var overrides default db
+- [x] Test: CLI flag takes precedence over env var
 
 ### Task 3: Additional flags and signal handling
 

@@ -246,6 +246,85 @@ func TestPasswordFileStripsNewline(t *testing.T) {
 	}
 }
 
+func TestEnvVarHost(t *testing.T) {
+	t.Setenv("RETHINKDB_HOST", "envhost")
+	cfg := &rootConfig{host: "localhost"}
+	cfg.resolveEnvVars(func(string) bool { return false })
+	if cfg.host != "envhost" {
+		t.Errorf("got %q, want %q", cfg.host, "envhost")
+	}
+}
+
+func TestEnvVarPort(t *testing.T) {
+	t.Setenv("RETHINKDB_PORT", "19015")
+	cfg := &rootConfig{port: 28015}
+	cfg.resolveEnvVars(func(string) bool { return false })
+	if cfg.port != 19015 {
+		t.Errorf("got %d, want %d", cfg.port, 19015)
+	}
+}
+
+func TestEnvVarUser(t *testing.T) {
+	t.Setenv("RETHINKDB_USER", "envuser")
+	cfg := &rootConfig{user: "admin"}
+	cfg.resolveEnvVars(func(string) bool { return false })
+	if cfg.user != "envuser" {
+		t.Errorf("got %q, want %q", cfg.user, "envuser")
+	}
+}
+
+func TestEnvVarPassword(t *testing.T) {
+	t.Setenv("RETHINKDB_PASSWORD", "envpass")
+	cfg := &rootConfig{}
+	cfg.resolveEnvVars(func(string) bool { return false })
+	if cfg.password != "envpass" {
+		t.Errorf("got %q, want %q", cfg.password, "envpass")
+	}
+}
+
+func TestEnvVarDatabase(t *testing.T) {
+	t.Setenv("RETHINKDB_DATABASE", "envdb")
+	cfg := &rootConfig{}
+	cfg.resolveEnvVars(func(string) bool { return false })
+	if cfg.database != "envdb" {
+		t.Errorf("got %q, want %q", cfg.database, "envdb")
+	}
+}
+
+func TestFlagPrecedenceOverEnvVar(t *testing.T) {
+	t.Setenv("RETHINKDB_HOST", "envhost")
+	t.Setenv("RETHINKDB_PORT", "19015")
+	t.Setenv("RETHINKDB_USER", "envuser")
+	t.Setenv("RETHINKDB_PASSWORD", "envpass")
+	t.Setenv("RETHINKDB_DATABASE", "envdb")
+
+	cfg := &rootConfig{
+		host:     "flaghost",
+		port:     12345,
+		user:     "flaguser",
+		password: "flagpass",
+		database: "flagdb",
+	}
+	// simulate all flags explicitly set
+	cfg.resolveEnvVars(func(string) bool { return true })
+
+	if cfg.host != "flaghost" {
+		t.Errorf("host: got %q, want %q", cfg.host, "flaghost")
+	}
+	if cfg.port != 12345 {
+		t.Errorf("port: got %d, want %d", cfg.port, 12345)
+	}
+	if cfg.user != "flaguser" {
+		t.Errorf("user: got %q, want %q", cfg.user, "flaguser")
+	}
+	if cfg.password != "flagpass" {
+		t.Errorf("password: got %q, want %q", cfg.password, "flagpass")
+	}
+	if cfg.database != "flagdb" {
+		t.Errorf("database: got %q, want %q", cfg.database, "flagdb")
+	}
+}
+
 func TestVersionFlag(t *testing.T) {
 	t.Parallel()
 	cmd := newRootCmd()
