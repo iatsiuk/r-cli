@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"r-cli/internal/conn"
 	"r-cli/internal/response"
@@ -53,6 +54,10 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		SilenceErrors: true,
 		Args:          cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 && term.IsTerminal(int(os.Stdin.Fd())) { //nolint:gosec
+				_ = cmd.Help()
+				return nil
+			}
 			expr, err := readQueryExpr(args, cmd.InOrStdin())
 			if err != nil {
 				return err

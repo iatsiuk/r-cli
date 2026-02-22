@@ -201,6 +201,12 @@ func TestSplitQueriesWhitespaceSeparator(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("got %d queries, want 2: %v", len(got), got)
 	}
+	if got[0] != "r.now()" {
+		t.Errorf("query[0]: got %q, want %q", got[0], "r.now()")
+	}
+	if got[1] != "r.dbList()" {
+		t.Errorf("query[1]: got %q, want %q", got[1], "r.dbList()")
+	}
 }
 
 func TestSplitQueriesMultilineQuery(t *testing.T) {
@@ -212,6 +218,13 @@ func TestSplitQueriesMultilineQuery(t *testing.T) {
 	}
 	if len(got) != 2 {
 		t.Fatalf("got %d queries, want 2: %v", len(got), got)
+	}
+	want0 := "r.db(\"test\")\n  .table(\"users\")"
+	if got[0] != want0 {
+		t.Errorf("query[0]: got %q, want %q", got[0], want0)
+	}
+	if got[1] != "r.now()" {
+		t.Errorf("query[1]: got %q, want %q", got[1], "r.now()")
 	}
 }
 
@@ -239,11 +252,17 @@ func TestRunQueryFileStopOnError(t *testing.T) {
 
 	cmd := &cobra.Command{}
 	cmd.SetContext(context.Background())
+	var errBuf strings.Builder
+	cmd.SetErr(&errBuf)
 	cfg := &rootConfig{}
 
 	err := runQueryFile(cmd, cfg, path, true)
 	if err == nil {
 		t.Error("expected error, got nil")
+	}
+	// stop-on-error returns immediately without printing to stderr
+	if errBuf.Len() != 0 {
+		t.Errorf("stop-on-error should not print to stderr, got: %q", errBuf.String())
 	}
 }
 
@@ -257,11 +276,17 @@ func TestRunQueryFileContinueOnError(t *testing.T) {
 
 	cmd := &cobra.Command{}
 	cmd.SetContext(context.Background())
+	var errBuf strings.Builder
+	cmd.SetErr(&errBuf)
 	cfg := &rootConfig{}
 
 	err := runQueryFile(cmd, cfg, path, false)
 	if err == nil {
 		t.Error("expected error, got nil")
+	}
+	// continue mode prints each error to stderr and attempts all queries
+	if count := strings.Count(errBuf.String(), "query error:"); count != 2 {
+		t.Errorf("continue mode: expected 2 errors on stderr, got %d; stderr: %q", count, errBuf.String())
 	}
 }
 

@@ -21,6 +21,9 @@ func newQueryCmd(cfg *rootConfig) *cobra.Command {
 		Short: "Execute a ReQL expression",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if filePath != "" && len(args) > 0 {
+				return fmt.Errorf("query: --file and expression argument are mutually exclusive")
+			}
 			if filePath != "" {
 				return runQueryFile(cmd, cfg, filePath, stopOnError)
 			}
@@ -78,6 +81,7 @@ func runQueryFile(cmd *cobra.Command, cfg *rootConfig, path string, stopOnError 
 			if stopOnError {
 				return err
 			}
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "query error: %v\n", err)
 			if firstErr == nil {
 				firstErr = err
 			}
