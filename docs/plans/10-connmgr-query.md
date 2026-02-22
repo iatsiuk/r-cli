@@ -36,5 +36,5 @@ Depends on: `03-conn`, `04-reql-core`, `09-response-cursor`
 
 ### Task 4: Server info
 
-- [ ] Test: `ServerInfo()` returns server name and ID
-- [ ] Implement: `ServerInfo(ctx) (*ServerInfo, error)`
+- [x] Test: `ServerInfo()` returns server name and ID
+- [x] Implement: `ServerInfo(ctx) (*ServerInfo, error)`

@@ -261,6 +261,36 @@ func TestExecutorRunWithTimeout(t *testing.T) {
 	}
 }
 
+func TestExecutorServerInfo(t *testing.T) {
+	t.Parallel()
+	const pass = "testpass"
+	handler := func(nc net.Conn, token uint64, _ []byte) {
+		sendResponse(nc, token, map[string]interface{}{
+			"t": 5, // ResponseServerInfo
+			"r": []interface{}{
+				map[string]interface{}{
+					"id":   "some-uuid-1234",
+					"name": "test-server",
+				},
+			},
+		})
+	}
+	addr, stop := startQueryServer(t, pass, handler)
+	defer stop()
+
+	ex := newTestExecutor(t, addr, pass)
+	info, err := ex.ServerInfo(context.Background())
+	if err != nil {
+		t.Fatalf("ServerInfo: %v", err)
+	}
+	if info.ID != "some-uuid-1234" {
+		t.Errorf("ID: got %q, want %q", info.ID, "some-uuid-1234")
+	}
+	if info.Name != "test-server" {
+		t.Errorf("Name: got %q, want %q", info.Name, "test-server")
+	}
+}
+
 func TestExecutorRunWithNoreply(t *testing.T) {
 	t.Parallel()
 	const pass = "testpass"

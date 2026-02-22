@@ -128,6 +128,40 @@ func isFeed(resp *response.Response) bool {
 	return false
 }
 
+// ServerInfo holds information about the connected RethinkDB server.
+type ServerInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// ServerInfo returns information about the connected server.
+func (e *Executor) ServerInfo(ctx context.Context) (*ServerInfo, error) {
+	c, err := e.mgr.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	token := c.NextToken()
+	raw, err := c.Send(ctx, token, []byte(`[5]`))
+	if err != nil {
+		return nil, fmt.Errorf("query: server info: %w", err)
+	}
+	resp, err := response.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("query: server info response: %w", err)
+	}
+	if resp.Type != proto.ResponseServerInfo {
+		return nil, fmt.Errorf("query: unexpected response type %d", resp.Type)
+	}
+	if len(resp.Results) == 0 {
+		return nil, fmt.Errorf("query: empty server info response")
+	}
+	var info ServerInfo
+	if err := json.Unmarshal(resp.Results[0], &info); err != nil {
+		return nil, fmt.Errorf("query: parse server info: %w", err)
+	}
+	return &info, nil
+}
+
 // errResp wraps a transport error into a CLIENT_ERROR response so streaming
 // cursors can surface it through the normal response channel.
 func errResp(err error) *response.Response {
