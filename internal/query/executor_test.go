@@ -353,7 +353,7 @@ func TestExecutorRunServerError(t *testing.T) {
 		sendResponse(nc, token, map[string]interface{}{
 			"t": 18, // ResponseRuntimeError
 			"r": []interface{}{"table `users` does not exist"},
-			"e": 4, // ErrorType runtime
+			"e": 3100000, // ErrorNonExistence
 		})
 	}
 	addr, stop := startQueryServer(t, pass, handler)
