@@ -38,14 +38,14 @@ Depends on: `04-reql-core`, `06-reql-functions-index`
 
 ### Task 3: Parser - advanced expressions
 
-- [ ] Test: parse bracket notation `row("field")("subfield")` -> nested BRACKET terms
-- [ ] Test: parse `r.expr([1,2,3])` -> MAKE_ARRAY wrapped
-- [ ] Test: parse `r.minval` (no parens) -> MINVAL term
-- [ ] Test: parse `r.maxval` (no parens) -> MAXVAL term
-- [ ] Test: parse `r.branch(cond, trueVal, falseVal)` -> BRANCH term
-- [ ] Test: parse `r.error("msg")` -> ERROR term
-- [ ] Test: parse `r.args([...])` -> ARGS term
-- [ ] Implement: extended expression parsing
+- [x] Test: parse bracket notation `row("field")("subfield")` -> nested BRACKET terms
+- [x] Test: parse `r.expr([1,2,3])` -> MAKE_ARRAY wrapped
+- [x] Test: parse `r.minval` (no parens) -> MINVAL term
+- [x] Test: parse `r.maxval` (no parens) -> MAXVAL term
+- [x] Test: parse `r.branch(cond, trueVal, falseVal)` -> BRANCH term
+- [x] Test: parse `r.error("msg")` -> ERROR term
+- [x] Test: parse `r.args([...])` -> ARGS term
+- [x] Implement: extended expression parsing
 
 ### Task 4: Parser - all method names and extended operations
 

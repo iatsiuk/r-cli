@@ -99,3 +99,49 @@ func TestParse_FilterNestedRow(t *testing.T) {
 	want := reql.DB("test").Table("users").Filter(reql.Row().Bracket("age").Gt(21))
 	assertTermEqual(t, got, want)
 }
+
+func TestParse_BracketChain(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.row("field")("subfield")`)
+	want := reql.Row().Bracket("field").Bracket("subfield")
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_Expr(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.expr([1, 2, 3])`)
+	want := reql.Array(1, 2, 3)
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_MinVal(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.minval`)
+	assertTermEqual(t, got, reql.MinVal())
+}
+
+func TestParse_MaxVal(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.maxval`)
+	assertTermEqual(t, got, reql.MaxVal())
+}
+
+func TestParse_Branch(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.branch(r.row("x").gt(0), "pos", "neg")`)
+	want := reql.Branch(reql.Row().Bracket("x").Gt(0), "pos", "neg")
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_Error(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.error("msg")`)
+	assertTermEqual(t, got, reql.Error("msg"))
+}
+
+func TestParse_Args(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.args([r.minval, r.maxval])`)
+	want := reql.Args(reql.Array(reql.MinVal(), reql.MaxVal()))
+	assertTermEqual(t, got, want)
+}

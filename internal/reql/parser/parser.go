@@ -92,12 +92,8 @@ func (p *parser) parseRExpr() (reql.Term, error) {
 }
 
 // rBuilders maps r.method names to builder functions.
-var rBuilders = map[string]func(*parser) (reql.Term, error){
-	"db":   parseRDB,
-	"row":  parseRRow,
-	"desc": parseRDesc,
-	"asc":  parseRAsc,
-}
+// initialized in init() to break the static dependency cycle.
+var rBuilders map[string]func(*parser) (reql.Term, error)
 
 func parseRDB(p *parser) (reql.Term, error) {
 	name, err := p.parseOneStringArg()
@@ -135,23 +131,74 @@ func parseRAsc(p *parser) (reql.Term, error) {
 	return reql.Asc(name), nil
 }
 
+func parseRMinVal(_ *parser) (reql.Term, error) {
+	return reql.MinVal(), nil
+}
+
+func parseRMaxVal(_ *parser) (reql.Term, error) {
+	return reql.MaxVal(), nil
+}
+
+func parseRBranch(p *parser) (reql.Term, error) {
+	args, err := p.parseArgList()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	iargs := make([]interface{}, len(args))
+	for i, a := range args {
+		iargs[i] = a
+	}
+	return reql.Branch(iargs...), nil
+}
+
+func parseRError(p *parser) (reql.Term, error) {
+	msg, err := p.parseOneStringArg()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Error(msg), nil
+}
+
+func parseRArgs(p *parser) (reql.Term, error) {
+	arg, err := p.parseOneArg()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Args(arg), nil
+}
+
+func parseRExpr(p *parser) (reql.Term, error) {
+	return p.parseOneArg()
+}
+
 func (p *parser) parseChain(t reql.Term) (reql.Term, error) {
-	for p.peek().Type == tokenDot {
-		p.advance()
-		method, err := p.expect(tokenIdent)
-		if err != nil {
-			return reql.Term{}, err
-		}
-		fn, ok := chainBuilders[method.Value]
-		if !ok {
-			return reql.Term{}, fmt.Errorf("unknown method .%s at position %d", method.Value, method.Pos)
-		}
-		t, err = fn(p, t)
-		if err != nil {
-			return reql.Term{}, err
+	for {
+		switch p.peek().Type {
+		case tokenDot:
+			p.advance()
+			method, err := p.expect(tokenIdent)
+			if err != nil {
+				return reql.Term{}, err
+			}
+			fn, ok := chainBuilders[method.Value]
+			if !ok {
+				return reql.Term{}, fmt.Errorf("unknown method .%s at position %d", method.Value, method.Pos)
+			}
+			t, err = fn(p, t)
+			if err != nil {
+				return reql.Term{}, err
+			}
+		case tokenLParen:
+			// bracket notation: term("field")
+			field, err := p.parseOneStringArg()
+			if err != nil {
+				return reql.Term{}, err
+			}
+			t = t.Bracket(field)
+		default:
+			return t, nil
 		}
 	}
-	return t, nil
 }
 
 // chainBuilders maps method names to chain builder functions.
@@ -159,6 +206,18 @@ func (p *parser) parseChain(t reql.Term) (reql.Term, error) {
 var chainBuilders map[string]func(*parser, reql.Term) (reql.Term, error)
 
 func init() {
+	rBuilders = map[string]func(*parser) (reql.Term, error){
+		"db":     parseRDB,
+		"row":    parseRRow,
+		"desc":   parseRDesc,
+		"asc":    parseRAsc,
+		"minval": parseRMinVal,
+		"maxval": parseRMaxVal,
+		"branch": parseRBranch,
+		"error":  parseRError,
+		"args":   parseRArgs,
+		"expr":   parseRExpr,
+	}
 	chainBuilders = map[string]func(*parser, reql.Term) (reql.Term, error){
 		"table":   chainTable,
 		"filter":  chainFilter,
