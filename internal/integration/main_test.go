@@ -78,9 +78,13 @@ func defaultCfg() conn.Config {
 }
 
 // newExecutor creates an Executor backed by the shared test container.
-func newExecutor() (*query.Executor, func()) {
+// Cleanup is registered via t.Cleanup so it runs after any t.Cleanup
+// callbacks registered by setupTestDB (LIFO order ensures DB drop before close).
+func newExecutor(t *testing.T) *query.Executor {
+	t.Helper()
 	mgr := connmgr.NewFromConfig(defaultCfg(), nil)
-	return query.New(mgr), func() { _ = mgr.Close() }
+	t.Cleanup(func() { _ = mgr.Close() })
+	return query.New(mgr)
 }
 
 // closeCursor closes a cursor if non-nil, discarding errors.

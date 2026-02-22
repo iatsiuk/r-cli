@@ -14,8 +14,7 @@ import (
 
 func TestTableCreate(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -41,8 +40,7 @@ func TestTableCreate(t *testing.T) {
 
 func TestTableCreatePrimaryKey(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -79,8 +77,7 @@ func TestTableCreatePrimaryKey(t *testing.T) {
 
 func TestTableCreateDuplicate(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -101,8 +98,7 @@ func TestTableCreateDuplicate(t *testing.T) {
 
 func TestTableDrop(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -134,8 +130,7 @@ func TestTableDrop(t *testing.T) {
 
 func TestTableDropNonexistent(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -154,8 +149,7 @@ func TestTableDropNonexistent(t *testing.T) {
 
 func TestTableConfig(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -203,8 +197,7 @@ func TestTableConfig(t *testing.T) {
 
 func TestTableStatus(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())

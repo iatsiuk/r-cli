@@ -14,8 +14,7 @@ import (
 
 func TestUpdateSingle(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -59,8 +58,7 @@ func TestUpdateSingle(t *testing.T) {
 
 func TestUpdateAll(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -85,8 +83,7 @@ func TestUpdateAll(t *testing.T) {
 
 func TestUpdateMerge(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -126,8 +123,7 @@ func TestUpdateMerge(t *testing.T) {
 
 func TestUpdateNonexistent(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -147,8 +143,7 @@ func TestUpdateNonexistent(t *testing.T) {
 
 func TestUpdateReturnChanges(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -199,8 +194,7 @@ func TestUpdateReturnChanges(t *testing.T) {
 
 func TestReplaceByGet(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -245,8 +239,7 @@ func TestReplaceByGet(t *testing.T) {
 
 func TestReplaceMissingPrimaryKey(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -275,8 +268,7 @@ func TestReplaceMissingPrimaryKey(t *testing.T) {
 
 func TestDeleteSingle(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -299,8 +291,7 @@ func TestDeleteSingle(t *testing.T) {
 
 func TestDeleteWithFilter(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -325,8 +316,7 @@ func TestDeleteWithFilter(t *testing.T) {
 
 func TestDeleteAll(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -351,8 +341,7 @@ func TestDeleteAll(t *testing.T) {
 
 func TestDeleteNonexistent(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())

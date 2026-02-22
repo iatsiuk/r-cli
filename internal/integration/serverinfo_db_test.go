@@ -20,8 +20,7 @@ var uuidRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4
 
 func TestServerInfoName(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	info, err := exec.ServerInfo(context.Background())
 	if err != nil {
@@ -37,8 +36,7 @@ func TestServerInfoName(t *testing.T) {
 
 func TestServerInfoUUID(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	info, err := exec.ServerInfo(context.Background())
 	if err != nil {
@@ -51,8 +49,7 @@ func TestServerInfoUUID(t *testing.T) {
 
 func TestDatabaseList(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	_, cur, err := exec.Run(context.Background(), reql.DBList(), nil)
 	if err != nil {
@@ -70,8 +67,7 @@ func TestDatabaseList(t *testing.T) {
 
 func TestDatabaseCreate(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	dbName := sanitizeID(t.Name())
 	setupTestDB(t, exec, dbName)
@@ -89,8 +85,7 @@ func TestDatabaseCreate(t *testing.T) {
 
 func TestDatabaseCreateDuplicate(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	dbName := sanitizeID(t.Name())
 	setupTestDB(t, exec, dbName)
@@ -108,8 +103,7 @@ func TestDatabaseCreateDuplicate(t *testing.T) {
 
 func TestDatabaseDrop(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -139,8 +133,7 @@ func TestDatabaseDrop(t *testing.T) {
 
 func TestDatabaseDropNonexistent(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	_, cur, err := exec.Run(context.Background(), reql.DBDrop("nonexistent_zzz_xyz"), nil)
 	closeCursor(cur)

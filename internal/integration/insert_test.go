@@ -39,8 +39,7 @@ func parseWriteResult(t *testing.T, cur cursor.Cursor) writeResult {
 
 func TestInsertSingle(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -68,8 +67,7 @@ func TestInsertSingle(t *testing.T) {
 
 func TestInsertExplicitID(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -95,8 +93,7 @@ func TestInsertExplicitID(t *testing.T) {
 
 func TestInsertDuplicateID(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -125,8 +122,7 @@ func TestInsertDuplicateID(t *testing.T) {
 
 func TestInsertConflictReplace(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -155,8 +151,7 @@ func TestInsertConflictReplace(t *testing.T) {
 
 func TestInsertConflictUpdate(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -185,8 +180,7 @@ func TestInsertConflictUpdate(t *testing.T) {
 
 func TestInsertBulk(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -216,8 +210,7 @@ func TestInsertBulk(t *testing.T) {
 
 func TestInsertEmptyObject(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -240,8 +233,7 @@ func TestInsertEmptyObject(t *testing.T) {
 
 func TestInsertNestedRoundtrip(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())

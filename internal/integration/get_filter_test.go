@@ -28,8 +28,7 @@ func seedTable(t *testing.T, exec *query.Executor, dbName, tableName string, doc
 
 func TestGetExisting(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -64,8 +63,7 @@ func TestGetExisting(t *testing.T) {
 
 func TestGetNonexistent(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -89,8 +87,7 @@ func TestGetNonexistent(t *testing.T) {
 
 func TestGetAll(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -119,8 +116,7 @@ func TestGetAll(t *testing.T) {
 
 func TestGetAllSecondaryIndex(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -161,8 +157,7 @@ func TestGetAllSecondaryIndex(t *testing.T) {
 
 func TestGetAllNoMatches(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -186,8 +181,7 @@ func TestGetAllNoMatches(t *testing.T) {
 
 func TestFilterExact(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -216,8 +210,7 @@ func TestFilterExact(t *testing.T) {
 
 func TestFilterGT(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -248,8 +241,7 @@ func TestFilterGT(t *testing.T) {
 
 func TestFilterAnd(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -279,8 +271,7 @@ func TestFilterAnd(t *testing.T) {
 
 func TestFilterEmpty(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
@@ -309,8 +300,7 @@ func TestFilterEmpty(t *testing.T) {
 
 func TestFilterNested(t *testing.T) {
 	t.Parallel()
-	exec, cleanup := newExecutor()
-	defer cleanup()
+	exec := newExecutor(t)
 
 	ctx := context.Background()
 	dbName := sanitizeID(t.Name())
