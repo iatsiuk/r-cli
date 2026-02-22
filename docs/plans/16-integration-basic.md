@@ -36,13 +36,13 @@ Set up TestMain with shared container, `setupTestDB`, `createTestTable` helpers.
 
 ### Task 3: Table operations
 
-- [ ] Test: TABLE_CREATE in test db, TABLE_LIST includes new table
-- [ ] Test: TABLE_CREATE with primary_key option -> table uses custom primary key
-- [ ] Test: TABLE_CREATE duplicate name -> RUNTIME_ERROR
-- [ ] Test: TABLE_DROP removes table, TABLE_LIST no longer includes it
-- [ ] Test: TABLE_DROP non-existent table -> RUNTIME_ERROR
-- [ ] Test: CONFIG on table -> returns object with id, name, db, primary_key, shards
-- [ ] Test: STATUS on table -> returns object with status.all_replicas_ready = true
+- [x] Test: TABLE_CREATE in test db, TABLE_LIST includes new table
+- [x] Test: TABLE_CREATE with primary_key option -> table uses custom primary key
+- [x] Test: TABLE_CREATE duplicate name -> RUNTIME_ERROR
+- [x] Test: TABLE_DROP removes table, TABLE_LIST no longer includes it
+- [x] Test: TABLE_DROP non-existent table -> RUNTIME_ERROR
+- [x] Test: CONFIG on table -> returns object with id, name, db, primary_key, shards
+- [x] Test: STATUS on table -> returns object with status.all_replicas_ready = true
 
 ### Task 4: Insert operations
 
