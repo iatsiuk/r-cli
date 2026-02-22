@@ -156,7 +156,7 @@ func TestDatabaseDropNonexistent(t *testing.T) {
 // sanitizeID converts a test name to a valid RethinkDB identifier (max 62 chars).
 func sanitizeID(name string) string {
 	s := strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
 			return r
 		}
 		return '_'
