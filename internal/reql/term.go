@@ -54,7 +54,7 @@ func replaceImplicit(t Term, inFunc bool) (Term, bool, error) {
 		return Var(1), true, nil
 	}
 	if t.termType == 0 {
-		return t, false, nil
+		return t, false, t.err
 	}
 	nested := inFunc || t.termType == proto.TermFunc
 	newArgs := make([]Term, len(t.args))
@@ -822,6 +822,9 @@ func Branch(args ...interface{}) Term {
 	if len(args) < 3 {
 		return errTerm(errors.New("reql: Branch requires at least 3 arguments"))
 	}
+	if len(args)%2 == 0 {
+		return errTerm(errors.New("reql: Branch requires an odd number of arguments"))
+	}
 	termArgs := make([]Term, len(args))
 	for i, a := range args {
 		termArgs[i] = toTerm(a)
@@ -879,6 +882,9 @@ func (t Term) IsEmpty() Term {
 
 // Contains creates a CONTAINS term ([93, [seq, values...]]).
 func (t Term) Contains(values ...interface{}) Term {
+	if len(values) == 0 {
+		return errTerm(errors.New("reql: Contains requires at least one value"))
+	}
 	args := make([]Term, 1, 1+len(values))
 	args[0] = t
 	for _, v := range values {
