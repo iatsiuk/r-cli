@@ -21,7 +21,7 @@ Depends on: `03-conn`, `12-cli-core`
 
 ### Task 2: CLI TLS flags
 
-- [ ] Test: `--tls-cert` flag sets CA certificate path
-- [ ] Test: `--tls-key` + `--tls-client-cert` for client certificate auth
-- [ ] Test: `--insecure-skip-verify` disables cert verification
-- [ ] Implement: TLS flags in root command, pass `*tls.Config` to connection
+- [x] Test: `--tls-cert` flag sets CA certificate path
+- [x] Test: `--tls-key` + `--tls-client-cert` for client certificate auth
+- [x] Test: `--insecure-skip-verify` disables cert verification
+- [x] Implement: TLS flags in root command, pass `*tls.Config` to connection

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -58,14 +57,18 @@ func readTerm(args []string, stdin io.Reader) ([]byte, error) {
 
 // newExecutor creates a connection manager and query executor from the given config.
 // The returned cleanup func must be called to close the manager.
-func newExecutor(cfg *rootConfig) (exec *query.Executor, cleanup func()) {
+func newExecutor(cfg *rootConfig) (*query.Executor, func(), error) {
+	tlsCfg, err := cfg.buildTLSConfig()
+	if err != nil {
+		return nil, func() {}, err
+	}
 	mgr := connmgr.NewFromConfig(conn.Config{
 		Host:     cfg.host,
 		Port:     cfg.port,
 		User:     cfg.user,
 		Password: cfg.password,
-	}, (*tls.Config)(nil))
-	return query.New(mgr), func() { _ = mgr.Close() }
+	}, tlsCfg)
+	return query.New(mgr), func() { _ = mgr.Close() }, nil
 }
 
 // execTerm builds a connection, runs the given ReQL term, and writes output.
@@ -80,7 +83,10 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 		_, _ = fmt.Fprintf(os.Stderr, "connecting to %s:%d\n", cfg.host, cfg.port)
 	}
 
-	exec, cleanup := newExecutor(cfg)
+	exec, cleanup, err := newExecutor(cfg)
+	if err != nil {
+		return err
+	}
 	defer cleanup()
 
 	start := time.Now()

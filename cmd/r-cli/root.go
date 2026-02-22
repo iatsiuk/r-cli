@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
@@ -25,19 +27,23 @@ const (
 )
 
 type rootConfig struct {
-	host         string
-	port         int
-	database     string
-	user         string
-	password     string
-	passwordFile string
-	timeout      time.Duration
-	format       string
-	profile      bool
-	timeFormat   string
-	binaryFormat string
-	quiet        bool
-	verbose      bool
+	host               string
+	port               int
+	database           string
+	user               string
+	password           string
+	passwordFile       string
+	timeout            time.Duration
+	format             string
+	profile            bool
+	timeFormat         string
+	binaryFormat       string
+	quiet              bool
+	verbose            bool
+	tlsCACert          string
+	tlsClientCert      string
+	tlsKey             string
+	insecureSkipVerify bool
 }
 
 func newRootCmd() *cobra.Command {
@@ -107,6 +113,10 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	f.StringVar(&cfg.binaryFormat, "binary-format", "native", "binary format: native (convert pseudo-types), raw (pass-through)")
 	f.BoolVar(&cfg.quiet, "quiet", false, "suppress non-data output to stderr")
 	f.BoolVar(&cfg.verbose, "verbose", false, "show connection info and query timing to stderr")
+	f.StringVar(&cfg.tlsCACert, "tls-cert", "", "path to CA certificate PEM file")
+	f.StringVar(&cfg.tlsClientCert, "tls-client-cert", "", "path to client certificate PEM file")
+	f.StringVar(&cfg.tlsKey, "tls-key", "", "path to client private key PEM file")
+	f.BoolVar(&cfg.insecureSkipVerify, "insecure-skip-verify", false, "skip TLS certificate verification (insecure)")
 
 	return cmd
 }
@@ -175,4 +185,54 @@ func (c *rootConfig) resolvePassword() error {
 	}
 	c.password = strings.TrimSpace(string(data))
 	return nil
+}
+
+// buildTLSConfig returns a *tls.Config built from TLS flags, or nil for plain TCP.
+func (c *rootConfig) buildTLSConfig() (*tls.Config, error) {
+	if c.tlsCACert == "" && c.tlsClientCert == "" && c.tlsKey == "" && !c.insecureSkipVerify {
+		return nil, nil
+	}
+	tlsCfg := &tls.Config{
+		InsecureSkipVerify: c.insecureSkipVerify, //nolint:gosec
+	}
+	if c.tlsCACert != "" {
+		pool, err := loadCACert(c.tlsCACert)
+		if err != nil {
+			return nil, err
+		}
+		tlsCfg.RootCAs = pool
+	}
+	if c.tlsClientCert != "" || c.tlsKey != "" {
+		cert, err := loadClientCert(c.tlsClientCert, c.tlsKey)
+		if err != nil {
+			return nil, err
+		}
+		tlsCfg.Certificates = []tls.Certificate{cert}
+	}
+	return tlsCfg, nil
+}
+
+// loadCACert reads a PEM file and returns an x509.CertPool with the certificate.
+func loadCACert(path string) (*x509.CertPool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading CA cert: %w", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(data) {
+		return nil, fmt.Errorf("parsing CA cert: no valid PEM certificate found")
+	}
+	return pool, nil
+}
+
+// loadClientCert loads an x509 key pair for mutual TLS authentication.
+func loadClientCert(certPath, keyPath string) (tls.Certificate, error) {
+	if certPath == "" || keyPath == "" {
+		return tls.Certificate{}, fmt.Errorf("--tls-client-cert and --tls-key must be used together")
+	}
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("loading client certificate: %w", err)
+	}
+	return cert, nil
 }
