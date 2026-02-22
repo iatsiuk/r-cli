@@ -31,6 +31,20 @@ func TestBuildQuery(t *testing.T) {
 			`[1,[15,[[14,["test"]],"users"]],{"db":[14,["mydb"]]}]`,
 		},
 		{
+			"start_db_term_opt",
+			proto.QueryStart,
+			table,
+			OptArgs{"db": DB("mydb")},
+			`[1,[15,[[14,["test"]],"users"]],{"db":[14,["mydb"]]}]`,
+		},
+		{
+			"start_non_db_opt",
+			proto.QueryStart,
+			table,
+			OptArgs{"read_mode": "outdated"},
+			`[1,[15,[[14,["test"]],"users"]],{"read_mode":"outdated"}]`,
+		},
+		{
 			"continue",
 			proto.QueryContinue,
 			Term{},
@@ -56,5 +70,13 @@ func TestBuildQuery(t *testing.T) {
 				t.Errorf("got %s, want %s", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestBuildQueryUnsupported(t *testing.T) {
+	t.Parallel()
+	_, err := BuildQuery(proto.QueryType(99), Term{}, nil)
+	if err == nil {
+		t.Error("expected error for unsupported query type, got nil")
 	}
 }

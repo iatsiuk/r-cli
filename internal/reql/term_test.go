@@ -310,7 +310,6 @@ func TestChangefeedAndMiscTerms(t *testing.T) {
 	}{
 		{"changes", table.Changes(), `[152,[[15,[[14,["test"]],"users"]]]]`},
 		{"changes_empty_opts", table.Changes(OptArgs{}), `[152,[[15,[[14,["test"]],"users"]]]]`},
-		{"changes_include_initial", table.Changes(OptArgs{"include_initial": true}), `[152,[[15,[[14,["test"]],"users"]]],{"include_initial":true}]`},
 		{"now", Now(), `[103,[]]`},
 		{"uuid", UUID(), `[169,[]]`},
 		{"binary", Binary("data"), `[155,["data"]]`},

@@ -2,6 +2,7 @@ package reql
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"r-cli/internal/proto"
 )
@@ -14,19 +15,16 @@ func BuildQuery(qt proto.QueryType, term Term, opts OptArgs) ([]byte, error) {
 	switch qt {
 	case proto.QueryContinue, proto.QueryStop:
 		return json.Marshal([]interface{}{int(qt)})
-	default:
+	case proto.QueryStart:
 		qOpts := make(map[string]interface{}, len(opts))
 		for k, v := range opts {
-			if k == "db" {
-				if name, ok := v.(string); ok {
-					qOpts[k] = DB(name)
-				} else {
-					qOpts[k] = v
-				}
-			} else {
-				qOpts[k] = v
-			}
+			qOpts[k] = v
+		}
+		if name, ok := opts["db"].(string); ok {
+			qOpts["db"] = DB(name)
 		}
 		return json.Marshal([]interface{}{int(qt), term, qOpts})
+	default:
+		return nil, fmt.Errorf("reql: unsupported query type %d", qt)
 	}
 }

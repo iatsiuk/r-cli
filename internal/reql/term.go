@@ -127,7 +127,7 @@ func DBList() Term {
 func (t Term) TableCreate(name string, opts ...OptArgs) Term {
 	term := Term{termType: proto.TermTableCreate, args: []Term{t, Datum(name)}}
 	if len(opts) > 0 {
-		term.opts = map[string]interface{}(opts[0])
+		term.opts = opts[0]
 	}
 	return term
 }
@@ -163,7 +163,7 @@ func (t Term) Filter(predicate interface{}) Term {
 func (t Term) Insert(doc interface{}, opts ...OptArgs) Term {
 	term := Term{termType: proto.TermInsert, args: []Term{t, toTerm(doc)}}
 	if len(opts) > 0 {
-		term.opts = map[string]interface{}(opts[0])
+		term.opts = opts[0]
 	}
 	return term
 }
