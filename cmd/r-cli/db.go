@@ -56,7 +56,7 @@ func newDBDropCmd(cfg *rootConfig) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !yes {
-				if err := confirmDrop("database", args[0], os.Stdin); err != nil {
+				if err := confirmDrop("database", args[0], os.Stdin, cfg.quiet); err != nil {
 					return err
 				}
 			}
@@ -70,7 +70,11 @@ func newDBDropCmd(cfg *rootConfig) *cobra.Command {
 var errAborted = errors.New("aborted")
 
 // confirmDrop prompts the user to confirm a destructive drop operation.
-func confirmDrop(kind, name string, r io.Reader) error {
+// When quiet is true, skips the prompt and returns errAborted (use --yes to proceed in quiet mode).
+func confirmDrop(kind, name string, r io.Reader, quiet bool) error {
+	if quiet {
+		return errAborted
+	}
 	fmt.Fprintf(os.Stderr, "Drop %s %q? [y/N] ", kind, name)
 	scanner := bufio.NewScanner(r)
 	if scanner.Scan() {

@@ -79,3 +79,19 @@ func TestCompletionFish(t *testing.T) {
 		t.Errorf("completion fish: output does not look like fish completion script")
 	}
 }
+
+func TestCompletionBashWithMissingPasswordFile(t *testing.T) {
+	t.Parallel()
+	// completion commands must not fail even if --password-file points to a missing file
+	root := newRootCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(&bytes.Buffer{})
+	root.SetArgs([]string{"--password-file", "/nonexistent/password.txt", "completion", "bash"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("completion bash with missing password-file: expected success, got %v", err)
+	}
+	if !strings.Contains(buf.String(), "bash") {
+		t.Error("completion bash: output does not look like bash completion script")
+	}
+}

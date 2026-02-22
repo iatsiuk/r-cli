@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -117,7 +118,7 @@ func TestDBDropYesFlagShorthand(t *testing.T) {
 func TestConfirmDropYes(t *testing.T) {
 	t.Parallel()
 	for _, input := range []string{"y", "Y", "yes", "YES", "Yes"} {
-		if err := confirmDrop("database", "mydb", strings.NewReader(input)); err != nil {
+		if err := confirmDrop("database", "mydb", strings.NewReader(input), false); err != nil {
 			t.Errorf("confirmDrop %q: expected nil, got %v", input, err)
 		}
 	}
@@ -126,8 +127,17 @@ func TestConfirmDropYes(t *testing.T) {
 func TestConfirmDropNo(t *testing.T) {
 	t.Parallel()
 	for _, input := range []string{"n", "N", "no", ""} {
-		if err := confirmDrop("database", "mydb", strings.NewReader(input)); err == nil {
+		if err := confirmDrop("database", "mydb", strings.NewReader(input), false); err == nil {
 			t.Errorf("confirmDrop %q: expected error, got nil", input)
 		}
+	}
+}
+
+func TestConfirmDropQuiet(t *testing.T) {
+	t.Parallel()
+	// quiet mode always aborts without reading stdin
+	err := confirmDrop("database", "mydb", strings.NewReader("y"), true)
+	if !errors.Is(err, errAborted) {
+		t.Errorf("confirmDrop quiet: expected errAborted, got %v", err)
 	}
 }

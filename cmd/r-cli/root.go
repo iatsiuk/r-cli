@@ -52,6 +52,10 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// completion subcommands don't need connection config
+			if p := cmd.Parent(); p != nil && p.Name() == "completion" {
+				return nil
+			}
 			if err := cfg.resolveEnvVars(cmd.Flags().Changed); err != nil {
 				return err
 			}

@@ -133,7 +133,7 @@ func TestRunCmdUsage(t *testing.T) {
 func TestConvertingIterTimePseudoType(t *testing.T) {
 	t.Parallel()
 	raw := json.RawMessage(`{"$reql_type$":"TIME","epoch_time":0,"timezone":"+00:00"}`)
-	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}}
+	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}, convertTime: true, convertBinary: true}
 	got, err := iter.Next()
 	if err != nil {
 		t.Fatal(err)
@@ -151,7 +151,7 @@ func TestConvertingIterBinaryPseudoType(t *testing.T) {
 	t.Parallel()
 	// "aGVsbG8=" is base64 for "hello"
 	raw := json.RawMessage(`{"$reql_type$":"BINARY","data":"aGVsbG8="}`)
-	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}}
+	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}, convertTime: true, convertBinary: true}
 	got, err := iter.Next()
 	if err != nil {
 		t.Fatal(err)
@@ -165,13 +165,50 @@ func TestConvertingIterBinaryPseudoType(t *testing.T) {
 func TestConvertingIterPassthrough(t *testing.T) {
 	t.Parallel()
 	raw := json.RawMessage(`{"key":"value"}`)
-	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}}
+	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}, convertTime: true, convertBinary: true}
 	got, err := iter.Next()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(got) != `{"key":"value"}` {
 		t.Errorf("got %q, want original JSON", got)
+	}
+}
+
+func TestConvertingIterTimeRawPassthrough(t *testing.T) {
+	t.Parallel()
+	// time-format raw: TIME pseudo-type should not be converted
+	raw := json.RawMessage(`{"$reql_type$":"TIME","epoch_time":0,"timezone":"+00:00"}`)
+	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}, convertTime: false, convertBinary: true}
+	got, err := iter.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// should remain as raw JSON object, not a time string
+	var m map[string]interface{}
+	if jsonErr := json.Unmarshal(got, &m); jsonErr != nil {
+		t.Fatalf("expected raw object, got %q: %v", got, jsonErr)
+	}
+	if m["$reql_type$"] != "TIME" {
+		t.Errorf("TIME pseudo-type should pass through when convertTime=false, got %q", got)
+	}
+}
+
+func TestConvertingIterBinaryRawPassthrough(t *testing.T) {
+	t.Parallel()
+	// binary-format raw: BINARY pseudo-type should not be converted
+	raw := json.RawMessage(`{"$reql_type$":"BINARY","data":"aGVsbG8="}`)
+	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}, convertTime: true, convertBinary: false}
+	got, err := iter.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]interface{}
+	if jsonErr := json.Unmarshal(got, &m); jsonErr != nil {
+		t.Fatalf("expected raw object, got %q: %v", got, jsonErr)
+	}
+	if m["$reql_type$"] != "BINARY" {
+		t.Errorf("BINARY pseudo-type should pass through when convertBinary=false, got %q", got)
 	}
 }
 

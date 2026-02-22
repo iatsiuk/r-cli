@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -75,6 +76,10 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 		defer cancel()
 	}
 
+	if cfg.verbose {
+		fmt.Fprintf(os.Stderr, "connecting to %s:%d\n", cfg.host, cfg.port)
+	}
+
 	exec, cleanup := newExecutor(cfg)
 	defer cleanup()
 
@@ -83,7 +88,11 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 		opts["db"] = cfg.database
 	}
 
+	start := time.Now()
 	cur, err := exec.Run(ctx, term, opts)
+	if cfg.verbose {
+		fmt.Fprintf(os.Stderr, "query time: %v\n", time.Since(start))
+	}
 	if err != nil {
 		return err
 	}
@@ -94,14 +103,20 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 
 	var iter output.RowIterator = cur
 	if cfg.timeFormat == "native" || cfg.binaryFormat == "native" {
-		iter = &convertingIter{inner: cur}
+		iter = &convertingIter{
+			inner:         cur,
+			convertTime:   cfg.timeFormat == "native",
+			convertBinary: cfg.binaryFormat == "native",
+		}
 	}
 	return writeOutput(w, output.DetectFormat(os.Stdout, cfg.format), iter)
 }
 
-// convertingIter wraps a RowIterator, applying ConvertPseudoTypes to each row.
+// convertingIter wraps a RowIterator, applying selective pseudo-type conversion to each row.
 type convertingIter struct {
-	inner output.RowIterator
+	inner         output.RowIterator
+	convertTime   bool
+	convertBinary bool
 }
 
 func (c *convertingIter) Next() (json.RawMessage, error) {
@@ -109,18 +124,64 @@ func (c *convertingIter) Next() (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	return convertRow(raw), nil
+	return convertRow(raw, c.convertTime, c.convertBinary), nil
 }
 
-// convertRow applies ConvertPseudoTypes to raw JSON, returning raw unchanged on any error.
-func convertRow(raw json.RawMessage) json.RawMessage {
+// convertRow applies selective pseudo-type conversion to raw JSON.
+// Returns raw unchanged on any error or when no conversion is needed.
+func convertRow(raw json.RawMessage, convertTime, convertBinary bool) json.RawMessage {
+	if !convertTime && !convertBinary {
+		return raw
+	}
 	var v interface{}
 	if json.Unmarshal(raw, &v) != nil {
 		return raw
 	}
-	out, err := json.Marshal(response.ConvertPseudoTypes(v))
+	out, err := json.Marshal(selectiveConvert(v, convertTime, convertBinary))
 	if err != nil {
 		return raw
+	}
+	return out
+}
+
+// selectiveConvert recursively converts TIME and/or BINARY pseudo-types based on flags.
+func selectiveConvert(v interface{}, convertTime, convertBinary bool) interface{} {
+	if convertTime && convertBinary {
+		return response.ConvertPseudoTypes(v)
+	}
+	switch val := v.(type) {
+	case map[string]interface{}:
+		return convertMap(val, convertTime, convertBinary)
+	case []interface{}:
+		out := make([]interface{}, len(val))
+		for i, item := range val {
+			out[i] = selectiveConvert(item, convertTime, convertBinary)
+		}
+		return out
+	}
+	return v
+}
+
+// convertMap handles pseudo-type detection and selective conversion for map values.
+func convertMap(m map[string]interface{}, convertTime, convertBinary bool) interface{} {
+	reqlType, isReql := m["$reql_type$"].(string)
+	if isReql {
+		switch reqlType {
+		case "TIME":
+			if convertTime {
+				return response.ConvertPseudoTypes(m)
+			}
+			return m
+		case "BINARY":
+			if convertBinary {
+				return response.ConvertPseudoTypes(m)
+			}
+			return m
+		}
+	}
+	out := make(map[string]interface{}, len(m))
+	for k, item := range m {
+		out[k] = selectiveConvert(item, convertTime, convertBinary)
 	}
 	return out
 }

@@ -73,7 +73,7 @@ func newTableDropCmd(cfg *rootConfig) *cobra.Command {
 				return err
 			}
 			if !yes {
-				if err := confirmDrop("table", args[0], os.Stdin); err != nil {
+				if err := confirmDrop("table", args[0], os.Stdin, cfg.quiet); err != nil {
 					return err
 				}
 			}
