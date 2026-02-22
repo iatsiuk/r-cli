@@ -98,6 +98,11 @@ func makeSend(ctx context.Context, c *conn.Conn, token uint64, ch chan<- *respon
 func continueStream(ctx context.Context, c *conn.Conn, token uint64, ch chan<- *response.Response) {
 	raw, err := c.Send(ctx, token, []byte(`[2]`))
 	if err != nil {
+		// context errors are handled by the cursor's own ctx.Done() case;
+		// sending them as errResp would race and lose the original error type.
+		if ctx.Err() != nil {
+			return
+		}
 		select {
 		case ch <- errResp(err):
 		default:
