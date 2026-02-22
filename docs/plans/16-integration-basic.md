@@ -46,14 +46,14 @@ Set up TestMain with shared container, `setupTestDB`, `createTestTable` helpers.
 
 ### Task 4: Insert operations
 
-- [ ] Test: insert single document -> response has inserted=1, generated_keys has 1 UUID
-- [ ] Test: insert document with explicit id -> no generated_keys, inserted=1
-- [ ] Test: insert duplicate id -> RUNTIME_ERROR (OP_FAILED) or conflict response
-- [ ] Test: insert with conflict="replace" -> replaced=1
-- [ ] Test: insert with conflict="update" -> unchanged=1 or replaced=1
-- [ ] Test: bulk insert 100 documents -> inserted=100, generated_keys has 100 UUIDs
-- [ ] Test: insert empty object -> inserted=1 (id auto-generated)
-- [ ] Test: insert document with nested objects and arrays -> roundtrip preserves structure
+- [x] Test: insert single document -> response has inserted=1, generated_keys has 1 UUID
+- [x] Test: insert document with explicit id -> no generated_keys, inserted=1
+- [x] Test: insert duplicate id -> RUNTIME_ERROR (OP_FAILED) or conflict response
+- [x] Test: insert with conflict="replace" -> replaced=1
+- [x] Test: insert with conflict="update" -> unchanged=1 or replaced=1
+- [x] Test: bulk insert 100 documents -> inserted=100, generated_keys has 100 UUIDs
+- [x] Test: insert empty object -> inserted=1 (id auto-generated)
+- [x] Test: insert document with nested objects and arrays -> roundtrip preserves structure
 
 ### Task 5: Get, GetAll and Filter
 
