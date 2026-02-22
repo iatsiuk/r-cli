@@ -87,6 +87,9 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 	if cfg.database != "" {
 		opts["db"] = cfg.database
 	}
+	if cfg.profile {
+		opts["profile"] = true
+	}
 
 	start := time.Now()
 	cur, err := exec.Run(ctx, term, opts)
