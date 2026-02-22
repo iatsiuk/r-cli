@@ -93,11 +93,11 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 
 	start := time.Now()
 	cur, err := exec.Run(ctx, term, opts)
-	if cfg.verbose {
-		fmt.Fprintf(os.Stderr, "query time: %v\n", time.Since(start))
-	}
 	if err != nil {
 		return err
+	}
+	if cfg.verbose {
+		fmt.Fprintf(os.Stderr, "query time: %v\n", time.Since(start))
 	}
 	if cur == nil {
 		return nil
