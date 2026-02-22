@@ -192,6 +192,10 @@ func TestArithmeticOperators(t *testing.T) {
 		{"sub", base.Sub(3), `[25,[10,3]]`},
 		{"mul", base.Mul(2), `[26,[10,2]]`},
 		{"div", base.Div(2), `[27,[10,2]]`},
+		{"mod", base.Mod(3), `[28,[10,3]]`},
+		{"floor", base.Floor(), `[183,[10]]`},
+		{"ceil", base.Ceil(), `[184,[10]]`},
+		{"round", base.Round(), `[185,[10]]`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

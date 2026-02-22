@@ -419,6 +419,26 @@ func (t Term) Div(value interface{}) Term {
 	return t.binop(proto.TermDiv, value)
 }
 
+// Mod creates a MOD term ([28, [term, value]]).
+func (t Term) Mod(value interface{}) Term {
+	return t.binop(proto.TermMod, value)
+}
+
+// Floor creates a FLOOR term ([183, [term]]).
+func (t Term) Floor() Term {
+	return Term{termType: proto.TermFloor, args: []Term{t}}
+}
+
+// Ceil creates a CEIL term ([184, [term]]).
+func (t Term) Ceil() Term {
+	return Term{termType: proto.TermCeil, args: []Term{t}}
+}
+
+// Round creates a ROUND term ([185, [term]]).
+func (t Term) Round() Term {
+	return Term{termType: proto.TermRound, args: []Term{t}}
+}
+
 // IndexCreate creates an INDEX_CREATE term ([75, [table, name]]).
 func (t Term) IndexCreate(name string) Term {
 	return Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}

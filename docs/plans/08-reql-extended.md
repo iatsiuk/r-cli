@@ -143,8 +143,8 @@ Constants:
 
 ### Task 10: Additional arithmetic
 
-- [ ] Test: `MOD(28)` -> `[28,[<term>,<value>]]`
-- [ ] Test: `FLOOR(183)` -> `[183,[<term>]]`
-- [ ] Test: `CEIL(184)` -> `[184,[<term>]]`
-- [ ] Test: `ROUND(185)` -> `[185,[<term>]]`
-- [ ] Implement: Mod, Floor, Ceil, Round methods
+- [x] Test: `MOD(28)` -> `[28,[<term>,<value>]]`
+- [x] Test: `FLOOR(183)` -> `[183,[<term>]]`
+- [x] Test: `CEIL(184)` -> `[184,[<term>]]`
+- [x] Test: `ROUND(185)` -> `[185,[<term>]]`
+- [x] Implement: Mod, Floor, Ceil, Round methods
