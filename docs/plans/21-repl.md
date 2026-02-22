@@ -37,11 +37,11 @@ Depends on: `14-parser`, `12-cli-core`
 
 ### Task 4: Tab completion
 
-- [ ] Test: `r.` + TAB -> list top-level r.* methods
-- [ ] Test: `.` + TAB after table -> list chainable methods
-- [ ] Test: `r.db("` + TAB -> list database names (query server)
-- [ ] Test: `.table("` + TAB -> list table names in current db (query server)
-- [ ] Implement: completer with static methods + dynamic db/table names
+- [x] Test: `r.` + TAB -> list top-level r.* methods
+- [x] Test: `.` + TAB after table -> list chainable methods
+- [x] Test: `r.db("` + TAB -> list database names (query server)
+- [x] Test: `.table("` + TAB -> list table names in current db (query server)
+- [x] Implement: completer with static methods + dynamic db/table names
 
 ### Task 5: REPL-specific commands
 

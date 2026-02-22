@@ -13,7 +13,12 @@ type readlineReader struct {
 }
 
 // NewReadlineReader creates a Reader backed by github.com/chzyer/readline.
-func NewReadlineReader(prompt, historyFile string, out, errOut io.Writer) (Reader, error) {
+// An optional TabCompleter may be passed to enable tab completion.
+func NewReadlineReader(prompt, historyFile string, out, errOut io.Writer, completer ...TabCompleter) (Reader, error) {
+	var ac readline.AutoCompleter
+	if len(completer) > 0 && completer[0] != nil {
+		ac = completer[0]
+	}
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:                 prompt,
 		HistoryFile:            historyFile,
@@ -22,6 +27,7 @@ func NewReadlineReader(prompt, historyFile string, out, errOut io.Writer) (Reade
 		EOFPrompt:              "exit",
 		Stdout:                 out,
 		Stderr:                 errOut,
+		AutoComplete:           ac,
 	})
 	if err != nil {
 		return nil, err
