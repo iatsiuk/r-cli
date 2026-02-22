@@ -26,12 +26,12 @@ Depends on: `12-cli-core`
 
 ### Task 2: `user` subcommands
 
-- [ ] Test: `r-cli user list` -> list users from rethinkdb.users table
-- [ ] Test: `r-cli user create <name> --password <pwd>` -> insert user
-- [ ] Test: `r-cli user create <name>` (no password flag) -> prompt for password (no echo)
-- [ ] Test: `r-cli user delete <name>` -> delete user (with confirmation)
-- [ ] Test: `r-cli user set-password <name>` -> prompt and update password (no echo)
-- [ ] Implement: user command group (uses `golang.org/x/term` for password prompt)
+- [x] Test: `r-cli user list` -> list users from rethinkdb.users table
+- [x] Test: `r-cli user create <name> --password <pwd>` -> insert user
+- [x] Test: `r-cli user create <name>` (no password flag) -> prompt for password (no echo)
+- [x] Test: `r-cli user delete <name>` -> delete user (with confirmation)
+- [x] Test: `r-cli user set-password <name>` -> prompt and update password (no echo)
+- [x] Implement: user command group (uses `golang.org/x/term` for password prompt)
 
 ### Task 3: `grant` command
 
