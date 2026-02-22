@@ -14,10 +14,10 @@ Depends on: `03-conn`, `12-cli-core`
 
 ### Task 1: TLS connection
 
-- [ ] Test: `DialTLS` with valid CA cert -> handshake succeeds
-- [ ] Test: `DialTLS` with wrong CA cert -> TLS verification error
-- [ ] Test: `DialTLS` with `InsecureSkipVerify` -> connects despite invalid cert
-- [ ] Implement: `DialTLS(ctx, addr, tlsConfig)` using `crypto/tls`
+- [x] Test: `DialTLS` with valid CA cert -> handshake succeeds
+- [x] Test: `DialTLS` with wrong CA cert -> TLS verification error
+- [x] Test: `DialTLS` with `InsecureSkipVerify` -> connects despite invalid cert
+- [x] Implement: `DialTLS(ctx, addr, tlsConfig)` using `crypto/tls`
 
 ### Task 2: CLI TLS flags
 
