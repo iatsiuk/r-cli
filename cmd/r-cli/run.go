@@ -77,7 +77,7 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 	}
 
 	if cfg.verbose && !cfg.quiet {
-		fmt.Fprintf(os.Stderr, "connecting to %s:%d\n", cfg.host, cfg.port)
+		_, _ = fmt.Fprintf(os.Stderr, "connecting to %s:%d\n", cfg.host, cfg.port)
 	}
 
 	exec, cleanup := newExecutor(cfg)
@@ -112,9 +112,9 @@ func buildQueryOpts(cfg *rootConfig) reql.OptArgs {
 // writeQueryMeta writes verbose timing and profile data to stderr.
 func writeQueryMeta(cfg *rootConfig, profile json.RawMessage, elapsed time.Duration) {
 	if cfg.verbose && !cfg.quiet {
-		fmt.Fprintf(os.Stderr, "query time: %v\n", elapsed)
+		_, _ = fmt.Fprintf(os.Stderr, "query time: %v\n", elapsed)
 	}
-	if cfg.profile && len(profile) > 0 {
+	if cfg.profile && !cfg.quiet && len(profile) > 0 {
 		_, _ = fmt.Fprintf(os.Stderr, "profile: %s\n", profile)
 	}
 }

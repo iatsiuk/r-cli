@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -36,12 +38,20 @@ func runStatus(ctx context.Context, cfg *rootConfig, w io.Writer) error {
 		defer cancel()
 	}
 
+	if cfg.verbose && !cfg.quiet {
+		_, _ = fmt.Fprintf(os.Stderr, "connecting to %s:%d\n", cfg.host, cfg.port)
+	}
+
 	exec, cleanup := newExecutor(cfg)
 	defer cleanup()
 
+	start := time.Now()
 	info, err := exec.ServerInfo(ctx)
 	if err != nil {
 		return err
+	}
+	if cfg.verbose && !cfg.quiet {
+		_, _ = fmt.Fprintf(os.Stderr, "query time: %v\n", time.Since(start))
 	}
 
 	si := statusInfo{
