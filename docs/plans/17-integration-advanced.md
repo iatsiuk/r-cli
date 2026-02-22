@@ -51,12 +51,12 @@ Depends on: `16-integration-basic`
 
 ### Task 5: Streaming and cursors
 
-- [ ] Test: query returning >1 batch (insert 1000+ small docs, read all) -> multiple CONTINUE roundtrips
-- [ ] Test: cursor Next() returns documents one by one
-- [ ] Test: cursor All() collects everything into slice
-- [ ] Test: cursor Close() mid-stream -> sends STOP, no error
-- [ ] Test: cursor with context cancel -> stops iteration, no leak
-- [ ] Test: two concurrent cursors on same connection -> both complete correctly
+- [x] Test: query returning >1 batch (insert 1000+ small docs, read all) -> multiple CONTINUE roundtrips
+- [x] Test: cursor Next() returns documents one by one
+- [x] Test: cursor All() collects everything into slice
+- [x] Test: cursor Close() mid-stream -> sends STOP, no error
+- [x] Test: cursor with context cancel -> stops iteration, no leak
+- [x] Test: two concurrent cursors on same connection -> both complete correctly
 
 ### Task 6: Changefeeds
 
