@@ -26,12 +26,12 @@ Depends on: `16-integration-basic`
 
 ### Task 2: Global permissions
 
-- [ ] Test: create user with no permissions -> any query returns PERMISSION_ERROR
-- [ ] Test: grant global read -> user can r.dbList(), r.table().count()
-- [ ] Test: global read without write -> insert returns PERMISSION_ERROR
-- [ ] Test: grant global read+write -> insert succeeds
-- [ ] Test: global write without read -> select returns PERMISSION_ERROR
-- [ ] Test: revoke permissions (grant read: false) -> previously working query fails
+- [x] Test: create user with no permissions -> any query returns PERMISSION_ERROR
+- [x] Test: grant global read -> user can r.dbList(), r.table().count()
+- [x] Test: global read without write -> insert returns PERMISSION_ERROR
+- [x] Test: grant global read+write -> insert succeeds
+- [x] Test: global write without read -> select returns PERMISSION_ERROR
+- [x] Test: revoke permissions (grant read: false) -> previously working query fails
 
 ### Task 3: Database-level permissions
 
