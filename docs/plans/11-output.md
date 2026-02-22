@@ -29,12 +29,12 @@ Package: `internal/output`
 
 ### Task 3: Table output
 
-- [ ] Test: format array of objects as aligned ASCII table
-- [ ] Test: handle missing fields (fill with empty)
-- [ ] Test: truncate long values
-- [ ] Test: handle non-object results (fallback to raw)
-- [ ] Test: rows exceeding maxTableRows (10000) -> truncate with warning to stderr
-- [ ] Implement: `Table(w io.Writer, iter RowIterator) error` (buffers up to maxTableRows=10000)
+- [x] Test: format array of objects as aligned ASCII table
+- [x] Test: handle missing fields (fill with empty)
+- [x] Test: truncate long values
+- [x] Test: handle non-object results (fallback to raw)
+- [x] Test: rows exceeding maxTableRows (10000) -> truncate with warning to stderr
+- [x] Implement: `Table(w io.Writer, iter RowIterator) error` (buffers up to maxTableRows=10000)
 
 ### Task 4: Non-TTY detection and auto-format
 
