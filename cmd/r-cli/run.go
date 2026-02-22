@@ -55,6 +55,11 @@ func readTerm(args []string, stdin io.Reader) ([]byte, error) {
 }
 
 func runQuery(ctx context.Context, cfg *rootConfig, termJSON []byte, w io.Writer) error {
+	return execTerm(ctx, cfg, reql.Datum(json.RawMessage(termJSON)), w)
+}
+
+// execTerm builds a connection, runs the given ReQL term, and writes output.
+func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer) error {
 	mgr := connmgr.NewFromConfig(conn.Config{
 		Host:     cfg.host,
 		Port:     cfg.port,
@@ -69,7 +74,7 @@ func runQuery(ctx context.Context, cfg *rootConfig, termJSON []byte, w io.Writer
 		opts["db"] = cfg.database
 	}
 
-	cur, err := exec.Run(ctx, reql.Datum(json.RawMessage(termJSON)), opts)
+	cur, err := exec.Run(ctx, term, opts)
 	if err != nil {
 		return err
 	}

@@ -59,10 +59,10 @@ Execute a raw ReQL JSON term directly (pre-serialized).
 
 ### Task 5: `db` subcommands
 
-- [ ] Test: `r-cli db list` -> list databases
-- [ ] Test: `r-cli db create <name>` -> create database
-- [ ] Test: `r-cli db drop <name>` -> drop database (with confirmation)
-- [ ] Implement: db command group
+- [x] Test: `r-cli db list` -> list databases
+- [x] Test: `r-cli db create <name>` -> create database
+- [x] Test: `r-cli db drop <name>` -> drop database (with confirmation)
+- [x] Implement: db command group
 
 ### Task 6: `table` subcommands
 
