@@ -82,19 +82,7 @@ func runREPL(ctx context.Context, cfg *rootConfig, out, errOut io.Writer) error 
 	signal.Notify(sigTermCh, syscall.SIGTERM)
 	defer signal.Stop(sigTermCh)
 
-	go func() {
-		for {
-			select {
-			case <-sigIntCh:
-				notifyInterrupt()
-			case <-sigTermCh:
-				closeReader()
-				return
-			case <-replCtx.Done():
-				return
-			}
-		}
-	}()
+	sigTermFired := startSignalRouter(replCtx, sigIntCh, sigTermCh, notifyInterrupt, closeReader)
 
 	r := repl.New(&repl.Config{
 		Reader:      reader,
@@ -110,7 +98,44 @@ func runREPL(ctx context.Context, cfg *rootConfig, out, errOut io.Writer) error 
 			localCfg.format = format
 		},
 	})
-	return r.Run(replCtx)
+	return runReplAndCheckExit(ctx, replCtx, r, sigTermFired)
+}
+
+// startSignalRouter routes OS signals during REPL: SIGINT -> notifyInterrupt, SIGTERM -> closeReader.
+// Returns a buffered channel that receives once when SIGTERM fires.
+func startSignalRouter(replCtx context.Context, sigIntCh, sigTermCh <-chan os.Signal, notifyInterrupt, closeReader func()) chan struct{} {
+	sigTermFired := make(chan struct{}, 1)
+	go func() {
+		for {
+			select {
+			case <-sigIntCh:
+				notifyInterrupt()
+			case <-sigTermCh:
+				select {
+				case sigTermFired <- struct{}{}:
+				default:
+				}
+				closeReader()
+				return
+			case <-replCtx.Done():
+				return
+			}
+		}
+	}()
+	return sigTermFired
+}
+
+// runReplAndCheckExit runs the REPL loop and returns errAborted when the REPL
+// exits cleanly but the root ctx was cancelled by SIGINT (not SIGTERM), so that
+// main exits with 0 instead of 130.
+func runReplAndCheckExit(ctx, replCtx context.Context, r *repl.Repl, sigTermFired <-chan struct{}) error {
+	if err := r.Run(replCtx); err != nil {
+		return err
+	}
+	if ctx.Err() == nil || len(sigTermFired) > 0 {
+		return nil
+	}
+	return errAborted
 }
 
 // makeReplExec returns an ExecFunc that parses and executes a ReQL expression.
