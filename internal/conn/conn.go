@@ -103,6 +103,13 @@ func newConn(nc net.Conn) *Conn {
 	return c
 }
 
+// IsClosed reports whether the connection is closed.
+func (c *Conn) IsClosed() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.closed
+}
+
 // Close closes the underlying connection and waits for all pending Send calls to unblock.
 func (c *Conn) Close() error {
 	c.mu.Lock()
@@ -167,6 +174,26 @@ func (c *Conn) sendStop(token uint64) {
 // nextToken returns the next unique query token, incrementing atomically.
 func (c *Conn) nextToken() uint64 {
 	return c.token.Add(1)
+}
+
+// NextToken returns the next unique query token for external callers.
+func (c *Conn) NextToken() uint64 {
+	return c.nextToken()
+}
+
+// WriteFrame writes a wire frame to the connection without registering a
+// response waiter. Used for noreply queries and STOP frames.
+func (c *Conn) WriteFrame(token uint64, payload []byte) error {
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return ErrClosed
+	}
+	c.mu.Unlock()
+	c.writeMu.Lock()
+	err := wire.WriteQuery(c.nc, token, payload)
+	c.writeMu.Unlock()
+	return err
 }
 
 // readLoop continuously reads wire frames and dispatches them to pending Send callers.
