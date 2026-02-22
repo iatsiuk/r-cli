@@ -33,8 +33,8 @@ Depends on: `04-reql-core`
 
 ### Task 3: Full query serialization
 
-- [ ] Test: wrap term in START query -> `[1,<term>,<optargs>]`
-- [ ] Test: query with `db` optarg -> db value wrapped as DB term
-- [ ] Test: CONTINUE query -> `[2]`
-- [ ] Test: STOP query -> `[3]`
-- [ ] Implement: `BuildQuery(queryType, term, opts) []byte`
+- [x] Test: wrap term in START query -> `[1,<term>,<optargs>]`
+- [x] Test: query with `db` optarg -> db value wrapped as DB term
+- [x] Test: CONTINUE query -> `[2]`
+- [x] Test: STOP query -> `[3]`
+- [x] Implement: `BuildQuery(queryType, term, opts) []byte`
