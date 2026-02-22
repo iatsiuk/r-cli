@@ -87,6 +87,9 @@ func detectInputFormat(file, flagFormat string) string {
 
 // runInsert reads documents from r and bulk-inserts them into db.table.
 func runInsert(ctx context.Context, cfg *rootConfig, ic *insertConfig, dbName, tableName string, r io.Reader, out io.Writer) error {
+	if ic.batchSize < 1 {
+		return fmt.Errorf("--batch-size must be >= 1")
+	}
 	if cfg.timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, cfg.timeout)
