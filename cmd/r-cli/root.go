@@ -46,6 +46,11 @@ type rootConfig struct {
 	insecureSkipVerify bool
 }
 
+// stdinIsTTY reports whether stdin is connected to a terminal; replaceable in tests.
+var stdinIsTTY = func() bool {
+	return term.IsTerminal(int(os.Stdin.Fd())) //nolint:gosec
+}
+
 func newRootCmd() *cobra.Command {
 	cfg := &rootConfig{}
 	return buildRootCmd(cfg)
@@ -63,9 +68,8 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 			if len(args) > 1 {
 				return fmt.Errorf("accepts at most 1 arg(s), received %d", len(args))
 			}
-			if len(args) == 0 && term.IsTerminal(int(os.Stdin.Fd())) { //nolint:gosec
-				_ = cmd.Help()
-				return nil
+			if len(args) == 0 && stdinIsTTY() {
+				return replStart(cmd.Context(), cfg, cmd.OutOrStdout(), cmd.ErrOrStderr())
 			}
 			expr, err := readQueryExpr(args, cmd.InOrStdin())
 			if err != nil {
@@ -89,6 +93,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		},
 	}
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	cmd.AddCommand(newReplCmd(cfg))
 	cmd.AddCommand(newQueryCmd(cfg))
 	cmd.AddCommand(newRunCmd(cfg))
 	cmd.AddCommand(newDBCmd(cfg))

@@ -20,14 +20,17 @@ func main() {
 	ctxErr := ctx.Err()
 	stop()
 
-	if ctxErr != nil {
-		os.Exit(exitINT)
-	}
 	if err != nil {
 		if errors.Is(err, errAborted) {
 			os.Exit(exitOK)
 		}
+		if ctxErr != nil {
+			os.Exit(exitINT)
+		}
 		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(exitCode(err))
+	}
+	if ctxErr != nil {
+		os.Exit(exitINT)
 	}
 }
