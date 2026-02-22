@@ -255,7 +255,9 @@ func TestPasswordFileStripsNewline(t *testing.T) {
 func TestEnvVarHost(t *testing.T) {
 	t.Setenv("RETHINKDB_HOST", "envhost")
 	cfg := &rootConfig{host: "localhost"}
-	cfg.resolveEnvVars(func(string) bool { return false })
+	if err := cfg.resolveEnvVars(func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
 	if cfg.host != "envhost" {
 		t.Errorf("got %q, want %q", cfg.host, "envhost")
 	}
@@ -264,16 +266,31 @@ func TestEnvVarHost(t *testing.T) {
 func TestEnvVarPort(t *testing.T) {
 	t.Setenv("RETHINKDB_PORT", "19015")
 	cfg := &rootConfig{port: 28015}
-	cfg.resolveEnvVars(func(string) bool { return false })
+	if err := cfg.resolveEnvVars(func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
 	if cfg.port != 19015 {
 		t.Errorf("got %d, want %d", cfg.port, 19015)
+	}
+}
+
+func TestEnvVarPortInvalid(t *testing.T) {
+	t.Setenv("RETHINKDB_PORT", "notanumber")
+	cfg := &rootConfig{port: 28015}
+	if err := cfg.resolveEnvVars(func(string) bool { return false }); err == nil {
+		t.Error("expected error for invalid RETHINKDB_PORT, got nil")
+	}
+	if cfg.port != 28015 {
+		t.Errorf("port should remain unchanged after error, got %d", cfg.port)
 	}
 }
 
 func TestEnvVarUser(t *testing.T) {
 	t.Setenv("RETHINKDB_USER", "envuser")
 	cfg := &rootConfig{user: "admin"}
-	cfg.resolveEnvVars(func(string) bool { return false })
+	if err := cfg.resolveEnvVars(func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
 	if cfg.user != "envuser" {
 		t.Errorf("got %q, want %q", cfg.user, "envuser")
 	}
@@ -282,7 +299,9 @@ func TestEnvVarUser(t *testing.T) {
 func TestEnvVarPassword(t *testing.T) {
 	t.Setenv("RETHINKDB_PASSWORD", "envpass")
 	cfg := &rootConfig{}
-	cfg.resolveEnvVars(func(string) bool { return false })
+	if err := cfg.resolveEnvVars(func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
 	if cfg.password != "envpass" {
 		t.Errorf("got %q, want %q", cfg.password, "envpass")
 	}
@@ -291,7 +310,9 @@ func TestEnvVarPassword(t *testing.T) {
 func TestEnvVarDatabase(t *testing.T) {
 	t.Setenv("RETHINKDB_DATABASE", "envdb")
 	cfg := &rootConfig{}
-	cfg.resolveEnvVars(func(string) bool { return false })
+	if err := cfg.resolveEnvVars(func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
 	if cfg.database != "envdb" {
 		t.Errorf("got %q, want %q", cfg.database, "envdb")
 	}
@@ -312,7 +333,9 @@ func TestFlagPrecedenceOverEnvVar(t *testing.T) {
 		database: "flagdb",
 	}
 	// simulate all flags explicitly set
-	cfg.resolveEnvVars(func(string) bool { return true })
+	if err := cfg.resolveEnvVars(func(string) bool { return true }); err != nil {
+		t.Fatal(err)
+	}
 
 	if cfg.host != "flaghost" {
 		t.Errorf("host: got %q, want %q", cfg.host, "flaghost")

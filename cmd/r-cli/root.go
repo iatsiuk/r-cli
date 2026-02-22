@@ -52,7 +52,9 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			cfg.resolveEnvVars(cmd.Flags().Changed)
+			if err := cfg.resolveEnvVars(cmd.Flags().Changed); err != nil {
+				return err
+			}
 			return cfg.resolvePassword()
 		},
 	}
@@ -105,18 +107,21 @@ func isQueryError(err error) bool {
 }
 
 // resolveEnvVars applies env var values for flags not explicitly set via CLI.
-func (c *rootConfig) resolveEnvVars(changed func(string) bool) {
+func (c *rootConfig) resolveEnvVars(changed func(string) bool) error {
 	applyEnvStr(&c.host, changed("host"), "RETHINKDB_HOST")
 	applyEnvStr(&c.user, changed("user"), "RETHINKDB_USER")
 	applyEnvStr(&c.password, changed("password"), "RETHINKDB_PASSWORD")
 	applyEnvStr(&c.database, changed("db"), "RETHINKDB_DATABASE")
 	if !changed("port") {
 		if v := os.Getenv("RETHINKDB_PORT"); v != "" {
-			if n, err := strconv.Atoi(v); err == nil {
-				c.port = n
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				return fmt.Errorf("RETHINKDB_PORT %q: not a valid port number", v)
 			}
+			c.port = n
 		}
 	}
+	return nil
 }
 
 // applyEnvStr sets *dst to the env var value when the flag was not explicitly set.

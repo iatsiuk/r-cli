@@ -16,6 +16,7 @@ import (
 	"r-cli/internal/output"
 	"r-cli/internal/query"
 	"r-cli/internal/reql"
+	"r-cli/internal/response"
 )
 
 func newRunCmd(cfg *rootConfig) *cobra.Command {
@@ -91,7 +92,37 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 	}
 	defer func() { _ = cur.Close() }()
 
-	return writeOutput(w, output.DetectFormat(os.Stdout, cfg.format), cur)
+	var iter output.RowIterator = cur
+	if cfg.timeFormat == "native" || cfg.binaryFormat == "native" {
+		iter = &convertingIter{inner: cur}
+	}
+	return writeOutput(w, output.DetectFormat(os.Stdout, cfg.format), iter)
+}
+
+// convertingIter wraps a RowIterator, applying ConvertPseudoTypes to each row.
+type convertingIter struct {
+	inner output.RowIterator
+}
+
+func (c *convertingIter) Next() (json.RawMessage, error) {
+	raw, err := c.inner.Next()
+	if err != nil {
+		return nil, err
+	}
+	return convertRow(raw), nil
+}
+
+// convertRow applies ConvertPseudoTypes to raw JSON, returning raw unchanged on any error.
+func convertRow(raw json.RawMessage) json.RawMessage {
+	var v interface{}
+	if json.Unmarshal(raw, &v) != nil {
+		return raw
+	}
+	out, err := json.Marshal(response.ConvertPseudoTypes(v))
+	if err != nil {
+		return raw
+	}
+	return out
 }
 
 func writeOutput(w io.Writer, format string, iter output.RowIterator) error {

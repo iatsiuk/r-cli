@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"strings"
 	"testing"
+	"time"
 )
 
 // stubIter is a minimal RowIterator for testing writeOutput.
@@ -126,4 +128,58 @@ func TestRunCmdUsage(t *testing.T) {
 		}
 	}
 	t.Error("run subcommand not found")
+}
+
+func TestConvertingIterTimePseudoType(t *testing.T) {
+	t.Parallel()
+	raw := json.RawMessage(`{"$reql_type$":"TIME","epoch_time":0,"timezone":"+00:00"}`)
+	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}}
+	got, err := iter.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed time.Time
+	if jsonErr := json.Unmarshal(got, &parsed); jsonErr != nil {
+		t.Fatalf("expected time.Time JSON, got %q: %v", got, jsonErr)
+	}
+	if parsed.UTC() != time.Unix(0, 0).UTC() {
+		t.Errorf("got %v, want unix epoch", parsed)
+	}
+}
+
+func TestConvertingIterBinaryPseudoType(t *testing.T) {
+	t.Parallel()
+	// "aGVsbG8=" is base64 for "hello"
+	raw := json.RawMessage(`{"$reql_type$":"BINARY","data":"aGVsbG8="}`)
+	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}}
+	got, err := iter.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// []byte marshals to base64 JSON string
+	if string(got) != `"aGVsbG8="` {
+		t.Errorf("got %q, want base64 string", got)
+	}
+}
+
+func TestConvertingIterPassthrough(t *testing.T) {
+	t.Parallel()
+	raw := json.RawMessage(`{"key":"value"}`)
+	iter := &convertingIter{inner: &stubIter{rows: []json.RawMessage{raw}}}
+	got, err := iter.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != `{"key":"value"}` {
+		t.Errorf("got %q, want original JSON", got)
+	}
+}
+
+func TestConvertingIterEOF(t *testing.T) {
+	t.Parallel()
+	iter := &convertingIter{inner: &stubIter{rows: nil}}
+	_, err := iter.Next()
+	if !errors.Is(err, io.EOF) {
+		t.Errorf("got %v, want io.EOF", err)
+	}
 }
