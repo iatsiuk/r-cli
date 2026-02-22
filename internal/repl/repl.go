@@ -159,7 +159,7 @@ func isComplete(s string) bool {
 			depth--
 		}
 	}
-	return depth == 0
+	return depth == 0 && !inStr
 }
 
 // dotCommand dispatches a REPL dot-command. Returns true if the REPL should exit.

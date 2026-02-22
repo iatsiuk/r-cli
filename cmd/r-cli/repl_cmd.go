@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -61,18 +63,37 @@ func runREPL(ctx context.Context, cfg *rootConfig, out, errOut io.Writer) error 
 		return err
 	}
 
-	// localCtx lets us unblock the shutdown goroutine when runREPL returns normally.
-	localCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	var once sync.Once
 	closeReader := func() { once.Do(func() { _ = reader.Close() }) }
 	defer closeReader()
 
-	// close readline when context is cancelled (SIGTERM/SIGINT) for graceful exit.
+	// replCtx is independent of ctx so that OS SIGINT during query execution
+	// cancels only the current query (via interruptCh) without killing the REPL loop.
+	replCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// route OS SIGINT to interruptCh; readline handles Ctrl+C in raw mode itself.
+	sigIntCh := make(chan os.Signal, 1)
+	signal.Notify(sigIntCh, os.Interrupt)
+	defer signal.Stop(sigIntCh)
+
+	// close readline on SIGTERM for graceful exit.
+	sigTermCh := make(chan os.Signal, 1)
+	signal.Notify(sigTermCh, syscall.SIGTERM)
+	defer signal.Stop(sigTermCh)
+
 	go func() {
-		<-localCtx.Done()
-		closeReader()
+		for {
+			select {
+			case <-sigIntCh:
+				notifyInterrupt()
+			case <-sigTermCh:
+				closeReader()
+				return
+			case <-replCtx.Done():
+				return
+			}
+		}
 	}()
 
 	r := repl.New(&repl.Config{
@@ -89,7 +110,7 @@ func runREPL(ctx context.Context, cfg *rootConfig, out, errOut io.Writer) error 
 			localCfg.format = format
 		},
 	})
-	return r.Run(ctx)
+	return r.Run(replCtx)
 }
 
 // makeReplExec returns an ExecFunc that parses and executes a ReQL expression.
