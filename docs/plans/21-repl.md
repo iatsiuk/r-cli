@@ -23,10 +23,10 @@ Depends on: `14-parser`, `12-cli-core`
 
 ### Task 2: History
 
-- [ ] Test: query is saved to history file (~/.r-cli_history)
-- [ ] Test: up/down arrows navigate history
-- [ ] Test: history persists between sessions
-- [ ] Implement: readline history integration
+- [x] Test: query is saved to history file (~/.r-cli_history)
+- [x] Test: up/down arrows navigate history
+- [x] Test: history persists between sessions
+- [x] Implement: readline history integration
 
 ### Task 3: Multiline input
 

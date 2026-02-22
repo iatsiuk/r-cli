@@ -13,9 +13,10 @@ import (
 // fakeReader is a test Reader that serves lines from a slice, returning EOF when exhausted.
 // The sentinel "\x03" triggers ErrInterrupt.
 type fakeReader struct {
-	lines  []string
-	pos    int
-	prompt string
+	lines   []string
+	pos     int
+	prompt  string
+	history []string
 }
 
 func (f *fakeReader) Readline() (string, error) {
@@ -30,8 +31,9 @@ func (f *fakeReader) Readline() (string, error) {
 	return line, nil
 }
 
-func (f *fakeReader) SetPrompt(prompt string) { f.prompt = prompt }
-func (f *fakeReader) Close() error            { return nil }
+func (f *fakeReader) SetPrompt(prompt string)      { f.prompt = prompt }
+func (f *fakeReader) AddHistory(line string) error { f.history = append(f.history, line); return nil }
+func (f *fakeReader) Close() error                 { return nil }
 
 func TestReplQueryExecution(t *testing.T) {
 	t.Parallel()
@@ -120,6 +122,32 @@ func TestReplCtrlCDuringInput(t *testing.T) {
 	}
 	if called != 1 {
 		t.Errorf("exec called %d times, want 1", called)
+	}
+}
+
+func TestReplHistorySaved(t *testing.T) {
+	t.Parallel()
+	fr := &fakeReader{lines: []string{"r.now()", "", "r.dbList()"}}
+
+	r := New(&Config{
+		Reader: fr,
+		Exec:   func(_ context.Context, _ string, _ io.Writer) error { return nil },
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	})
+
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// empty line must not be saved to history
+	want := []string{"r.now()", "r.dbList()"}
+	if len(fr.history) != len(want) {
+		t.Fatalf("history len %d, want %d: %v", len(fr.history), len(want), fr.history)
+	}
+	for i, w := range want {
+		if fr.history[i] != w {
+			t.Errorf("history[%d] = %q, want %q", i, fr.history[i], w)
+		}
 	}
 }
 

@@ -16,6 +16,7 @@ var ErrInterrupt = errors.New("interrupt")
 type Reader interface {
 	Readline() (string, error)
 	SetPrompt(prompt string)
+	AddHistory(line string) error
 	Close() error
 }
 
@@ -84,6 +85,7 @@ func (r *Repl) Run(ctx context.Context) error {
 		if line == "" {
 			continue
 		}
+		_ = r.reader.AddHistory(line)
 		r.runQuery(ctx, line)
 	}
 }
