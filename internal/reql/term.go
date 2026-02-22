@@ -893,6 +893,45 @@ func Literal(value interface{}) Term {
 	return Term{termType: proto.TermLiteral, args: []Term{toTerm(value)}}
 }
 
+// Sync creates a SYNC term ([138, [table_term]]).
+func (t Term) Sync() Term {
+	return Term{termType: proto.TermSync, args: []Term{t}}
+}
+
+// Reconfigure creates a RECONFIGURE term ([176, [table_term]], opts?).
+func (t Term) Reconfigure(opts ...OptArgs) Term {
+	term := Term{termType: proto.TermReconfigure, args: []Term{t}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
+}
+
+// Rebalance creates a REBALANCE term ([179, [table_term]]).
+func (t Term) Rebalance() Term {
+	return Term{termType: proto.TermRebalance, args: []Term{t}}
+}
+
+// Wait creates a WAIT term ([177, [table_term]]).
+func (t Term) Wait() Term {
+	return Term{termType: proto.TermWait, args: []Term{t}}
+}
+
+// Args creates an ARGS term ([154, [array]]).
+func Args(array Term) Term {
+	return Term{termType: proto.TermArgs, args: []Term{array}}
+}
+
+// MinVal creates a MINVAL term ([180, []]).
+func MinVal() Term {
+	return Term{termType: proto.TermMinVal}
+}
+
+// MaxVal creates a MAXVAL term ([181, []]).
+func MaxVal() Term {
+	return Term{termType: proto.TermMaxVal}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}

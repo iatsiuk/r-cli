@@ -953,3 +953,55 @@ func TestObjectExtendedOperations(t *testing.T) {
 		},
 	})
 }
+
+func TestAdminOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	arr := Array(Datum(1), Datum(2))
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"sync",
+			table.Sync(),
+			`[138,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"reconfigure",
+			table.Reconfigure(OptArgs{"shards": 2, "replicas": 1}),
+			`[176,[[15,[[14,["test"]],"users"]]],{"replicas":1,"shards":2}]`,
+		},
+		{
+			"rebalance",
+			table.Rebalance(),
+			`[179,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"wait",
+			table.Wait(),
+			`[177,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"args",
+			Args(arr),
+			`[154,[[2,[1,2]]]]`,
+		},
+		{
+			"minval",
+			MinVal(),
+			`[180,[]]`,
+		},
+		{
+			"maxval",
+			MaxVal(),
+			`[181,[]]`,
+		},
+		{
+			"between_minval_maxval",
+			table.Between(MinVal(), MaxVal()),
+			`[182,[[15,[[14,["test"]],"users"]],[180,[]],[181,[]]]]`,
+		},
+	})
+}

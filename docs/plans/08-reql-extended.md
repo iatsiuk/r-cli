@@ -114,15 +114,15 @@ Constants:
 
 ### Task 8: Admin operations
 
-- [ ] Test: `SYNC(138)` -> `[138,[<table_term>]]`
-- [ ] Test: `RECONFIGURE(176)` -> `[176,[<table_term>],{"shards":2,"replicas":1}]`
-- [ ] Test: `REBALANCE(179)` -> `[179,[<table_term>]]`
-- [ ] Test: `WAIT(177)` -> `[177,[<table_term>]]`
-- [ ] Test: `ARGS(154)` -> `[154,[<array>]]`
-- [ ] Test: `MINVAL(180)` -> `[180,[]]`
-- [ ] Test: `MAXVAL(181)` -> `[181,[]]`
-- [ ] Test: Between with minval/maxval -> `[182,[<seq>,[180,[]],[181,[]]]]`
-- [ ] Implement: Sync, Reconfigure, Rebalance, Wait, Args, MinVal, MaxVal methods
+- [x] Test: `SYNC(138)` -> `[138,[<table_term>]]`
+- [x] Test: `RECONFIGURE(176)` -> `[176,[<table_term>],{"shards":2,"replicas":1}]`
+- [x] Test: `REBALANCE(179)` -> `[179,[<table_term>]]`
+- [x] Test: `WAIT(177)` -> `[177,[<table_term>]]`
+- [x] Test: `ARGS(154)` -> `[154,[<array>]]`
+- [x] Test: `MINVAL(180)` -> `[180,[]]`
+- [x] Test: `MAXVAL(181)` -> `[181,[]]`
+- [x] Test: Between with minval/maxval -> `[182,[<seq>,[180,[]],[181,[]]]]`
+- [x] Implement: Sync, Reconfigure, Rebalance, Wait, Args, MinVal, MaxVal methods
 
 ### Task 9: Geospatial operations
 
