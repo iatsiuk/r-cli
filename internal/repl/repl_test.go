@@ -250,10 +250,9 @@ func TestReplMultilineCompleteQueryExecutes(t *testing.T) {
 	if called != 1 {
 		t.Errorf("exec called %d times, want 1", called)
 	}
-	want := `r.table(\n"heroes"\n)`
-	_ = want
-	if !strings.Contains(capturedExpr, `r.table(`) || !strings.Contains(capturedExpr, `"heroes"`) || !strings.Contains(capturedExpr, ")") {
-		t.Errorf("captured expr missing expected parts: %q", capturedExpr)
+	want := "r.table(\n\"heroes\"\n)"
+	if capturedExpr != want {
+		t.Errorf("capturedExpr = %q, want %q", capturedExpr, want)
 	}
 	// verify the history entry is the joined multiline expression
 	if len(fr.history) != 1 {
@@ -359,6 +358,192 @@ func TestReplDotHelp(t *testing.T) {
 	for _, want := range []string{".exit", ".quit", ".use", ".format", ".help"} {
 		if !strings.Contains(output, want) {
 			t.Errorf(".help output missing %q; got: %q", want, output)
+		}
+	}
+}
+
+func TestReplReadlineError(t *testing.T) {
+	t.Parallel()
+	readErr := fmt.Errorf("terminal read error")
+	r := New(&Config{
+		Reader: &errorReader{err: readErr},
+		Exec:   func(_ context.Context, _ string, _ io.Writer) error { return nil },
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	})
+	err := r.Run(context.Background())
+	if err == nil {
+		t.Fatal("expected error from Run, got nil")
+	}
+	if err.Error() != readErr.Error() {
+		t.Errorf("Run error = %v, want %v", err, readErr)
+	}
+}
+
+// errorReader returns a fixed error from Readline (not EOF, not interrupt).
+type errorReader struct {
+	err error
+}
+
+func (e *errorReader) Readline() (string, error) { return "", e.err }
+func (e *errorReader) SetPrompt(_ string)        {}
+func (e *errorReader) AddHistory(_ string) error { return nil }
+func (e *errorReader) Close() error              { return nil }
+
+func TestReplRunQueryExecError(t *testing.T) {
+	t.Parallel()
+	var errOut bytes.Buffer
+	execErr := fmt.Errorf("query execution failed")
+	called := 0
+
+	r := New(&Config{
+		Reader: &fakeReader{lines: []string{"r.now()", "r.dbList()"}},
+		Exec: func(_ context.Context, expr string, _ io.Writer) error {
+			called++
+			if called == 1 {
+				return execErr
+			}
+			return nil
+		},
+		Out:    io.Discard,
+		ErrOut: &errOut,
+	})
+
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected Run error: %v", err)
+	}
+	if called != 2 {
+		t.Errorf("exec called %d times, want 2", called)
+	}
+	if !strings.Contains(errOut.String(), execErr.Error()) {
+		t.Errorf("errOut missing exec error message: %q", errOut.String())
+	}
+}
+
+func TestReplDotUseNoArg(t *testing.T) {
+	t.Parallel()
+	var errOut bytes.Buffer
+	called := false
+	r := New(&Config{
+		Reader: &fakeReader{lines: []string{".use"}},
+		Exec:   func(_ context.Context, _ string, _ io.Writer) error { return nil },
+		Out:    io.Discard,
+		ErrOut: &errOut,
+		OnUseDB: func(_ string) {
+			called = true
+		},
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called {
+		t.Error("OnUseDB should not be called when .use has no argument")
+	}
+	if !strings.Contains(errOut.String(), "usage:") {
+		t.Errorf("expected usage message in errOut, got: %q", errOut.String())
+	}
+}
+
+func TestReplDotFormatNoArg(t *testing.T) {
+	t.Parallel()
+	var errOut bytes.Buffer
+	called := false
+	r := New(&Config{
+		Reader: &fakeReader{lines: []string{".format"}},
+		Exec:   func(_ context.Context, _ string, _ io.Writer) error { return nil },
+		Out:    io.Discard,
+		ErrOut: &errOut,
+		OnFormat: func(_ string) {
+			called = true
+		},
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called {
+		t.Error("OnFormat should not be called when .format has no argument")
+	}
+	if !strings.Contains(errOut.String(), "usage:") {
+		t.Errorf("expected usage message in errOut, got: %q", errOut.String())
+	}
+}
+
+func TestReplDotUnknownCommand(t *testing.T) {
+	t.Parallel()
+	var errOut bytes.Buffer
+	called := 0
+	r := New(&Config{
+		Reader: &fakeReader{lines: []string{".foo", "r.now()"}},
+		Exec: func(_ context.Context, _ string, _ io.Writer) error {
+			called++
+			return nil
+		},
+		Out:    io.Discard,
+		ErrOut: &errOut,
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called != 1 {
+		t.Errorf("exec called %d times, want 1 (unknown command should not exit)", called)
+	}
+	if !strings.Contains(errOut.String(), "unknown command") {
+		t.Errorf("expected 'unknown command' in errOut, got: %q", errOut.String())
+	}
+}
+
+func TestReplCtrlCDuringMultiline(t *testing.T) {
+	t.Parallel()
+	var capturedExprs []string
+	fr := &fakeReader{
+		// start multiline, then Ctrl+C to abort, then a fresh query
+		lines: []string{"r.table(", "\x03", "r.now()"},
+	}
+
+	r := New(&Config{
+		Reader: fr,
+		Exec: func(_ context.Context, expr string, _ io.Writer) error {
+			capturedExprs = append(capturedExprs, expr)
+			return nil
+		},
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	})
+
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// only r.now() should have been executed; r.table( was aborted
+	if len(capturedExprs) != 1 || capturedExprs[0] != "r.now()" {
+		t.Errorf("capturedExprs = %v, want [r.now()]", capturedExprs)
+	}
+	// prompt should have reset to primary after Ctrl+C
+	primaryCount := 0
+	for _, p := range fr.prompts {
+		if p == "r> " {
+			primaryCount++
+		}
+	}
+	if primaryCount < 2 {
+		t.Errorf("primary prompt should appear at least twice (start + after Ctrl+C); prompts: %v", fr.prompts)
+	}
+}
+
+func TestIsCompleteEscapeInString(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input    string
+		complete bool
+	}{
+		{`r.filter({"k": "v\"1"})`, true},
+		{`r.filter({"k": "v\"1"`, false},
+		{`r.insert({"name": "O\'Brien"})`, true},
+		{`r.insert({"name": "O\'Brien"`, false},
+	}
+	for _, tc := range tests {
+		got := isComplete(tc.input)
+		if got != tc.complete {
+			t.Errorf("isComplete(%q) = %v, want %v", tc.input, got, tc.complete)
 		}
 	}
 }
