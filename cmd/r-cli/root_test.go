@@ -519,6 +519,8 @@ func generateTestCert(t *testing.T) (certPEM, keyPEM []byte) {
 	tmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject:      pkix.Name{CommonName: "test"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 	}
@@ -647,6 +649,9 @@ func TestBuildTLSConfigClientCertMissingKey(t *testing.T) {
 	if err == nil {
 		t.Error("expected error when --tls-client-cert set without --tls-key")
 	}
+	if !strings.Contains(err.Error(), "--tls-client-cert and --tls-key must be used together") {
+		t.Errorf("unexpected error message: %v", err)
+	}
 }
 
 func TestBuildTLSConfigKeyMissingClientCert(t *testing.T) {
@@ -656,6 +661,9 @@ func TestBuildTLSConfigKeyMissingClientCert(t *testing.T) {
 	if err == nil {
 		t.Error("expected error when --tls-key set without --tls-client-cert")
 	}
+	if !strings.Contains(err.Error(), "--tls-client-cert and --tls-key must be used together") {
+		t.Errorf("unexpected error message: %v", err)
+	}
 }
 
 func TestBuildTLSConfigCACertNotFound(t *testing.T) {
@@ -664,5 +672,22 @@ func TestBuildTLSConfigCACertNotFound(t *testing.T) {
 	_, err := cfg.buildTLSConfig()
 	if err == nil {
 		t.Error("expected error for missing CA cert file")
+	}
+}
+
+func TestBuildTLSConfigCACertInvalidPEM(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	certPath := dir + "/invalid.pem"
+	if err := os.WriteFile(certPath, []byte("not a valid PEM certificate"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &rootConfig{tlsCACert: certPath}
+	_, err := cfg.buildTLSConfig()
+	if err == nil {
+		t.Error("expected error for invalid PEM content")
+	}
+	if !strings.Contains(err.Error(), "no valid PEM certificate found") {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }

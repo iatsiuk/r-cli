@@ -184,14 +184,9 @@ func (c *Conn) sendStop(token uint64) {
 	c.writeMu.Unlock()
 }
 
-// nextToken returns the next unique query token, incrementing atomically.
-func (c *Conn) nextToken() uint64 {
-	return c.token.Add(1)
-}
-
-// NextToken returns the next unique query token for external callers.
+// NextToken returns the next unique query token, incrementing atomically.
 func (c *Conn) NextToken() uint64 {
-	return c.nextToken()
+	return c.token.Add(1)
 }
 
 // WriteFrame writes a wire frame to the connection without registering a

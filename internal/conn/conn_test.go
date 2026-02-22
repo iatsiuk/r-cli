@@ -25,9 +25,9 @@ import (
 func TestNextTokenMonotonic(t *testing.T) {
 	t.Parallel()
 	c := &Conn{}
-	prev := c.nextToken()
+	prev := c.NextToken()
 	for range 100 {
-		next := c.nextToken()
+		next := c.NextToken()
 		if next <= prev {
 			t.Fatalf("token %d is not greater than previous %d", next, prev)
 		}
@@ -51,7 +51,7 @@ func TestNextTokenConcurrentNoDuplicates(t *testing.T) {
 			defer wg.Done()
 			tokens := make([]uint64, tokensEach)
 			for i := range tokensEach {
-				tokens[i] = c.nextToken()
+				tokens[i] = c.NextToken()
 			}
 			mu.Lock()
 			for _, tok := range tokens {
@@ -106,7 +106,7 @@ func TestConnBasicSendReceive(t *testing.T) {
 	t.Parallel()
 	c, server := setupConn(t)
 
-	tok := c.nextToken()
+	tok := c.NextToken()
 	query := []byte(`[1,[39,[]],{}]`)
 	resp := []byte(`{"t":1,"r":[42]}`)
 
@@ -141,7 +141,7 @@ func TestConnConcurrentQueries(t *testing.T) { //nolint:cyclop
 	pairs := make([]pair, n)
 	for i := range n {
 		pairs[i] = pair{
-			token:   c.nextToken(),
+			token:   c.NextToken(),
 			payload: []byte(fmt.Sprintf(`{"i":%d}`, i)),
 		}
 	}
@@ -193,8 +193,8 @@ func TestConnOutOfOrderResponses(t *testing.T) {
 	t.Parallel()
 	c, server := setupConn(t)
 
-	tok1 := c.nextToken()
-	tok2 := c.nextToken()
+	tok1 := c.NextToken()
+	tok2 := c.NextToken()
 	resp1 := []byte(`"r1"`)
 	resp2 := []byte(`"r2"`)
 
@@ -250,7 +250,7 @@ func TestConnSlowConsumerNoBlock(t *testing.T) {
 	t.Parallel()
 	c, server := setupConn(t)
 
-	tok2 := c.nextToken()
+	tok2 := c.NextToken()
 	resp2 := []byte(`"fast"`)
 
 	// pre-fill a waiter for a fake token to simulate a slow/full consumer
@@ -290,7 +290,7 @@ func TestConnLateResponseDiscarded(t *testing.T) {
 	t.Parallel()
 	c, server := setupConn(t)
 
-	tok := c.nextToken()
+	tok := c.NextToken()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -334,7 +334,7 @@ func TestConnCloseUnblocksWaiters(t *testing.T) {
 	t.Parallel()
 	c, server := setupConn(t)
 
-	tok := c.nextToken()
+	tok := c.NextToken()
 	serverGotQuery := make(chan struct{})
 	go func() {
 		_, _, _ = wire.ReadResponse(server)
@@ -369,7 +369,7 @@ func TestConnSendAfterClose(t *testing.T) {
 		t.Logf("Close: %v", err)
 	}
 
-	_, err := c.Send(context.Background(), c.nextToken(), []byte(`"q"`))
+	_, err := c.Send(context.Background(), c.NextToken(), []byte(`"q"`))
 	if err == nil {
 		t.Fatal("expected error after Close, got nil")
 	}
@@ -382,7 +382,7 @@ func TestConnContextCancellationSendsStop(t *testing.T) { //nolint:cyclop
 	t.Parallel()
 	c, server := setupConn(t)
 
-	tok := c.nextToken()
+	tok := c.NextToken()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -581,7 +581,9 @@ func TestDialTLSValidCACert(t *testing.T) {
 	addr, certPEM := testTLSServer(t)
 
 	pool := x509.NewCertPool()
-	pool.AppendCertsFromPEM(certPEM)
+	if !pool.AppendCertsFromPEM(certPEM) {
+		t.Fatal("AppendCertsFromPEM: no valid certificate found")
+	}
 
 	nc, err := DialTLS(context.Background(), addr, &tls.Config{RootCAs: pool})
 	if err != nil {
@@ -614,7 +616,9 @@ func TestDialTLSWrongCACert(t *testing.T) {
 	wrongCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 
 	wrongPool := x509.NewCertPool()
-	wrongPool.AppendCertsFromPEM(wrongCertPEM)
+	if !wrongPool.AppendCertsFromPEM(wrongCertPEM) {
+		t.Fatal("AppendCertsFromPEM: no valid certificate found")
+	}
 
 	_, err = DialTLS(context.Background(), addr, &tls.Config{RootCAs: wrongPool})
 	if err == nil {
@@ -637,7 +641,7 @@ func TestConnStopWithLatePartialNoDeadlock(t *testing.T) {
 	t.Parallel()
 	c, server := setupConn(t)
 
-	tok := c.nextToken()
+	tok := c.NextToken()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
