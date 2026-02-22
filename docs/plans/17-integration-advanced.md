@@ -15,13 +15,13 @@ Depends on: `16-integration-basic`
 
 ### Task 1: OrderBy, Limit, Skip, Count, Distinct
 
-- [ ] Test: orderBy ascending -> documents in correct order
-- [ ] Test: orderBy descending -> reverse order
-- [ ] Test: limit(5) on 20 docs -> exactly 5 returned
-- [ ] Test: skip(10) on 20 docs -> 10 returned
-- [ ] Test: skip(5).limit(5) -> correct slice
-- [ ] Test: count on filtered result -> correct number
-- [ ] Test: distinct on field with duplicates -> unique values only
+- [x] Test: orderBy ascending -> documents in correct order
+- [x] Test: orderBy descending -> reverse order
+- [x] Test: limit(5) on 20 docs -> exactly 5 returned
+- [x] Test: skip(10) on 20 docs -> 10 returned
+- [x] Test: skip(5).limit(5) -> correct slice
+- [x] Test: count on filtered result -> correct number
+- [x] Test: distinct on field with duplicates -> unique values only
 
 ### Task 2: Pluck, Without, Merge, HasFields
 
