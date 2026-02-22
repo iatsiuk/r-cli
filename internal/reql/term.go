@@ -443,9 +443,14 @@ func (t Term) Round() Term {
 	return Term{termType: proto.TermRound, args: []Term{t}}
 }
 
-// IndexCreate creates an INDEX_CREATE term ([75, [table, name]]).
-func (t Term) IndexCreate(name string) Term {
-	return Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
+// IndexCreate creates an INDEX_CREATE term ([75, [table, name]], opts?).
+// Optional OptArgs can specify options like {"geo": true, "multi": true}.
+func (t Term) IndexCreate(name string, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
 }
 
 // IndexDrop creates an INDEX_DROP term ([76, [table, name]]).
@@ -533,6 +538,11 @@ func (t Term) Status() Term {
 // Grant creates a GRANT term ([188, [scope, user, perms]]).
 func (t Term) Grant(user string, perms interface{}) Term {
 	return Term{termType: proto.TermGrant, args: []Term{t, Datum(user), toTerm(perms)}}
+}
+
+// Grant creates a global GRANT term ([188, [user, perms]]) with no scope.
+func Grant(user string, perms interface{}) Term {
+	return Term{termType: proto.TermGrant, args: []Term{Datum(user), toTerm(perms)}}
 }
 
 // Do creates a FUNCALL term ([64, [fn, args...]]).
