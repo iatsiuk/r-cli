@@ -317,3 +317,51 @@ func TestExecutorRunWithNoreply(t *testing.T) {
 		t.Error("server did not receive noreply query within 1s")
 	}
 }
+
+func TestExecutorRunGetsAtom(t *testing.T) {
+	t.Parallel()
+	const pass = "testpass"
+	handler := func(nc net.Conn, token uint64, _ []byte) {
+		sendResponse(nc, token, map[string]interface{}{
+			"t": 1, // ResponseSuccessAtom
+			"r": []interface{}{map[string]interface{}{"value": 42}},
+		})
+	}
+	addr, stop := startQueryServer(t, pass, handler)
+	defer stop()
+
+	ex := newTestExecutor(t, addr, pass)
+	cur, err := ex.Run(context.Background(), reql.DB("test").Table("users").Count(), nil)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	defer func() { _ = cur.Close() }()
+
+	item, err := cur.Next()
+	if err != nil {
+		t.Fatalf("Next: %v", err)
+	}
+	if string(item) == "" {
+		t.Fatal("got empty item from atom cursor")
+	}
+}
+
+func TestExecutorRunServerError(t *testing.T) {
+	t.Parallel()
+	const pass = "testpass"
+	handler := func(nc net.Conn, token uint64, _ []byte) {
+		sendResponse(nc, token, map[string]interface{}{
+			"t": 18, // ResponseRuntimeError
+			"r": []interface{}{"table `users` does not exist"},
+			"e": 4, // ErrorType runtime
+		})
+	}
+	addr, stop := startQueryServer(t, pass, handler)
+	defer stop()
+
+	ex := newTestExecutor(t, addr, pass)
+	_, err := ex.Run(context.Background(), reql.DB("test").Table("users"), nil)
+	if err == nil {
+		t.Fatal("expected error from server, got nil")
+	}
+}

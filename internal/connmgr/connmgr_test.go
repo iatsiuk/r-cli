@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"r-cli/internal/conn"
+	"r-cli/internal/proto"
 	"r-cli/internal/scram"
 )
 
@@ -56,8 +57,8 @@ func readHandshakeInit(nc net.Conn) (string, error) {
 	if _, err := io.ReadFull(nc, magic); err != nil {
 		return "", err
 	}
-	if binary.LittleEndian.Uint32(magic) == 0 {
-		return "", fmt.Errorf("invalid magic")
+	if binary.LittleEndian.Uint32(magic) != uint32(proto.V1_0) {
+		return "", fmt.Errorf("invalid magic: %08x", binary.LittleEndian.Uint32(magic))
 	}
 
 	step3, err := readNull(nc)
@@ -404,5 +405,15 @@ func TestCloseClosesConnection(t *testing.T) {
 	}
 	if !errors.Is(err, conn.ErrClosed) {
 		t.Errorf("expected ErrClosed, got %v", err)
+	}
+}
+
+func TestCloseWithNoConnection(t *testing.T) {
+	t.Parallel()
+	mgr := New(func(ctx context.Context) (*conn.Conn, error) {
+		return nil, fmt.Errorf("should not be called")
+	})
+	if err := mgr.Close(); err != nil {
+		t.Fatalf("Close on fresh manager: %v", err)
 	}
 }
