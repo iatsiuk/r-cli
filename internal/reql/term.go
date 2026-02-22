@@ -2,6 +2,7 @@ package reql
 
 import (
 	"encoding/json"
+	"errors"
 
 	"r-cli/internal/proto"
 )
@@ -13,6 +14,70 @@ type Term struct {
 	datum    interface{}
 	args     []Term
 	opts     map[string]interface{}
+	err      error
+}
+
+// errTerm returns a Term that serializes as an error.
+func errTerm(err error) Term {
+	return Term{err: err}
+}
+
+// Row creates an IMPLICIT_VAR term ([13,[]]).
+// Used as a shorthand for a single-argument function in methods like Filter.
+func Row() Term {
+	return Term{termType: proto.TermImplicitVar}
+}
+
+// wrapImplicitVar detects IMPLICIT_VAR in t and, if found, replaces all occurrences
+// with VAR(1) and wraps the term in FUNC([2,[1]], body).
+// Returns unchanged term if no IMPLICIT_VAR is present.
+// Returns error if IMPLICIT_VAR appears inside a nested FUNC.
+func wrapImplicitVar(t Term) (Term, error) {
+	replaced, found, err := replaceImplicit(t, false)
+	if err != nil {
+		return Term{}, err
+	}
+	if !found {
+		return t, nil
+	}
+	return Func(replaced, 1), nil
+}
+
+// replaceImplicit walks t replacing IMPLICIT_VAR with VAR(1).
+// inFunc indicates we are inside a FUNC body; IMPLICIT_VAR there is ambiguous.
+// Returns the modified term, whether any replacement was made, and any error.
+func replaceImplicit(t Term, inFunc bool) (Term, bool, error) {
+	if t.termType == proto.TermImplicitVar {
+		if inFunc {
+			return Term{}, false, errors.New("reql: IMPLICIT_VAR inside nested function is ambiguous")
+		}
+		return Var(1), true, nil
+	}
+	if t.termType == 0 {
+		return t, false, nil
+	}
+	nested := inFunc || t.termType == proto.TermFunc
+	newArgs := make([]Term, len(t.args))
+	var anyReplaced bool
+	for i, a := range t.args {
+		rep, did, err := replaceImplicit(a, nested)
+		if err != nil {
+			return Term{}, false, err
+		}
+		newArgs[i] = rep
+		if did {
+			anyReplaced = true
+		}
+	}
+	if !anyReplaced {
+		return t, false, nil
+	}
+	return Term{
+		termType: t.termType,
+		datum:    t.datum,
+		args:     newArgs,
+		opts:     t.opts,
+	}, true, nil
 }
 
 // Datum wraps a raw Go value as a ReQL term.
@@ -32,11 +97,7 @@ func toTerm(v interface{}) Term {
 func Array(items ...interface{}) Term {
 	args := make([]Term, len(items))
 	for i, item := range items {
-		if t, ok := item.(Term); ok {
-			args[i] = t
-		} else {
-			args[i] = Datum(item)
-		}
+		args[i] = toTerm(item)
 	}
 	return Term{termType: proto.TermMakeArray, args: args}
 }
@@ -52,9 +113,14 @@ func (t Term) Table(name string) Term {
 }
 
 // Filter creates a FILTER term ([39, [seq, predicate]]).
-// predicate can be a Term or any value that marshals to a JSON document.
+// If predicate contains IMPLICIT_VAR (Row()), it is auto-wrapped in FUNC.
 func (t Term) Filter(predicate interface{}) Term {
-	return Term{termType: proto.TermFilter, args: []Term{t, toTerm(predicate)}}
+	pt := toTerm(predicate)
+	wrapped, err := wrapImplicitVar(pt)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: proto.TermFilter, args: []Term{t, wrapped}}
 }
 
 // Insert creates an INSERT term ([56, [table, doc]]).
@@ -304,6 +370,114 @@ func (t Term) Div(value interface{}) Term {
 	return t.binop(proto.TermDiv, value)
 }
 
+// IndexCreate creates an INDEX_CREATE term ([75, [table, name]]).
+func (t Term) IndexCreate(name string) Term {
+	return Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
+}
+
+// IndexDrop creates an INDEX_DROP term ([76, [table, name]]).
+func (t Term) IndexDrop(name string) Term {
+	return Term{termType: proto.TermIndexDrop, args: []Term{t, Datum(name)}}
+}
+
+// IndexList creates an INDEX_LIST term ([77, [table]]).
+func (t Term) IndexList() Term {
+	return Term{termType: proto.TermIndexList, args: []Term{t}}
+}
+
+// indexOp builds an index operation term with optional index names.
+func (t Term) indexOp(tt proto.TermType, names []string) Term {
+	args := make([]Term, 1, 1+len(names))
+	args[0] = t
+	for _, n := range names {
+		args = append(args, Datum(n))
+	}
+	return Term{termType: tt, args: args}
+}
+
+// IndexWait creates an INDEX_WAIT term ([140, [table, names...]]).
+func (t Term) IndexWait(names ...string) Term { return t.indexOp(proto.TermIndexWait, names) }
+
+// IndexStatus creates an INDEX_STATUS term ([139, [table, names...]]).
+func (t Term) IndexStatus(names ...string) Term { return t.indexOp(proto.TermIndexStatus, names) }
+
+// IndexRename creates an INDEX_RENAME term ([156, [table, old, new]]).
+func (t Term) IndexRename(oldName, newName string) Term {
+	return Term{termType: proto.TermIndexRename, args: []Term{t, Datum(oldName), Datum(newName)}}
+}
+
+// Var creates a VAR term ([10, [id]]) referencing a function parameter.
+func Var(id int) Term {
+	return Term{termType: proto.TermVar, args: []Term{Datum(id)}}
+}
+
+// Func creates a FUNC term ([69, [[2, [param_ids...]], body]]).
+// params are the integer parameter IDs; body is the function body term.
+func Func(body Term, params ...int) Term {
+	paramTerms := make([]Term, len(params))
+	for i, p := range params {
+		paramTerms[i] = Datum(p)
+	}
+	paramArray := Term{termType: proto.TermMakeArray, args: paramTerms}
+	return Term{termType: proto.TermFunc, args: []Term{paramArray, body}}
+}
+
+// Changes creates a CHANGES term ([152, [term]], opts?).
+// Optional OptArgs can specify options like {"include_initial": true}.
+func (t Term) Changes(opts ...OptArgs) Term {
+	term := Term{termType: proto.TermChanges, args: []Term{t}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
+}
+
+// Now creates a NOW term ([103, []]).
+func Now() Term {
+	return Term{termType: proto.TermNow}
+}
+
+// UUID creates a UUID term ([169, []]).
+func UUID() Term {
+	return Term{termType: proto.TermUUID}
+}
+
+// Binary creates a BINARY term ([155, [data]]).
+func Binary(data interface{}) Term {
+	return Term{termType: proto.TermBinary, args: []Term{toTerm(data)}}
+}
+
+// Config creates a CONFIG term ([174, [term]]).
+func (t Term) Config() Term {
+	return Term{termType: proto.TermConfig, args: []Term{t}}
+}
+
+// Status creates a STATUS term ([175, [term]]).
+func (t Term) Status() Term {
+	return Term{termType: proto.TermStatus, args: []Term{t}}
+}
+
+// Grant creates a GRANT term ([188, [scope, user, perms]]).
+func (t Term) Grant(user string, perms interface{}) Term {
+	return Term{termType: proto.TermGrant, args: []Term{t, Datum(user), toTerm(perms)}}
+}
+
+// Do creates a FUNCALL term ([64, [fn, args...]]).
+// API order: Do(arg1, arg2, ..., fn) - function is the last argument.
+// Wire order: [64, [fn, arg1, arg2, ...]] - function goes first on the wire.
+func Do(args ...interface{}) Term {
+	if len(args) == 0 {
+		return errTerm(errors.New("reql: Do requires at least a function argument"))
+	}
+	fn := toTerm(args[len(args)-1])
+	wireArgs := make([]Term, 1, len(args))
+	wireArgs[0] = fn
+	for _, a := range args[:len(args)-1] {
+		wireArgs = append(wireArgs, toTerm(a))
+	}
+	return Term{termType: proto.TermFuncCall, args: wireArgs}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}
@@ -312,6 +486,9 @@ func (t Term) binop(tt proto.TermType, value interface{}) Term {
 // MarshalJSON serializes the term to ReQL wire format.
 // Datum terms serialize as their raw value; compound terms as [type, [args...], opts?].
 func (t Term) MarshalJSON() ([]byte, error) {
+	if t.err != nil {
+		return nil, t.err
+	}
 	if t.termType == 0 {
 		return json.Marshal(t.datum)
 	}

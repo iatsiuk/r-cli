@@ -2,6 +2,7 @@ package reql
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -265,6 +266,207 @@ func TestAggregationOperations(t *testing.T) {
 				t.Errorf("got %s, want %s", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestIndexOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"index_create", table.IndexCreate("name"), `[75,[[15,[[14,["test"]],"users"]],"name"]]`},
+		{"index_drop", table.IndexDrop("name"), `[76,[[15,[[14,["test"]],"users"]],"name"]]`},
+		{"index_list", table.IndexList(), `[77,[[15,[[14,["test"]],"users"]]]]`},
+		{"index_wait", table.IndexWait("name"), `[140,[[15,[[14,["test"]],"users"]],"name"]]`},
+		{"index_wait_all", table.IndexWait(), `[140,[[15,[[14,["test"]],"users"]]]]`},
+		{"index_status", table.IndexStatus("name"), `[139,[[15,[[14,["test"]],"users"]],"name"]]`},
+		{"index_status_all", table.IndexStatus(), `[139,[[15,[[14,["test"]],"users"]]]]`},
+		{"index_rename", table.IndexRename("old", "new"), `[156,[[15,[[14,["test"]],"users"]],"old","new"]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestChangefeedAndMiscTerms(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"changes", table.Changes(), `[152,[[15,[[14,["test"]],"users"]]]]`},
+		{"changes_empty_opts", table.Changes(OptArgs{}), `[152,[[15,[[14,["test"]],"users"]]]]`},
+		{"changes_include_initial", table.Changes(OptArgs{"include_initial": true}), `[152,[[15,[[14,["test"]],"users"]]],{"include_initial":true}]`},
+		{"now", Now(), `[103,[]]`},
+		{"uuid", UUID(), `[169,[]]`},
+		{"binary", Binary("data"), `[155,["data"]]`},
+		{"config", table.Config(), `[174,[[15,[[14,["test"]],"users"]]]]`},
+		{"status", table.Status(), `[175,[[15,[[14,["test"]],"users"]]]]`},
+		{"grant", table.Grant("alice", map[string]interface{}{"read": true}), `[188,[[15,[[14,["test"]],"users"]],"alice",{"read":true}]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFuncSerialization(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"var", Var(1), `[10,[1]]`},
+		{"var_id", Var(42), `[10,[42]]`},
+		{"zero_params_func", Func(Datum(42)), `[69,[[2,[]],42]]`},
+		{"single_arg_func", Func(Datum(42), 1), `[69,[[2,[1]],42]]`},
+		{"multi_arg_func", Func(Var(1).Add(Var(2)), 1, 2), `[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestImplicitVarWrapping(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	tests := []struct {
+		name    string
+		term    Term
+		want    string
+		wantErr bool
+	}{
+		{
+			// IMPLICIT_VAR in predicate -> auto-wrapped in FUNC
+			"wrap_simple",
+			table.Filter(Row().GetField("age").Gt(21)),
+			`[39,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[21,[[31,[[10,[1]],"age"]],21]]]]]]`,
+			false,
+		},
+		{
+			// multiple IMPLICIT_VAR at different positions -> all replaced
+			"wrap_multiple",
+			table.Filter(Row().GetField("x").Eq(Row().GetField("y"))),
+			`[39,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[17,[[31,[[10,[1]],"x"]],[31,[[10,[1]],"y"]]]]]]]]`,
+			false,
+		},
+		{
+			// explicit FUNC predicate passes through unchanged
+			"explicit_func",
+			table.Filter(Func(Var(1).GetField("age").Gt(21), 1)),
+			`[39,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[21,[[31,[[10,[1]],"age"]],21]]]]]]`,
+			false,
+		},
+		{
+			// compound predicate with And - all IMPLICIT_VAR nodes replaced
+			"wrap_compound",
+			table.Filter(Row().GetField("a").Gt(0).And(Row().GetField("b").Lt(10))),
+			`[39,[[15,[[14,["test"]],"users"]],[69,[[2,[1]],[67,[[21,[[31,[[10,[1]],"a"]],0]],[19,[[31,[[10,[1]],"b"]],10]]]]]]]]`,
+			false,
+		},
+		{
+			// IMPLICIT_VAR inside explicit FUNC -> error (ambiguous)
+			"nested_func_error",
+			table.Filter(Func(Row().Gt(0), 1)),
+			"",
+			true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), "IMPLICIT_VAR") {
+					t.Errorf("expected IMPLICIT_VAR error, got: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFuncCall(t *testing.T) {
+	t.Parallel()
+	fn := Func(Var(1).Add(Var(2)), 1, 2)
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			// Do(arg1, arg2, fn) -> [64,[fn,arg1,arg2]]
+			"two_args",
+			Do(10, 20, fn),
+			`[64,[[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]],10,20]]`,
+		},
+		{
+			// Do(fn) with no extra args -> [64,[fn]]
+			"no_args",
+			Do(fn),
+			`[64,[[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]]]`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestDoError(t *testing.T) {
+	t.Parallel()
+	_, err := json.Marshal(Do())
+	if err == nil {
+		t.Fatal("expected error for Do() with no args, got nil")
 	}
 }
 
