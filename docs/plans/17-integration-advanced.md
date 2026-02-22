@@ -60,12 +60,12 @@ Depends on: `16-integration-basic`
 
 ### Task 6: Changefeeds
 
-- [ ] Test: changes() on table -> insert a doc in separate goroutine, cursor receives the change
-- [ ] Test: change object has old_val=null, new_val=<doc> for insert
-- [ ] Test: update triggers change with old_val and new_val
-- [ ] Test: delete triggers change with old_val=<doc>, new_val=null
-- [ ] Test: cursor Close() stops changefeed cleanly
-- [ ] Test: changes with include_initial=true -> receives existing docs first
+- [x] Test: changes() on table -> insert a doc in separate goroutine, cursor receives the change
+- [x] Test: change object has old_val=null, new_val=<doc> for insert
+- [x] Test: update triggers change with old_val and new_val
+- [x] Test: delete triggers change with old_val=<doc>, new_val=null
+- [x] Test: cursor Close() stops changefeed cleanly
+- [x] Test: changes with include_initial=true -> receives existing docs first
 
 ### Task 7: Pseudo-types
 
