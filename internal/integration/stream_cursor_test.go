@@ -161,7 +161,9 @@ func TestCursorContextCancel(t *testing.T) {
 	seedLargeTable(t, exec, dbName, "docs", 1000, 200)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs"), nil)
+	// force small batches so the cursor uses SUCCESS_PARTIAL (streaming mode),
+	// which is required for context cancellation to propagate.
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs"), reql.OptArgs{"max_batch_rows": 1})
 	if err != nil {
 		cancel()
 		t.Fatalf("table scan: %v", err)

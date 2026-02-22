@@ -16,9 +16,9 @@ Depends on: `16-integration-basic`, `15-cli-query`, `13-cli-extended`
 
 ### Task 1: Geospatial integration
 
-- [ ] Test: create geo index, insert points, getNearest returns sorted by distance
-- [ ] Test: getIntersecting with polygon -> correct results
-- [ ] Test: distance between two points -> correct meters
+- [x] Test: create geo index, insert points, getNearest returns sorted by distance
+- [x] Test: getIntersecting with polygon -> correct results
+- [x] Test: distance between two points -> correct meters
 
 ### Task 2: String/time operations and joins
 
