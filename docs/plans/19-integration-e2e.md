@@ -60,14 +60,14 @@ Tests execute compiled `r-cli` binary via `os/exec`. Host and port from `testAdd
 
 ### Task 6: User/permission and index e2e
 
-Uses password container.
+Uses shared container (admin has no password; avoids local --password flag conflict on user create).
 
-- [ ] Test: `r-cli user create` + `r-cli user list` -> user appears
-- [ ] Test: `r-cli grant <user> --read --db <testdb>` -> user can query that db
-- [ ] Test: `r-cli user delete` -> user removed
-- [ ] Test: `r-cli index create` + `r-cli index list` -> index appears
-- [ ] Test: `r-cli index wait` -> returns after index ready
-- [ ] Test: `r-cli index drop` -> index removed
+- [x] Test: `r-cli user create` + `r-cli user list` -> user appears
+- [x] Test: `r-cli grant <user> --read --db <testdb>` -> user can query that db
+- [x] Test: `r-cli user delete` -> user removed
+- [x] Test: `r-cli index create` + `r-cli index list` -> index appears
+- [x] Test: `r-cli index wait` -> returns after index ready
+- [x] Test: `r-cli index drop` -> index removed
 
 ### Task 7: Bulk insert e2e
 
