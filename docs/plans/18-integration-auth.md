@@ -16,13 +16,13 @@ Depends on: `16-integration-basic`
 
 ### Task 1: SCRAM-SHA-256 handshake
 
-- [ ] Test: connect as admin with correct password ("testpass") -> handshake succeeds
-- [ ] Test: connect with wrong password -> ReqlAuthError (error_code 10-20)
-- [ ] Test: connect with non-existent username -> ReqlAuthError
-- [ ] Test: create user with password, connect with correct credentials -> handshake succeeds
-- [ ] Test: create user, change password, old password fails, new password works
-- [ ] Test: user with special characters in password (unicode, quotes, commas) -> handshake succeeds
-- [ ] Test: user with empty password -> handshake succeeds (if server allows)
+- [x] Test: connect as admin with correct password ("testpass") -> handshake succeeds
+- [x] Test: connect with wrong password -> ReqlAuthError (error_code 10-20)
+- [x] Test: connect with non-existent username -> ReqlAuthError
+- [x] Test: create user with password, connect with correct credentials -> handshake succeeds
+- [x] Test: create user, change password, old password fails, new password works
+- [x] Test: user with special characters in password (unicode, quotes, commas) -> handshake succeeds
+- [x] Test: user with empty password -> handshake succeeds (if server allows)
 
 ### Task 2: Global permissions
 
