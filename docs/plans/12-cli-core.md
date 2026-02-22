@@ -53,9 +53,9 @@ Depends on: `10-connmgr-query`, `11-output`
 
 Execute a raw ReQL JSON term directly (pre-serialized).
 
-- [ ] Test: `r-cli run '[15,[[14,["test"]],"users"]]'` -> sends term as-is
-- [ ] Test: stdin input
-- [ ] Implement: run command
+- [x] Test: `r-cli run '[15,[[14,["test"]],"users"]]'` -> sends term as-is
+- [x] Test: stdin input
+- [x] Implement: run command
 
 ### Task 5: `db` subcommands
 
