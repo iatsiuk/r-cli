@@ -25,10 +25,10 @@ Depends on: `16-integration-basic`
 
 ### Task 2: Pluck, Without, Merge, HasFields
 
-- [ ] Test: pluck("name") -> documents with only id and name fields
-- [ ] Test: without("password") -> documents without password field
-- [ ] Test: merge({new_field: "value"}) -> field added to each document
-- [ ] Test: hasFields("email") -> only documents that have email field
+- [x] Test: pluck("name") -> documents with only id and name fields
+- [x] Test: without("password") -> documents without password field
+- [x] Test: merge({new_field: "value"}) -> field added to each document
+- [x] Test: hasFields("email") -> only documents that have email field
 
 ### Task 3: Map, Reduce, Group
 
