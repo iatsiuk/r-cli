@@ -44,13 +44,13 @@ Depends on: `16-integration-basic`
 
 ### Task 4: Table-level permissions and inheritance
 
-- [ ] Test: grant read on specific table -> can query that table
-- [ ] Test: query different table in same db -> PERMISSION_ERROR
-- [ ] Test: grant write on specific table -> insert into that table succeeds
-- [ ] Test: insert into different table -> PERMISSION_ERROR
-- [ ] Test: global read + db-level write override -> user can read globally but write only in specific db
-- [ ] Test: db-level read=false overrides global read=true -> PERMISSION_ERROR on that db
-- [ ] Test: table-level grant overrides db-level -> more specific wins
+- [x] Test: grant read on specific table -> can query that table
+- [x] Test: query different table in same db -> PERMISSION_ERROR
+- [x] Test: grant write on specific table -> insert into that table succeeds
+- [x] Test: insert into different table -> PERMISSION_ERROR
+- [x] Test: global read + db-level write override -> user can read globally but write only in specific db
+- [x] Test: db-level read=false overrides global read=true -> PERMISSION_ERROR on that db
+- [x] Test: table-level grant overrides db-level -> more specific wins
 
 ### Task 5: Cleanup
 
