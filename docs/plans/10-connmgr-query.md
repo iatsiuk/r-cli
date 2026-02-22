@@ -21,10 +21,10 @@ Depends on: `03-conn`, `04-reql-core`, `09-response-cursor`
 
 ### Task 2: Reconnect on failure
 
-- [ ] Test: `Get()` after connection drop -> reconnects automatically
-- [ ] Test: `Get()` during server downtime -> returns dial error
-- [ ] Test: reconnect preserves config (host, port, user, password, tls)
-- [ ] Implement: detect closed/errored connection in `Get()`, re-dial
+- [x] Test: `Get()` after connection drop -> reconnects automatically
+- [x] Test: `Get()` during server downtime -> returns dial error
+- [x] Test: reconnect preserves config (host, port, user, password, tls)
+- [x] Implement: detect closed/errored connection in `Get()`, re-dial
 
 ### Task 3: Query executor
 

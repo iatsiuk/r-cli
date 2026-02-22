@@ -103,6 +103,13 @@ func newConn(nc net.Conn) *Conn {
 	return c
 }
 
+// IsClosed reports whether the connection is closed.
+func (c *Conn) IsClosed() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.closed
+}
+
 // Close closes the underlying connection and waits for all pending Send calls to unblock.
 func (c *Conn) Close() error {
 	c.mu.Lock()

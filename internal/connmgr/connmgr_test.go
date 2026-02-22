@@ -11,7 +11,9 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"r-cli/internal/conn"
 	"r-cli/internal/scram"
@@ -142,6 +144,41 @@ func serveHandshake(nc net.Conn, password string) {
 	_ = completeSCRAM(nc, clientFirstMsg, password)
 }
 
+// serveHandshakeThenClose completes the handshake then immediately closes the connection.
+func serveHandshakeThenClose(nc net.Conn, password string) {
+	defer func() { _ = nc.Close() }()
+	clientFirstMsg, err := readHandshakeInit(nc)
+	if err != nil {
+		return
+	}
+	_ = completeSCRAM(nc, clientFirstMsg, password)
+}
+
+// startDropOnceServer starts a server that drops the first connection after
+// handshake and serves subsequent connections normally.
+func startDropOnceServer(t *testing.T, password string) (addr string, stop func()) {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	var dropped atomic.Bool
+	go func() {
+		for {
+			nc, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			if !dropped.Swap(true) {
+				go serveHandshakeThenClose(nc, password)
+			} else {
+				go serveHandshake(nc, password)
+			}
+		}
+	}()
+	return ln.Addr().String(), func() { _ = ln.Close() }
+}
+
 func readNull(r io.Reader) ([]byte, error) {
 	var buf []byte
 	b := make([]byte, 1)
@@ -233,6 +270,113 @@ func TestGetReturnsSameConnection(t *testing.T) {
 	}
 	if dialCount != 1 {
 		t.Fatalf("dial called %d times, want 1", dialCount)
+	}
+}
+
+func TestGetReconnectsAfterDrop(t *testing.T) {
+	t.Parallel()
+	const pass = "testpass"
+	addr, stop := startDropOnceServer(t, pass)
+	defer stop()
+
+	mgr := New(testDialFunc(addr, pass))
+	defer func() { _ = mgr.Close() }()
+
+	c1, err := mgr.Get(context.Background())
+	if err != nil {
+		t.Fatalf("first Get: %v", err)
+	}
+
+	// wait for server to drop c1 and readLoop to detect it
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && !c1.IsClosed() {
+		time.Sleep(time.Millisecond)
+	}
+	if !c1.IsClosed() {
+		t.Fatal("connection not marked closed after 2s")
+	}
+
+	c2, err := mgr.Get(context.Background())
+	if err != nil {
+		t.Fatalf("reconnect Get: %v", err)
+	}
+	if c1 == c2 {
+		t.Fatal("expected a new connection after drop, got the same pointer")
+	}
+}
+
+func TestGetDuringServerDowntime(t *testing.T) {
+	t.Parallel()
+	// get a free port then close listener so nothing is listening there
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	addr := ln.Addr().String()
+	_ = ln.Close()
+
+	dialCount := 0
+	mgr := New(func(ctx context.Context) (*conn.Conn, error) {
+		dialCount++
+		cfg := conn.Config{Host: "127.0.0.1", Port: 1, User: "admin"}
+		return conn.Dial(ctx, addr, cfg, nil)
+	})
+
+	if _, err := mgr.Get(context.Background()); err == nil {
+		t.Fatal("expected dial error, got nil")
+	}
+	if dialCount != 1 {
+		t.Fatalf("dial called %d times on first failure, want 1", dialCount)
+	}
+
+	// second Get must also re-dial (failed conn must not be cached)
+	if _, err := mgr.Get(context.Background()); err == nil {
+		t.Fatal("expected dial error on second Get, got nil")
+	}
+	if dialCount != 2 {
+		t.Fatalf("dial called %d times after two failures, want 2", dialCount)
+	}
+}
+
+func TestReconnectPreservesConfig(t *testing.T) {
+	t.Parallel()
+	const pass = "secret"
+	addr, stop := startDropOnceServer(t, pass)
+	defer stop()
+
+	host, portStr, _ := net.SplitHostPort(addr)
+	port, _ := strconv.Atoi(portStr)
+	cfg := conn.Config{
+		Host:     host,
+		Port:     port,
+		User:     "admin",
+		Password: pass,
+	}
+
+	mgr := NewFromConfig(cfg, nil)
+	defer func() { _ = mgr.Close() }()
+
+	c1, err := mgr.Get(context.Background())
+	if err != nil {
+		t.Fatalf("first Get: %v", err)
+	}
+
+	// wait for drop
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && !c1.IsClosed() {
+		time.Sleep(time.Millisecond)
+	}
+	if !c1.IsClosed() {
+		t.Fatal("connection not marked closed after 2s")
+	}
+
+	// reconnect must succeed using same host/port/user/password
+	c2, err := mgr.Get(context.Background())
+	if err != nil {
+		t.Fatalf("reconnect with preserved config failed: %v", err)
+	}
+	if c1 == c2 {
+		t.Fatal("expected a new connection, got the same pointer")
 	}
 }
 

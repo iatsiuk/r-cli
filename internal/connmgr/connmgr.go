@@ -33,12 +33,14 @@ func NewFromConfig(cfg conn.Config, tlsCfg *tls.Config) *ConnManager {
 }
 
 // Get returns the current connection, creating one lazily on first call.
+// If the existing connection is closed or errored, it re-dials automatically.
 func (m *ConnManager) Get(ctx context.Context) (*conn.Conn, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.c != nil {
+	if m.c != nil && !m.c.IsClosed() {
 		return m.c, nil
 	}
+	m.c = nil
 	c, err := m.dial(ctx)
 	if err != nil {
 		return nil, err
