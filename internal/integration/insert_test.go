@@ -11,8 +11,8 @@ import (
 	"r-cli/internal/reql"
 )
 
-// insertResult holds fields from a RethinkDB write operation response.
-type insertResult struct {
+// writeResult holds fields from a RethinkDB write operation response.
+type writeResult struct {
 	Inserted      int      `json:"inserted"`
 	Replaced      int      `json:"replaced"`
 	Deleted       int      `json:"deleted"`
@@ -22,15 +22,15 @@ type insertResult struct {
 	GeneratedKeys []string `json:"generated_keys"`
 }
 
-// parseInsertResult reads the next cursor item and unmarshals it as insertResult.
-func parseInsertResult(t *testing.T, cur cursor.Cursor) insertResult {
+// parseWriteResult reads the next cursor item and unmarshals it as writeResult.
+func parseWriteResult(t *testing.T, cur cursor.Cursor) writeResult {
 	t.Helper()
 	defer closeCursor(cur)
 	raw, err := cur.Next()
 	if err != nil {
 		t.Fatalf("cursor next: %v", err)
 	}
-	var r insertResult
+	var r writeResult
 	if err := json.Unmarshal(raw, &r); err != nil {
 		t.Fatalf("unmarshal insert result: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestInsertSingle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Inserted != 1 {
 		t.Errorf("inserted=%d, want 1", r.Inserted)
@@ -83,7 +83,7 @@ func TestInsertExplicitID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Inserted != 1 {
 		t.Errorf("inserted=%d, want 1", r.Inserted)
@@ -116,7 +116,7 @@ func TestInsertDuplicateID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second insert: %v", err)
 	}
-	r := parseInsertResult(t, cur2)
+	r := parseWriteResult(t, cur2)
 
 	if r.Errors != 1 {
 		t.Errorf("errors=%d, want 1 for duplicate id", r.Errors)
@@ -146,7 +146,7 @@ func TestInsertConflictReplace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert with conflict=replace: %v", err)
 	}
-	r := parseInsertResult(t, cur2)
+	r := parseWriteResult(t, cur2)
 
 	if r.Replaced != 1 {
 		t.Errorf("replaced=%d, want 1", r.Replaced)
@@ -176,7 +176,7 @@ func TestInsertConflictUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert with conflict=update: %v", err)
 	}
-	r := parseInsertResult(t, cur2)
+	r := parseWriteResult(t, cur2)
 
 	if r.Unchanged+r.Replaced != 1 {
 		t.Errorf("unchanged=%d replaced=%d, want unchanged+replaced=1", r.Unchanged, r.Replaced)
@@ -204,7 +204,7 @@ func TestInsertBulk(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bulk insert: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Inserted != 100 {
 		t.Errorf("inserted=%d, want 100", r.Inserted)
@@ -228,7 +228,7 @@ func TestInsertEmptyObject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert empty object: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Inserted != 1 {
 		t.Errorf("inserted=%d, want 1", r.Inserted)

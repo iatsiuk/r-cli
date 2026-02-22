@@ -29,7 +29,7 @@ func TestUpdateSingle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Replaced != 1 {
 		t.Errorf("replaced=%d, want 1", r.Replaced)
@@ -76,7 +76,7 @@ func TestUpdateAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update all: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Replaced != 3 {
 		t.Errorf("replaced=%d, want 3", r.Replaced)
@@ -138,7 +138,7 @@ func TestUpdateNonexistent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update nonexistent: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Skipped != 1 {
 		t.Errorf("skipped=%d, want 1", r.Skipped)
@@ -214,7 +214,7 @@ func TestReplaceByGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("replace: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Replaced != 1 {
 		t.Errorf("replaced=%d, want 1", r.Replaced)
@@ -267,7 +267,7 @@ func TestReplaceMissingPrimaryKey(t *testing.T) {
 		closeCursor(cur)
 		return
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 	if r.Errors == 0 {
 		t.Error("expected errors>0 for replace without primary key")
 	}
@@ -290,7 +290,7 @@ func TestDeleteSingle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("delete: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Deleted != 1 {
 		t.Errorf("deleted=%d, want 1", r.Deleted)
@@ -316,7 +316,7 @@ func TestDeleteWithFilter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("delete with filter: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Deleted != 2 {
 		t.Errorf("deleted=%d, want 2", r.Deleted)
@@ -342,7 +342,7 @@ func TestDeleteAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("delete all: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Deleted != 3 {
 		t.Errorf("deleted=%d, want 3", r.Deleted)
@@ -363,7 +363,7 @@ func TestDeleteNonexistent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("delete nonexistent: %v", err)
 	}
-	r := parseInsertResult(t, cur)
+	r := parseWriteResult(t, cur)
 
 	if r.Deleted != 0 {
 		t.Errorf("deleted=%d, want 0", r.Deleted)
