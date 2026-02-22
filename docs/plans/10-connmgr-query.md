@@ -14,10 +14,10 @@ Depends on: `03-conn`, `04-reql-core`, `09-response-cursor`
 
 ### Task 1: Lazy connect
 
-- [ ] Test: `Get()` on fresh manager creates connection on first call
-- [ ] Test: subsequent `Get()` returns the same connection (no reconnect)
-- [ ] Test: `Close()` closes the underlying connection
-- [ ] Implement: `ConnManager` struct with `Get(ctx) (*Conn, error)`, `Close()`
+- [x] Test: `Get()` on fresh manager creates connection on first call
+- [x] Test: subsequent `Get()` returns the same connection (no reconnect)
+- [x] Test: `Close()` closes the underlying connection
+- [x] Implement: `ConnManager` struct with `Get(ctx) (*Conn, error)`, `Close()`
 
 ### Task 2: Reconnect on failure
 
