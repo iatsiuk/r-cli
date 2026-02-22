@@ -470,6 +470,35 @@ func TestDoError(t *testing.T) {
 	}
 }
 
+func TestAdminTerms(t *testing.T) {
+	t.Parallel()
+	db := DB("test")
+	tests := []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"db_create", DBCreate("mydb"), `[57,["mydb"]]`},
+		{"db_drop", DBDrop("mydb"), `[58,["mydb"]]`},
+		{"db_list", DBList(), `[59,[]]`},
+		{"table_create", db.TableCreate("users"), `[60,[[14,["test"]],"users"]]`},
+		{"table_drop", db.TableDrop("users"), `[61,[[14,["test"]],"users"]]`},
+		{"table_list", db.TableList(), `[62,[[14,["test"]]]]`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestArray(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -14,13 +14,13 @@ Depends on: `04-reql-core`
 
 ### Task 1: Database/table admin terms
 
-- [ ] Test: `DBCreate("name")` -> `[57,["name"]]`
-- [ ] Test: `DBDrop("name")` -> `[58,["name"]]`
-- [ ] Test: `DBList()` -> `[59,[]]`
-- [ ] Test: `TableCreate("name")` -> `[60,[<db_term>,"name"]]`
-- [ ] Test: `TableDrop("name")` -> `[61,[<db_term>,"name"]]`
-- [ ] Test: `TableList()` -> `[62,[<db_term>]]`
-- [ ] Implement: admin term builders
+- [x] Test: `DBCreate("name")` -> `[57,["name"]]`
+- [x] Test: `DBDrop("name")` -> `[58,["name"]]`
+- [x] Test: `DBList()` -> `[59,[]]`
+- [x] Test: `TableCreate("name")` -> `[60,[<db_term>,"name"]]`
+- [x] Test: `TableDrop("name")` -> `[61,[<db_term>,"name"]]`
+- [x] Test: `TableList()` -> `[62,[<db_term>]]`
+- [x] Implement: admin term builders
 
 ### Task 2: Term optargs
 

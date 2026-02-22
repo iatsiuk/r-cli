@@ -107,6 +107,36 @@ func DB(name string) Term {
 	return Term{termType: proto.TermDB, args: []Term{Datum(name)}}
 }
 
+// DBCreate creates a DB_CREATE term ([57, [name]]).
+func DBCreate(name string) Term {
+	return Term{termType: proto.TermDBCreate, args: []Term{Datum(name)}}
+}
+
+// DBDrop creates a DB_DROP term ([58, [name]]).
+func DBDrop(name string) Term {
+	return Term{termType: proto.TermDBDrop, args: []Term{Datum(name)}}
+}
+
+// DBList creates a DB_LIST term ([59, []]).
+func DBList() Term {
+	return Term{termType: proto.TermDBList}
+}
+
+// TableCreate creates a TABLE_CREATE term ([60, [db, name]]) chained on a DB term.
+func (t Term) TableCreate(name string) Term {
+	return Term{termType: proto.TermTableCreate, args: []Term{t, Datum(name)}}
+}
+
+// TableDrop creates a TABLE_DROP term ([61, [db, name]]) chained on a DB term.
+func (t Term) TableDrop(name string) Term {
+	return Term{termType: proto.TermTableDrop, args: []Term{t, Datum(name)}}
+}
+
+// TableList creates a TABLE_LIST term ([62, [db]]) chained on a DB term.
+func (t Term) TableList() Term {
+	return Term{termType: proto.TermTableList, args: []Term{t}}
+}
+
 // Table creates a TABLE term chained on a DB term ([15, [db, name]]).
 func (t Term) Table(name string) Term {
 	return Term{termType: proto.TermTable, args: []Term{t, Datum(name)}}
