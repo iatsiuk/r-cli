@@ -108,6 +108,11 @@ func DB(name string) Term {
 	return Term{termType: proto.TermDB, args: []Term{Datum(name)}}
 }
 
+// Table creates a TABLE term ([15, [name]]) using the connection-default database.
+func Table(name string) Term {
+	return Term{termType: proto.TermTable, args: []Term{Datum(name)}}
+}
+
 // DBCreate creates a DB_CREATE term ([57, [name]]).
 func DBCreate(name string) Term {
 	return Term{termType: proto.TermDBCreate, args: []Term{Datum(name)}}
