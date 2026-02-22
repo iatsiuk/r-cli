@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -130,19 +132,93 @@ func TestBuildGrantPermsRevoke(t *testing.T) {
 
 func TestGrantTermGlobal(t *testing.T) {
 	t.Parallel()
-	// global grant: no db, no table
 	term := grantTerm("", "", "alice", map[string]interface{}{"read": true})
-	_ = term // verify no panic
+	data, err := json.Marshal(term)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(data)
+	if !strings.Contains(got, `"alice"`) {
+		t.Errorf("grantTerm global: expected alice in %s", got)
+	}
+	// global grant must not wrap in a DB term (termType 14)
+	if strings.Contains(got, `[14,`) {
+		t.Errorf("grantTerm global: unexpected DB term in %s", got)
+	}
 }
 
 func TestGrantTermDB(t *testing.T) {
 	t.Parallel()
 	term := grantTerm("test", "", "alice", map[string]interface{}{"read": true})
-	_ = term
+	data, err := json.Marshal(term)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(data)
+	if !strings.Contains(got, `[14,`) {
+		t.Errorf("grantTerm db: expected DB term in %s", got)
+	}
+	if !strings.Contains(got, `"alice"`) {
+		t.Errorf("grantTerm db: expected alice in %s", got)
+	}
+	// db-scoped grant must not wrap in a Table term (termType 15)
+	if strings.Contains(got, `[15,`) {
+		t.Errorf("grantTerm db: unexpected Table term in %s", got)
+	}
 }
 
 func TestGrantTermTable(t *testing.T) {
 	t.Parallel()
-	term := grantTerm("test", "users", "alice", map[string]interface{}{"read": true, "write": true})
-	_ = term
+	term := grantTerm("test", "users", "alice", map[string]interface{}{"read": true})
+	data, err := json.Marshal(term)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(data)
+	if !strings.Contains(got, `[14,`) {
+		t.Errorf("grantTerm table: expected DB term in %s", got)
+	}
+	if !strings.Contains(got, `[15,`) {
+		t.Errorf("grantTerm table: expected Table term in %s", got)
+	}
+	if !strings.Contains(got, `"alice"`) {
+		t.Errorf("grantTerm table: expected alice in %s", got)
+	}
+}
+
+func TestBuildGrantPermsBothFlags(t *testing.T) {
+	t.Parallel()
+	cfg := &rootConfig{}
+	cmd := newGrantCmd(cfg)
+	if err := cmd.ParseFlags([]string{"--read", "--write"}); err != nil {
+		t.Fatal(err)
+	}
+	read, _ := cmd.Flags().GetBool("read")
+	write, _ := cmd.Flags().GetBool("write")
+	perms := buildGrantPerms(cmd, read, write)
+	if v, ok := perms["read"]; !ok || v != true {
+		t.Errorf("buildGrantPerms both: expected read=true, got %v", perms)
+	}
+	if v, ok := perms["write"]; !ok || v != true {
+		t.Errorf("buildGrantPerms both: expected write=true, got %v", perms)
+	}
+	if len(perms) != 2 {
+		t.Errorf("buildGrantPerms both: expected 2 permissions, got %d", len(perms))
+	}
+}
+
+func TestGrantTableRequiresDB(t *testing.T) {
+	t.Parallel()
+	cfg := &rootConfig{}
+	cmd := newGrantCmd(cfg)
+	if err := cmd.ParseFlags([]string{"--table", "users", "--read"}); err != nil {
+		t.Fatal(err)
+	}
+	err := cmd.RunE(cmd, []string{"alice"})
+	if err == nil {
+		t.Error("grant --table without --db: expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "--table requires --db") {
+		t.Errorf("grant --table without --db: unexpected error: %v", err)
+	}
 }

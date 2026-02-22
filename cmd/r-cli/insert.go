@@ -191,7 +191,9 @@ func execInsertBatch(ctx context.Context, exec *query.Executor, cfg *rootConfig,
 			Inserted int64 `json:"inserted"`
 			Errors   int64 `json:"errors"`
 		}
-		_ = json.Unmarshal(rows[0], &res)
+		if err := json.Unmarshal(rows[0], &res); err != nil {
+			return fmt.Errorf("parsing insert response: %w", err)
+		}
 		total.Inserted += res.Inserted
 		total.Errors += res.Errors
 	}

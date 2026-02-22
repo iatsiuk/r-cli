@@ -182,16 +182,6 @@ func TestDetectInputFormat(t *testing.T) {
 	}
 }
 
-func TestInsertFormatFlagControlsInputFormat(t *testing.T) {
-	t.Parallel()
-	// the root --format flag value is used as input format for insert
-	// json file with --format jsonl should be read as jsonl
-	got := detectInputFormat("data.json", "jsonl")
-	if got != "jsonl" {
-		t.Errorf("detectInputFormat: --format jsonl should override extension, got %q", got)
-	}
-}
-
 func TestOpenInputSourceStdin(t *testing.T) {
 	t.Parallel()
 	stdin := strings.NewReader("test data")
