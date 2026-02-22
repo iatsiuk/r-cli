@@ -35,12 +35,12 @@ Depends on: `16-integration-basic`
 
 ### Task 3: Database-level permissions
 
-- [ ] Test: grant read on specific db only -> can query tables in that db
-- [ ] Test: query table in different db -> PERMISSION_ERROR
-- [ ] Test: grant write on specific db -> insert in that db succeeds
-- [ ] Test: insert in other db -> PERMISSION_ERROR
-- [ ] Test: config permission on db -> can create/drop tables in that db
-- [ ] Test: config=false -> TABLE_CREATE returns PERMISSION_ERROR
+- [x] Test: grant read on specific db only -> can query tables in that db
+- [x] Test: query table in different db -> PERMISSION_ERROR
+- [x] Test: grant write on specific db -> insert in that db succeeds
+- [x] Test: insert in other db -> PERMISSION_ERROR
+- [x] Test: config permission on db -> can create/drop tables in that db
+- [x] Test: config=false -> TABLE_CREATE returns PERMISSION_ERROR
 
 ### Task 4: Table-level permissions and inheritance
 
