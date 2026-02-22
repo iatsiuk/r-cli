@@ -230,9 +230,13 @@ func (t Term) GetAll(args ...interface{}) Term {
 	return Term{termType: proto.TermGetAll, args: termArgs, opts: opts}
 }
 
-// Between creates a BETWEEN term ([182, [term, lower, upper]]).
-func (t Term) Between(lower, upper interface{}) Term {
-	return Term{termType: proto.TermBetween, args: []Term{t, toTerm(lower), toTerm(upper)}}
+// Between creates a BETWEEN term ([182, [term, lower, upper]], opts?).
+func (t Term) Between(lower, upper interface{}, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermBetween, args: []Term{t, toTerm(lower), toTerm(upper)}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
 }
 
 // Asc creates an ASC term ([73, [field]]) for use with OrderBy.

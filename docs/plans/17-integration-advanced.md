@@ -40,14 +40,14 @@ Depends on: `16-integration-basic`
 
 ### Task 4: Secondary indexes
 
-- [ ] Test: INDEX_CREATE on field -> index created
-- [ ] Test: INDEX_LIST -> includes new index
-- [ ] Test: INDEX_WAIT -> index ready
-- [ ] Test: INDEX_STATUS -> status shows ready=true
-- [ ] Test: GetAll with secondary index -> uses index
-- [ ] Test: Between with secondary index -> correct range
-- [ ] Test: INDEX_DROP removes index
-- [ ] Test: INDEX_RENAME renames index
+- [x] Test: INDEX_CREATE on field -> index created
+- [x] Test: INDEX_LIST -> includes new index
+- [x] Test: INDEX_WAIT -> index ready
+- [x] Test: INDEX_STATUS -> status shows ready=true
+- [x] Test: GetAll with secondary index -> uses index
+- [x] Test: Between with secondary index -> correct range
+- [x] Test: INDEX_DROP removes index
+- [x] Test: INDEX_RENAME renames index
 
 ### Task 5: Streaming and cursors
 
