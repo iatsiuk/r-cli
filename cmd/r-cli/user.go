@@ -116,5 +116,5 @@ func promptPassword(w io.Writer, r io.Reader) (string, error) {
 	if err := scanner.Err(); err != nil {
 		return "", fmt.Errorf("reading password: %w", err)
 	}
-	return "", nil
+	return "", fmt.Errorf("password cannot be empty")
 }
