@@ -6,11 +6,11 @@ import (
 	"unicode"
 )
 
-// TokenType identifies the kind of lexical token.
-type TokenType int
+// tokenType identifies the kind of lexical token.
+type tokenType int
 
 const (
-	tokenEOF TokenType = iota
+	tokenEOF tokenType = iota
 	tokenIdent
 	tokenDot
 	tokenLParen
@@ -27,27 +27,27 @@ const (
 	tokenNull
 )
 
-// Token is a single lexical unit with its type, raw value, and byte offset.
-type Token struct {
-	Type  TokenType
+// token is a single lexical unit with its type, raw value, and rune index.
+type token struct {
+	Type  tokenType
 	Value string
 	Pos   int
 }
 
-// Lexer converts a ReQL string into a flat token slice.
-type Lexer struct {
+// lexer converts a ReQL string into a flat token slice.
+type lexer struct {
 	input []rune
 	pos   int
 }
 
-// newLexer creates a Lexer for the given input string.
-func newLexer(input string) *Lexer {
-	return &Lexer{input: []rune(input)}
+// newLexer creates a lexer for the given input string.
+func newLexer(input string) *lexer {
+	return &lexer{input: []rune(input)}
 }
 
 // tokenize returns all tokens including a trailing EOF, or the first error.
-func (l *Lexer) tokenize() ([]Token, error) {
-	var tokens []Token
+func (l *lexer) tokenize() ([]token, error) {
+	var tokens []token
 	for {
 		tok, err := l.next()
 		if err != nil {
@@ -61,16 +61,16 @@ func (l *Lexer) tokenize() ([]Token, error) {
 	return tokens, nil
 }
 
-func (l *Lexer) skipWhitespace() {
+func (l *lexer) skipWhitespace() {
 	for l.pos < len(l.input) && unicode.IsSpace(l.input[l.pos]) {
 		l.pos++
 	}
 }
 
-func (l *Lexer) next() (Token, error) {
+func (l *lexer) next() (token, error) {
 	l.skipWhitespace()
 	if l.pos >= len(l.input) {
-		return Token{Type: tokenEOF, Pos: l.pos}, nil
+		return token{Type: tokenEOF, Pos: l.pos}, nil
 	}
 	ch := l.input[l.pos]
 	if tok, ok := l.punctToken(ch); ok {
@@ -80,7 +80,7 @@ func (l *Lexer) next() (Token, error) {
 }
 
 // punctTypes maps single-character punctuation to its token type.
-var punctTypes = map[rune]TokenType{
+var punctTypes = map[rune]tokenType{
 	'.': tokenDot,
 	'(': tokenLParen,
 	')': tokenRParen,
@@ -93,17 +93,17 @@ var punctTypes = map[rune]TokenType{
 }
 
 // punctToken returns a single-character punctuation token if ch matches.
-func (l *Lexer) punctToken(ch rune) (Token, bool) {
+func (l *lexer) punctToken(ch rune) (token, bool) {
 	typ, ok := punctTypes[ch]
 	if !ok {
-		return Token{}, false
+		return token{}, false
 	}
 	start := l.pos
 	l.pos++
-	return Token{Type: typ, Value: string(ch), Pos: start}, true
+	return token{Type: typ, Value: string(ch), Pos: start}, true
 }
 
-func (l *Lexer) readValue(ch rune) (Token, error) {
+func (l *lexer) readValue(ch rune) (token, error) {
 	start := l.pos
 	switch {
 	case ch == '"' || ch == '\'':
@@ -113,11 +113,11 @@ func (l *Lexer) readValue(ch rune) (Token, error) {
 	case unicode.IsLetter(ch) || ch == '_':
 		return l.readIdent()
 	default:
-		return Token{}, fmt.Errorf("unexpected character %q at position %d", string(ch), start)
+		return token{}, fmt.Errorf("unexpected character %q at position %d", string(ch), start)
 	}
 }
 
-func (l *Lexer) readString(quote rune) (Token, error) {
+func (l *lexer) readString(quote rune) (token, error) {
 	start := l.pos
 	l.pos++ // skip opening quote
 	var sb strings.Builder
@@ -127,24 +127,24 @@ func (l *Lexer) readString(quote rune) (Token, error) {
 		case '\\':
 			l.pos++
 			if l.pos >= len(l.input) {
-				return Token{}, fmt.Errorf("unterminated string at position %d", start)
+				return token{}, fmt.Errorf("unterminated string at position %d", start)
 			}
 			esc := l.input[l.pos]
 			r, ok := unescapeChar(esc)
 			if !ok {
-				return Token{}, fmt.Errorf("unknown escape sequence '\\%c' at position %d", esc, l.pos-1)
+				return token{}, fmt.Errorf("unknown escape sequence '\\%c' at position %d", esc, l.pos-1)
 			}
 			sb.WriteRune(r)
 			l.pos++
 		case quote:
 			l.pos++
-			return Token{Type: tokenString, Value: sb.String(), Pos: start}, nil
+			return token{Type: tokenString, Value: sb.String(), Pos: start}, nil
 		default:
 			sb.WriteRune(ch)
 			l.pos++
 		}
 	}
-	return Token{}, fmt.Errorf("unterminated string at position %d", start)
+	return token{}, fmt.Errorf("unterminated string at position %d", start)
 }
 
 func unescapeChar(ch rune) (rune, bool) {
@@ -166,13 +166,13 @@ func unescapeChar(ch rune) (rune, bool) {
 	}
 }
 
-func (l *Lexer) readDigits() {
+func (l *lexer) readDigits() {
 	for l.pos < len(l.input) && unicode.IsDigit(l.input[l.pos]) {
 		l.pos++
 	}
 }
 
-func (l *Lexer) readExponent() {
+func (l *lexer) readExponent() {
 	if l.pos >= len(l.input) {
 		return
 	}
@@ -186,12 +186,12 @@ func (l *Lexer) readExponent() {
 	l.readDigits()
 }
 
-func (l *Lexer) readNumber() (Token, error) {
+func (l *lexer) readNumber() (token, error) {
 	start := l.pos
 	if l.input[l.pos] == '-' {
 		l.pos++
 		if l.pos >= len(l.input) || !unicode.IsDigit(l.input[l.pos]) {
-			return Token{}, fmt.Errorf("unexpected character '-' at position %d", start)
+			return token{}, fmt.Errorf("unexpected character '-' at position %d", start)
 		}
 	}
 	l.readDigits()
@@ -200,10 +200,10 @@ func (l *Lexer) readNumber() (Token, error) {
 		l.readDigits()
 	}
 	l.readExponent()
-	return Token{Type: tokenNumber, Value: string(l.input[start:l.pos]), Pos: start}, nil
+	return token{Type: tokenNumber, Value: string(l.input[start:l.pos]), Pos: start}, nil
 }
 
-func (l *Lexer) readIdent() (Token, error) {
+func (l *lexer) readIdent() (token, error) {
 	start := l.pos
 	for l.pos < len(l.input) && (unicode.IsLetter(l.input[l.pos]) || unicode.IsDigit(l.input[l.pos]) || l.input[l.pos] == '_') {
 		l.pos++
@@ -211,9 +211,9 @@ func (l *Lexer) readIdent() (Token, error) {
 	val := string(l.input[start:l.pos])
 	switch val {
 	case "true", "false":
-		return Token{Type: tokenBool, Value: val, Pos: start}, nil
+		return token{Type: tokenBool, Value: val, Pos: start}, nil
 	case "null":
-		return Token{Type: tokenNull, Value: val, Pos: start}, nil
+		return token{Type: tokenNull, Value: val, Pos: start}, nil
 	}
-	return Token{Type: tokenIdent, Value: val, Pos: start}, nil
+	return token{Type: tokenIdent, Value: val, Pos: start}, nil
 }

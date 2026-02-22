@@ -28,19 +28,19 @@ func Parse(input string) (reql.Term, error) {
 const maxDepth = 256
 
 type parser struct {
-	tokens []Token
+	tokens []token
 	pos    int
 	depth  int
 }
 
-func (p *parser) peek() Token {
+func (p *parser) peek() token {
 	if p.pos < len(p.tokens) {
 		return p.tokens[p.pos]
 	}
-	return Token{Type: tokenEOF}
+	return token{Type: tokenEOF}
 }
 
-func (p *parser) advance() Token {
+func (p *parser) advance() token {
 	tok := p.peek()
 	if tok.Type != tokenEOF {
 		p.pos++
@@ -48,10 +48,29 @@ func (p *parser) advance() Token {
 	return tok
 }
 
-func (p *parser) expect(tt TokenType) (Token, error) {
+var tokenNames = map[tokenType]string{
+	tokenEOF:      "EOF",
+	tokenIdent:    "identifier",
+	tokenDot:      "'.'",
+	tokenLParen:   "'('",
+	tokenRParen:   "')'",
+	tokenLBracket: "'['",
+	tokenRBracket: "']'",
+	tokenLBrace:   "'{'",
+	tokenRBrace:   "'}'",
+	tokenComma:    "','",
+	tokenColon:    "':'",
+	tokenString:   "string literal",
+	tokenNumber:   "number",
+	tokenBool:     "bool",
+	tokenNull:     "null",
+}
+
+func (p *parser) expect(tt tokenType) (token, error) {
 	tok := p.peek()
 	if tok.Type != tt {
-		return Token{}, fmt.Errorf("expected token %d, got %q at position %d", int(tt), tok.Value, tok.Pos)
+		name := tokenNames[tt]
+		return token{}, fmt.Errorf("expected %s, got %q at position %d", name, tok.Value, tok.Pos)
 	}
 	return p.advance(), nil
 }
@@ -179,8 +198,23 @@ func parseRAsc(p *parser) (reql.Term, error) {
 	return reql.Asc(name), nil
 }
 
-func parseRMinVal(_ *parser) (reql.Term, error) { return reql.MinVal(), nil }
-func parseRMaxVal(_ *parser) (reql.Term, error) { return reql.MaxVal(), nil }
+func parseRMinVal(p *parser) (reql.Term, error) {
+	if p.peek().Type == tokenLParen {
+		if err := p.parseNoArgs(); err != nil {
+			return reql.Term{}, err
+		}
+	}
+	return reql.MinVal(), nil
+}
+
+func parseRMaxVal(p *parser) (reql.Term, error) {
+	if p.peek().Type == tokenLParen {
+		if err := p.parseNoArgs(); err != nil {
+			return reql.Term{}, err
+		}
+	}
+	return reql.MaxVal(), nil
+}
 
 func parseRBranch(p *parser) (reql.Term, error) {
 	args, err := p.parseArgList()
@@ -461,6 +495,9 @@ func chainGetAll(p *parser, t reql.Term) (reql.Term, error) {
 	if err != nil {
 		return reql.Term{}, err
 	}
+	if len(args) == 0 {
+		return reql.Term{}, fmt.Errorf("getAll requires at least one key")
+	}
 	iargs := make([]interface{}, len(args))
 	for i, a := range args {
 		iargs[i] = a
@@ -480,6 +517,9 @@ func chainContains(p *parser, t reql.Term) (reql.Term, error) {
 	args, err := p.parseArgList()
 	if err != nil {
 		return reql.Term{}, err
+	}
+	if len(args) == 0 {
+		return reql.Term{}, fmt.Errorf("contains requires at least one value")
 	}
 	iargs := make([]interface{}, len(args))
 	for i, a := range args {
@@ -913,6 +953,9 @@ func (p *parser) parseArgList() ([]reql.Term, error) {
 			if _, err := p.expect(tokenComma); err != nil {
 				return nil, err
 			}
+			if p.peek().Type == tokenRParen {
+				return nil, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
+			}
 		}
 	}
 	if _, err := p.expect(tokenRParen); err != nil {
@@ -947,6 +990,9 @@ func (p *parser) parseStringList() ([]string, error) {
 		if p.peek().Type != tokenRParen {
 			if _, err := p.expect(tokenComma); err != nil {
 				return nil, err
+			}
+			if p.peek().Type == tokenRParen {
+				return nil, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
 			}
 		}
 	}
@@ -983,7 +1029,7 @@ func (p *parser) parseTwoArgs() (first, second reql.Term, err error) {
 
 // parseTwoStringArgs parses ("s1", "s2") and returns both strings.
 func (p *parser) parseTwoStringArgs() (s1, s2 string, err error) {
-	var tok1, tok2 Token
+	var tok1, tok2 token
 	_, err = p.expect(tokenLParen)
 	if err != nil {
 		return "", "", err
@@ -1031,7 +1077,7 @@ func (p *parser) parseStringThenArg() (string, reql.Term, error) {
 
 // parseTwoInts parses (n1, n2) for methods like slice.
 func (p *parser) parseTwoInts() (n1, n2 int, err error) {
-	var tok1, tok2 Token
+	var tok1, tok2 token
 	_, err = p.expect(tokenLParen)
 	if err != nil {
 		return 0, 0, err
@@ -1065,7 +1111,7 @@ func (p *parser) parseTwoInts() (n1, n2 int, err error) {
 
 // parseTwoFloatArgs parses (f1, f2) for r.point.
 func (p *parser) parseTwoFloatArgs() (v1, v2 float64, err error) {
-	var tok1, tok2 Token
+	var tok1, tok2 token
 	_, err = p.expect(tokenLParen)
 	if err != nil {
 		return 0, 0, err
@@ -1120,6 +1166,9 @@ func (p *parser) parseObjectTerm() (reql.Term, error) {
 		m[key] = val
 		if p.peek().Type == tokenComma {
 			p.advance()
+			if p.peek().Type == tokenRBrace {
+				return reql.Term{}, fmt.Errorf("trailing comma in object at position %d", p.peek().Pos)
+			}
 		}
 	}
 	if _, err := p.expect(tokenRBrace); err != nil {
@@ -1151,6 +1200,9 @@ func (p *parser) parseArrayTerm() (reql.Term, error) {
 		items = append(items, item)
 		if p.peek().Type == tokenComma {
 			p.advance()
+			if p.peek().Type == tokenRBracket {
+				return reql.Term{}, fmt.Errorf("trailing comma in array at position %d", p.peek().Pos)
+			}
 		}
 	}
 	if _, err := p.expect(tokenRBracket); err != nil {

@@ -6,7 +6,7 @@ import (
 
 // tv is a compact token descriptor for test assertions.
 type tv struct {
-	t TokenType
+	t tokenType
 	v string
 }
 

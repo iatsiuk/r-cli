@@ -210,17 +210,17 @@ func TestParse_SyntaxError(t *testing.T) {
 		wantMsg string
 	}{
 		{`r.unknownThing()`, "unknown r.unknownThing"},
-		{`r.db(`, "expected token"},
-		{`r.db("test"`, "expected token"},
+		{`r.db(`, "expected string literal"},
+		{`r.db("test"`, "expected ')'"},
 		{`r.db("test").unknownMethod()`, "unknown method .unknownMethod"},
 		{`42 extra`, "unexpected token"},
 		// comma required in arg list
-		{`r.db("test").table("users").getAll("a" "b")`, "expected token"},
+		{`r.db("test").table("users").getAll("a" "b")`, "expected ','"},
 		// branch requires odd arg count >= 3
 		{`r.branch(true, "x")`, "r.branch requires"},
 		{`r.branch(true)`, "r.branch requires"},
 		// comma required in string list
-		{`r.db("test").table("users").pluck("a" "b")`, "expected token"},
+		{`r.db("test").table("users").pluck("a" "b")`, "expected ','"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
