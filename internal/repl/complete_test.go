@@ -129,7 +129,6 @@ func TestCompleterDBNames(t *testing.T) {
 func TestCompleterTableNames(t *testing.T) {
 	t.Parallel()
 	c := &Completer{
-		CurrentDB: "test",
 		FetchTables: func(_ context.Context, db string) ([]string, error) {
 			if db == "test" {
 				return []string{"heroes", "planets", "users"}, nil
@@ -137,6 +136,7 @@ func TestCompleterTableNames(t *testing.T) {
 			return nil, nil
 		},
 	}
+	c.SetCurrentDB("test")
 
 	// `.table("` -> all table names, length 0
 	line := []rune(`.table("`)

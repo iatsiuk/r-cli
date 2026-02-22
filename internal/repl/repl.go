@@ -193,6 +193,10 @@ func (r *Repl) dotCommand(line string) bool {
 }
 
 func (r *Repl) runQuery(ctx context.Context, expr string) {
+	// drain any stale interrupt signal queued while readline was waiting for input
+	for len(r.interruptCh) > 0 {
+		<-r.interruptCh
+	}
 	queryCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 

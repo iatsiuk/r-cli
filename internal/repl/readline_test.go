@@ -17,7 +17,7 @@ import (
 // It provides a no-op stdin so readline doesn't try to set terminal raw mode.
 func newTestReadlineReader(t *testing.T, historyFile string) (Reader, bool) {
 	t.Helper()
-	r, err := NewReadlineReader("r> ", historyFile, io.Discard, io.Discard)
+	r, err := NewReadlineReader("r> ", historyFile, io.Discard, io.Discard, nil)
 	if err != nil {
 		t.Logf("readline init failed (no TTY): %v", err)
 		return nil, false

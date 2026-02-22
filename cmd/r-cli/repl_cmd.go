@@ -45,11 +45,18 @@ func runREPL(ctx context.Context, cfg *rootConfig, out, errOut io.Writer) error 
 	completer := &repl.Completer{
 		FetchDBs:    makeFetchDBs(exec),
 		FetchTables: makeFetchTables(exec, &localCfg),
-		CurrentDB:   cfg.database,
 	}
+	completer.SetCurrentDB(cfg.database)
 
 	historyFile := replHistoryFile()
-	reader, err := repl.NewReadlineReader("r> ", historyFile, out, errOut, completer)
+	interruptCh := make(chan struct{}, 1)
+	notifyInterrupt := func() {
+		select {
+		case interruptCh <- struct{}{}:
+		default:
+		}
+	}
+	reader, err := repl.NewReadlineReader("r> ", historyFile, out, errOut, notifyInterrupt, completer)
 	if err != nil {
 		return err
 	}
@@ -69,13 +76,14 @@ func runREPL(ctx context.Context, cfg *rootConfig, out, errOut io.Writer) error 
 	}()
 
 	r := repl.New(&repl.Config{
-		Reader: reader,
-		Exec:   makeReplExec(exec, &localCfg),
-		Out:    out,
-		ErrOut: errOut,
+		Reader:      reader,
+		Exec:        makeReplExec(exec, &localCfg),
+		Out:         out,
+		ErrOut:      errOut,
+		InterruptCh: interruptCh,
 		OnUseDB: func(db string) {
 			localCfg.database = db
-			completer.CurrentDB = db
+			completer.SetCurrentDB(db)
 		},
 		OnFormat: func(format string) {
 			localCfg.format = format

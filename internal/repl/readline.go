@@ -13,13 +13,14 @@ type readlineReader struct {
 }
 
 // NewReadlineReader creates a Reader backed by github.com/chzyer/readline.
+// interruptHook is called (non-blocking) when Ctrl+C is pressed; pass nil to disable.
 // An optional TabCompleter may be passed to enable tab completion.
-func NewReadlineReader(prompt, historyFile string, out, errOut io.Writer, completer ...TabCompleter) (Reader, error) {
+func NewReadlineReader(prompt, historyFile string, out, errOut io.Writer, interruptHook func(), completer ...TabCompleter) (Reader, error) {
 	var ac readline.AutoCompleter
 	if len(completer) > 0 && completer[0] != nil {
 		ac = completer[0]
 	}
-	rl, err := readline.NewEx(&readline.Config{
+	cfg := &readline.Config{
 		Prompt:                 prompt,
 		HistoryFile:            historyFile,
 		DisableAutoSaveHistory: true,
@@ -28,7 +29,16 @@ func NewReadlineReader(prompt, historyFile string, out, errOut io.Writer, comple
 		Stdout:                 out,
 		Stderr:                 errOut,
 		AutoComplete:           ac,
-	})
+	}
+	if interruptHook != nil {
+		cfg.FuncFilterInputRune = func(r rune) (rune, bool) {
+			if r == readline.CharInterrupt {
+				interruptHook()
+			}
+			return r, true
+		}
+	}
+	rl, err := readline.NewEx(cfg)
 	if err != nil {
 		return nil, err
 	}

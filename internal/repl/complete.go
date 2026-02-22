@@ -3,6 +3,7 @@ package repl
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -16,7 +17,22 @@ type TabCompleter interface {
 type Completer struct {
 	FetchDBs    func(ctx context.Context) ([]string, error)
 	FetchTables func(ctx context.Context, db string) ([]string, error)
-	CurrentDB   string
+	mu          sync.RWMutex
+	currentDB   string
+}
+
+// SetCurrentDB updates the current database used for table name completion.
+// Safe to call concurrently with tab completion.
+func (c *Completer) SetCurrentDB(db string) {
+	c.mu.Lock()
+	c.currentDB = db
+	c.mu.Unlock()
+}
+
+func (c *Completer) getDB() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.currentDB
 }
 
 // top-level r.* method names (from parser rBuilders map, sorted)
@@ -142,6 +158,6 @@ func (c *Completer) fetchTableNames() []string {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	names, _ := c.FetchTables(ctx, c.CurrentDB)
+	names, _ := c.FetchTables(ctx, c.getDB())
 	return names
 }
