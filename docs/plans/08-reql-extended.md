@@ -126,20 +126,20 @@ Constants:
 
 ### Task 9: Geospatial operations
 
-- [ ] Test: `GEOJSON(157)` -> `[157,[<geojson_obj>]]`
-- [ ] Test: `TO_GEOJSON(158)` -> `[158,[<geo_term>]]`
-- [ ] Test: `POINT(159)` -> `[159,[-122.4,37.7]]`
-- [ ] Test: `LINE(160)` -> `[160,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]]]`
-- [ ] Test: `POLYGON(161)` -> `[161,[[159,[...]],[159,[...]],[159,[...]]]]`
-- [ ] Test: `CIRCLE(165)` -> `[165,[[159,[-122.4,37.7]],1000],{"unit":"m"}]`
-- [ ] Test: `DISTANCE(162)` -> `[162,[<geo1>,<geo2>],{"unit":"km"}]`
-- [ ] Test: `INTERSECTS(163)` -> `[163,[<geo1>,<geo2>]]`
-- [ ] Test: `INCLUDES(164)` -> `[164,[<geo>,<point>]]`
-- [ ] Test: `GET_INTERSECTING(166)` with index optarg -> `[166,[<table>,<geo>],{"index":"location"}]`
-- [ ] Test: `GET_NEAREST(168)` with index optarg -> `[168,[<table>,<point>],{"index":"location"}]`
-- [ ] Test: `FILL(167)` -> `[167,[<line_term>]]`
-- [ ] Test: `POLYGON_SUB(171)` -> `[171,[<polygon1>,<polygon2>]]`
-- [ ] Implement: GeoJson, ToGeoJson, Point, Line, Polygon, Circle, Distance, Intersects, Includes, GetIntersecting, GetNearest, Fill, PolygonSub methods
+- [x] Test: `GEOJSON(157)` -> `[157,[<geojson_obj>]]`
+- [x] Test: `TO_GEOJSON(158)` -> `[158,[<geo_term>]]`
+- [x] Test: `POINT(159)` -> `[159,[-122.4,37.7]]`
+- [x] Test: `LINE(160)` -> `[160,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]]]`
+- [x] Test: `POLYGON(161)` -> `[161,[[159,[...]],[159,[...]],[159,[...]]]]`
+- [x] Test: `CIRCLE(165)` -> `[165,[[159,[-122.4,37.7]],1000],{"unit":"m"}]`
+- [x] Test: `DISTANCE(162)` -> `[162,[<geo1>,<geo2>],{"unit":"km"}]`
+- [x] Test: `INTERSECTS(163)` -> `[163,[<geo1>,<geo2>]]`
+- [x] Test: `INCLUDES(164)` -> `[164,[<geo>,<point>]]`
+- [x] Test: `GET_INTERSECTING(166)` with index optarg -> `[166,[<table>,<geo>],{"index":"location"}]`
+- [x] Test: `GET_NEAREST(168)` with index optarg -> `[168,[<table>,<point>],{"index":"location"}]`
+- [x] Test: `FILL(167)` -> `[167,[<line_term>]]`
+- [x] Test: `POLYGON_SUB(171)` -> `[171,[<polygon1>,<polygon2>]]`
+- [x] Implement: GeoJson, ToGeoJson, Point, Line, Polygon, Circle, Distance, Intersects, Includes, GetIntersecting, GetNearest, Fill, PolygonSub methods
 
 ### Task 10: Additional arithmetic
 

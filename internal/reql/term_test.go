@@ -954,6 +954,88 @@ func TestObjectExtendedOperations(t *testing.T) {
 	})
 }
 
+func TestGeospatialOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("places")
+	p1 := Point(-122.4, 37.7)
+	p2 := Point(-122.3, 37.8)
+	p3 := Point(-122.2, 37.9)
+	line := Line(p1, p2)
+	poly := Polygon(p1, p2, p3)
+	geojsonObj := map[string]interface{}{"type": "Point", "coordinates": []interface{}{-122.4, 37.7}}
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"geojson",
+			GeoJson(geojsonObj),
+			`[157,[{"coordinates":[-122.4,37.7],"type":"Point"}]]`,
+		},
+		{
+			"to_geojson",
+			p1.ToGeoJson(),
+			`[158,[[159,[-122.4,37.7]]]]`,
+		},
+		{
+			"point",
+			p1,
+			`[159,[-122.4,37.7]]`,
+		},
+		{
+			"line",
+			line,
+			`[160,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]]]`,
+		},
+		{
+			"polygon",
+			poly,
+			`[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]]`,
+		},
+		{
+			"circle",
+			Circle(p1, 1000, OptArgs{"unit": "m"}),
+			`[165,[[159,[-122.4,37.7]],1000],{"unit":"m"}]`,
+		},
+		{
+			"distance",
+			p1.Distance(p2, OptArgs{"unit": "km"}),
+			`[162,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]],{"unit":"km"}]`,
+		},
+		{
+			"intersects",
+			p1.Intersects(p2),
+			`[163,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]]]`,
+		},
+		{
+			"includes",
+			poly.Includes(p1),
+			`[164,[[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]],[159,[-122.4,37.7]]]]`,
+		},
+		{
+			"get_intersecting",
+			table.GetIntersecting(poly, OptArgs{"index": "location"}),
+			`[166,[[15,[[14,["test"]],"places"]],[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]]],{"index":"location"}]`,
+		},
+		{
+			"get_nearest",
+			table.GetNearest(p1, OptArgs{"index": "location"}),
+			`[168,[[15,[[14,["test"]],"places"]],[159,[-122.4,37.7]]],{"index":"location"}]`,
+		},
+		{
+			"fill",
+			line.Fill(),
+			`[167,[[160,[[159,[-122.4,37.7]],[159,[-122.3,37.8]]]]]]`,
+		},
+		{
+			"polygon_sub",
+			poly.PolygonSub(Polygon(p1, p2, p3)),
+			`[171,[[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]],[161,[[159,[-122.4,37.7]],[159,[-122.3,37.8]],[159,[-122.2,37.9]]]]]]`,
+		},
+	})
+}
+
 func TestAdminOperations(t *testing.T) {
 	t.Parallel()
 	table := DB("test").Table("users")

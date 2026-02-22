@@ -932,6 +932,87 @@ func MaxVal() Term {
 	return Term{termType: proto.TermMaxVal}
 }
 
+// GeoJson creates a GEOJSON term ([157, [obj]]).
+func GeoJson(obj interface{}) Term {
+	return Term{termType: proto.TermGeoJSON, args: []Term{toTerm(obj)}}
+}
+
+// ToGeoJson creates a TO_GEOJSON term ([158, [geo_term]]).
+func (t Term) ToGeoJson() Term {
+	return Term{termType: proto.TermToGeoJSON, args: []Term{t}}
+}
+
+// Point creates a POINT term ([159, [lon, lat]]).
+func Point(lon, lat float64) Term {
+	return Term{termType: proto.TermPoint, args: []Term{Datum(lon), Datum(lat)}}
+}
+
+// Line creates a LINE term ([160, [point1, point2, ...]]).
+func Line(points ...Term) Term {
+	return Term{termType: proto.TermLine, args: points}
+}
+
+// Polygon creates a POLYGON term ([161, [point1, point2, ...]]).
+func Polygon(points ...Term) Term {
+	return Term{termType: proto.TermPolygon, args: points}
+}
+
+// Circle creates a CIRCLE term ([165, [center, radius]], opts?).
+func Circle(center Term, radius float64, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermCircle, args: []Term{center, Datum(radius)}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
+}
+
+// Distance creates a DISTANCE term ([162, [geo1, geo2]], opts?).
+func (t Term) Distance(other Term, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermDistance, args: []Term{t, other}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
+}
+
+// Intersects creates an INTERSECTS term ([163, [geo1, geo2]]).
+func (t Term) Intersects(other Term) Term {
+	return Term{termType: proto.TermIntersects, args: []Term{t, other}}
+}
+
+// Includes creates an INCLUDES term ([164, [geo, point]]).
+func (t Term) Includes(point Term) Term {
+	return Term{termType: proto.TermIncludes, args: []Term{t, point}}
+}
+
+// GetIntersecting creates a GET_INTERSECTING term ([166, [table, geo]], opts?).
+func (t Term) GetIntersecting(geo Term, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermGetIntersecting, args: []Term{t, geo}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
+}
+
+// GetNearest creates a GET_NEAREST term ([168, [table, point]], opts?).
+func (t Term) GetNearest(point Term, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermGetNearest, args: []Term{t, point}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
+}
+
+// Fill creates a FILL term ([167, [line_term]]).
+func (t Term) Fill() Term {
+	return Term{termType: proto.TermFill, args: []Term{t}}
+}
+
+// PolygonSub creates a POLYGON_SUB term ([171, [polygon1, polygon2]]).
+func (t Term) PolygonSub(other Term) Term {
+	return Term{termType: proto.TermPolygonSub, args: []Term{t, other}}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}
