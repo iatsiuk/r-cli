@@ -54,6 +54,9 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		SilenceErrors: true,
 		Args:          cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 1 {
+				return fmt.Errorf("accepts at most 1 arg(s), received %d", len(args))
+			}
 			if len(args) == 0 && term.IsTerminal(int(os.Stdin.Fd())) { //nolint:gosec
 				_ = cmd.Help()
 				return nil
