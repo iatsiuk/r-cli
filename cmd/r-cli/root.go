@@ -51,6 +51,14 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Args:          cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			expr, err := readQueryExpr(args, cmd.InOrStdin())
+			if err != nil {
+				return err
+			}
+			return runQueryExpr(cmd, cfg, expr)
+		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// completion subcommands don't need connection config
 			if p := cmd.Parent(); p != nil && p.Name() == "completion" {
@@ -67,6 +75,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 		},
 	}
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	cmd.AddCommand(newQueryCmd(cfg))
 	cmd.AddCommand(newRunCmd(cfg))
 	cmd.AddCommand(newDBCmd(cfg))
 	cmd.AddCommand(newTableCmd(cfg))

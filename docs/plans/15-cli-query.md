@@ -14,12 +14,12 @@ Depends on: `14-parser`, `12-cli-core`
 
 ### Task 1: Query command implementation
 
-- [ ] Test: `r-cli query 'r.db("test").table("users")'` -> executes and prints result
-- [ ] Test: `r-cli 'r.db("test").table("users")'` -> query as default command
-- [ ] Test: pipe query from stdin: `echo '...' | r-cli query`
-- [ ] Test: `--file` / `-F` flag reads query from file
-- [ ] Test: `--file` with multiple queries separated by `---` -> execute sequentially, output each
-- [ ] Test: `--file` with multiple queries, `--stop-on-error` -> stop on first failure
-- [ ] Test: invalid query string -> parse error
-- [ ] Test: connection failure -> descriptive error
-- [ ] Implement: query command with input modes (arg, stdin, file)
+- [x] Test: `r-cli query 'r.db("test").table("users")'` -> executes and prints result
+- [x] Test: `r-cli 'r.db("test").table("users")'` -> query as default command
+- [x] Test: pipe query from stdin: `echo '...' | r-cli query`
+- [x] Test: `--file` / `-F` flag reads query from file
+- [x] Test: `--file` with multiple queries separated by `---` -> execute sequentially, output each
+- [x] Test: `--file` with multiple queries, `--stop-on-error` -> stop on first failure
+- [x] Test: invalid query string -> parse error
+- [x] Test: connection failure -> descriptive error
+- [x] Implement: query command with input modes (arg, stdin, file)
