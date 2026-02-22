@@ -23,37 +23,39 @@ func New(mgr *connmgr.ConnManager) *Executor {
 	return &Executor{mgr: mgr}
 }
 
-// Run executes a ReQL term and returns a cursor over the results.
+// Run executes a ReQL term and returns profile data, a cursor over the results, and any error.
+// Profile is non-nil only when the server returns profiling data (opts["profile"]=true).
 // If opts contains "noreply": true, the query is sent without waiting for a
-// response and Run returns (nil, nil).
-func (e *Executor) Run(ctx context.Context, term reql.Term, opts reql.OptArgs) (cursor.Cursor, error) {
+// response and Run returns (nil, nil, nil).
+func (e *Executor) Run(ctx context.Context, term reql.Term, opts reql.OptArgs) (json.RawMessage, cursor.Cursor, error) {
 	c, err := e.mgr.Get(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if opts == nil {
 		opts = reql.OptArgs{}
 	}
 	payload, err := reql.BuildQuery(proto.QueryStart, term, opts)
 	if err != nil {
-		return nil, fmt.Errorf("query: build: %w", err)
+		return nil, nil, fmt.Errorf("query: build: %w", err)
 	}
 	if v, _ := opts["noreply"].(bool); v {
-		return nil, c.WriteFrame(c.NextToken(), payload)
+		return nil, nil, c.WriteFrame(c.NextToken(), payload)
 	}
 	token := c.NextToken()
 	raw, err := c.Send(ctx, token, payload)
 	if err != nil {
-		return nil, fmt.Errorf("query: send: %w", err)
+		return nil, nil, fmt.Errorf("query: send: %w", err)
 	}
 	resp, err := response.Parse(raw)
 	if err != nil {
-		return nil, fmt.Errorf("query: response: %w", err)
+		return nil, nil, fmt.Errorf("query: response: %w", err)
 	}
 	if err := response.MapError(resp); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return makeCursor(ctx, c, token, resp)
+	cur, err := makeCursor(ctx, c, token, resp)
+	return resp.Profile, cur, err
 }
 
 // makeCursor selects the appropriate cursor type for the response.

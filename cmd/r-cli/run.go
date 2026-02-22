@@ -76,13 +76,29 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 		defer cancel()
 	}
 
-	if cfg.verbose {
+	if cfg.verbose && !cfg.quiet {
 		fmt.Fprintf(os.Stderr, "connecting to %s:%d\n", cfg.host, cfg.port)
 	}
 
 	exec, cleanup := newExecutor(cfg)
 	defer cleanup()
 
+	start := time.Now()
+	profile, cur, err := exec.Run(ctx, term, buildQueryOpts(cfg))
+	if err != nil {
+		return err
+	}
+	writeQueryMeta(cfg, profile, time.Since(start))
+	if cur == nil {
+		return nil
+	}
+	defer func() { _ = cur.Close() }()
+
+	return writeOutput(w, output.DetectFormat(os.Stdout, cfg.format), makeIter(cur, cfg))
+}
+
+// buildQueryOpts constructs the ReQL query options from the root config.
+func buildQueryOpts(cfg *rootConfig) reql.OptArgs {
 	opts := reql.OptArgs{}
 	if cfg.database != "" {
 		opts["db"] = cfg.database
@@ -90,29 +106,29 @@ func execTerm(ctx context.Context, cfg *rootConfig, term reql.Term, w io.Writer)
 	if cfg.profile {
 		opts["profile"] = true
 	}
+	return opts
+}
 
-	start := time.Now()
-	cur, err := exec.Run(ctx, term, opts)
-	if err != nil {
-		return err
+// writeQueryMeta writes verbose timing and profile data to stderr.
+func writeQueryMeta(cfg *rootConfig, profile json.RawMessage, elapsed time.Duration) {
+	if cfg.verbose && !cfg.quiet {
+		fmt.Fprintf(os.Stderr, "query time: %v\n", elapsed)
 	}
-	if cfg.verbose {
-		fmt.Fprintf(os.Stderr, "query time: %v\n", time.Since(start))
+	if cfg.profile && len(profile) > 0 {
+		_, _ = fmt.Fprintf(os.Stderr, "profile: %s\n", profile)
 	}
-	if cur == nil {
-		return nil
-	}
-	defer func() { _ = cur.Close() }()
+}
 
-	var iter output.RowIterator = cur
+// makeIter wraps cur in a convertingIter when pseudo-type conversion is requested.
+func makeIter(cur output.RowIterator, cfg *rootConfig) output.RowIterator {
 	if cfg.timeFormat == "native" || cfg.binaryFormat == "native" {
-		iter = &convertingIter{
+		return &convertingIter{
 			inner:         cur,
 			convertTime:   cfg.timeFormat == "native",
 			convertBinary: cfg.binaryFormat == "native",
 		}
 	}
-	return writeOutput(w, output.DetectFormat(os.Stdout, cfg.format), iter)
+	return cur
 }
 
 // convertingIter wraps a RowIterator, applying selective pseudo-type conversion to each row.
