@@ -114,7 +114,7 @@ func parseStep6(data []byte) (string, error) {
 		return "", fmt.Errorf("parseStep6: %w", err)
 	}
 	if !resp.Success {
-		return "", fmt.Errorf("parseStep6: server returned failure: %s", resp.Error)
+		return "", fmt.Errorf("%w: %s", ErrReqlAuth, resp.Error)
 	}
 	return resp.Authentication, nil
 }

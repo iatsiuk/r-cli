@@ -197,7 +197,7 @@ func TestExecutorRunGetsSequence(t *testing.T) {
 	defer stop()
 
 	ex := newTestExecutor(t, addr, pass)
-	cur, err := ex.Run(context.Background(), reql.DB("test").Table("users"), nil)
+	_, cur, err := ex.Run(context.Background(), reql.DB("test").Table("users"), nil)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestExecutorRunWithDBOption(t *testing.T) {
 	defer stop()
 
 	ex := newTestExecutor(t, addr, pass)
-	_, err := ex.Run(context.Background(), reql.DB("test").Table("users"), reql.OptArgs{"db": "mydb"})
+	_, _, err := ex.Run(context.Background(), reql.DB("test").Table("users"), reql.OptArgs{"db": "mydb"})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestExecutorRunWithTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	_, err := ex.Run(ctx, reql.DB("test").Table("users"), nil)
+	_, _, err := ex.Run(ctx, reql.DB("test").Table("users"), nil)
 	if err == nil {
 		t.Fatal("expected timeout error, got nil")
 	}
@@ -303,7 +303,7 @@ func TestExecutorRunWithNoreply(t *testing.T) {
 	defer stop()
 
 	ex := newTestExecutor(t, addr, pass)
-	cur, err := ex.Run(context.Background(), reql.DB("test").Table("users"), reql.OptArgs{"noreply": true})
+	_, cur, err := ex.Run(context.Background(), reql.DB("test").Table("users"), reql.OptArgs{"noreply": true})
 	if err != nil {
 		t.Fatalf("Run with noreply: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestExecutorRunGetsAtom(t *testing.T) {
 	defer stop()
 
 	ex := newTestExecutor(t, addr, pass)
-	cur, err := ex.Run(context.Background(), reql.DB("test").Table("users").Count(), nil)
+	_, cur, err := ex.Run(context.Background(), reql.DB("test").Table("users").Count(), nil)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -360,8 +360,31 @@ func TestExecutorRunServerError(t *testing.T) {
 	defer stop()
 
 	ex := newTestExecutor(t, addr, pass)
-	_, err := ex.Run(context.Background(), reql.DB("test").Table("users"), nil)
+	_, _, err := ex.Run(context.Background(), reql.DB("test").Table("users"), nil)
 	if err == nil {
 		t.Fatal("expected error from server, got nil")
+	}
+}
+
+func TestExecutorRunReturnsProfile(t *testing.T) {
+	t.Parallel()
+	const pass = "testpass"
+	handler := func(nc net.Conn, token uint64, _ []byte) {
+		sendResponse(nc, token, map[string]interface{}{
+			"t": 2, // ResponseSuccessSequence
+			"r": []interface{}{},
+			"p": []interface{}{map[string]interface{}{"description": "Datum", "duration(ms)": 0.1}},
+		})
+	}
+	addr, stop := startQueryServer(t, pass, handler)
+	defer stop()
+
+	ex := newTestExecutor(t, addr, pass)
+	profile, _, err := ex.Run(context.Background(), reql.DB("test").Table("users"), reql.OptArgs{"profile": true})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(profile) == 0 {
+		t.Fatal("expected non-empty profile, got nil")
 	}
 }

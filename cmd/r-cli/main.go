@@ -1,31 +1,33 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
-
-	"github.com/spf13/cobra"
+	"os/signal"
+	"syscall"
 )
 
 var version = "dev"
 
 func main() {
-	if err := newRootCmd().Execute(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+
+	cmd := newRootCmd()
+	err := cmd.ExecuteContext(ctx)
+
+	ctxErr := ctx.Err()
+	stop()
+
+	if ctxErr != nil {
+		os.Exit(exitINT)
+	}
+	if err != nil {
+		if errors.Is(err, errAborted) {
+			os.Exit(exitOK)
+		}
 		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		os.Exit(exitCode(err))
 	}
-}
-
-func newRootCmd() *cobra.Command {
-	rootCmd := &cobra.Command{
-		Use:               "r-cli",
-		Short:             "RethinkDB query CLI",
-		Version:           version,
-		SilenceUsage:      true,
-		SilenceErrors:     true,
-		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
-	}
-	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
-
-	return rootCmd
 }
