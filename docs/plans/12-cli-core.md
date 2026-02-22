@@ -74,9 +74,9 @@ Execute a raw ReQL JSON term directly (pre-serialized).
 
 ### Task 7: `status` and `completion` commands
 
-- [ ] Test: `r-cli status` -> shows server info, connection status
-- [ ] Implement: status command
-- [ ] Test: `r-cli completion bash` generates valid bash completion script
-- [ ] Test: `r-cli completion zsh` generates valid zsh completion script
-- [ ] Test: `r-cli completion fish` generates valid fish completion script
-- [ ] Implement: cobra built-in completion generation
+- [x] Test: `r-cli status` -> shows server info, connection status
+- [x] Implement: status command
+- [x] Test: `r-cli completion bash` generates valid bash completion script
+- [x] Test: `r-cli completion zsh` generates valid zsh completion script
+- [x] Test: `r-cli completion fish` generates valid fish completion script
+- [x] Implement: cobra built-in completion generation

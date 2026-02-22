@@ -46,12 +46,11 @@ func newRootCmd() *cobra.Command {
 
 func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "r-cli",
-		Short:             "RethinkDB query CLI",
-		Version:           version,
-		SilenceUsage:      true,
-		SilenceErrors:     true,
-		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
+		Use:           "r-cli",
+		Short:         "RethinkDB query CLI",
+		Version:       version,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cfg.resolveEnvVars(cmd.Flags().Changed)
 			return cfg.resolvePassword()
@@ -61,6 +60,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	cmd.AddCommand(newRunCmd(cfg))
 	cmd.AddCommand(newDBCmd(cfg))
 	cmd.AddCommand(newTableCmd(cfg))
+	cmd.AddCommand(newStatusCmd(cfg))
 
 	f := cmd.PersistentFlags()
 	f.StringVarP(&cfg.host, "host", "H", "localhost", "RethinkDB host")
