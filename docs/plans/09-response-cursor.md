@@ -32,13 +32,13 @@ Depends on: `01-proto-wire`, `03-conn`
 
 ### Task 3: Error mapping
 
-- [ ] Test: CLIENT_ERROR (16) -> ReqlClientError
-- [ ] Test: COMPILE_ERROR (17) -> ReqlCompileError
-- [ ] Test: RUNTIME_ERROR (18) -> ReqlRuntimeError
-- [ ] Test: RUNTIME_ERROR with ErrorType NON_EXISTENCE -> ReqlNonExistenceError
-- [ ] Test: RUNTIME_ERROR with ErrorType PERMISSION_ERROR -> ReqlPermissionError
-- [ ] Test: backtrace included in error message
-- [ ] Implement: error types and mapping function
+- [x] Test: CLIENT_ERROR (16) -> ReqlClientError
+- [x] Test: COMPILE_ERROR (17) -> ReqlCompileError
+- [x] Test: RUNTIME_ERROR (18) -> ReqlRuntimeError
+- [x] Test: RUNTIME_ERROR with ErrorType NON_EXISTENCE -> ReqlNonExistenceError
+- [x] Test: RUNTIME_ERROR with ErrorType PERMISSION_ERROR -> ReqlPermissionError
+- [x] Test: backtrace included in error message
+- [x] Implement: error types and mapping function
 
 ### Task 4: Atom and sequence cursors
 
