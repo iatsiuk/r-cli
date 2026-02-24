@@ -67,12 +67,12 @@ Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"
 
 ### Task 3: Parser -- multi-param arrow
 
-- [ ] Test: parse `(a, b) => a.add(b)` -> wire JSON `[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]`
-- [ ] Test: parse `(a, b, c) => a.add(b).add(c)` -> wire JSON with 3-param FUNC
-- [ ] Test: parse `(x, x) => x` -> error "duplicate parameter name"
-- [ ] Test: parse `() => 1` -> error "at least one parameter required"
-- [ ] Test: parse `(a,) => a` -> error (trailing comma)
-- [ ] Implement: multi-param arrow parsing
+- [x] Test: parse `(a, b) => a.add(b)` -> wire JSON `[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]`
+- [x] Test: parse `(a, b, c) => a.add(b).add(c)` -> wire JSON with 3-param FUNC
+- [x] Test: parse `(x, x) => x` -> error "duplicate parameter name"
+- [x] Test: parse `() => 1` -> error "at least one parameter required"
+- [x] Test: parse `(a,) => a` -> error (trailing comma)
+- [x] Implement: multi-param arrow parsing
 
 ### Task 4: Parser -- bare single-param arrow (no parens)
 

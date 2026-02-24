@@ -412,6 +412,46 @@ func TestParseLambda_SingleParamParen(t *testing.T) {
 	})
 }
 
+func TestParseLambda_MultiParam(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"two_params",
+			`(a, b) => a.add(b)`,
+			reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2),
+		},
+		{
+			"three_params",
+			`(a, b, c) => a.add(b).add(c)`,
+			reql.Func(reql.Var(1).Add(reql.Var(2)).Add(reql.Var(3)), 1, 2, 3),
+		},
+	})
+}
+
+func TestParseLambda_MultiParam_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`(x, x) => x`, "duplicate parameter name"},
+		{`() => 1`, "at least one parameter"},
+		{`(a,) => a`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
 func TestParseLambda_SingleParamParen_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

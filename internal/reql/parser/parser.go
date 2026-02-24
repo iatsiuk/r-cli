@@ -258,7 +258,7 @@ func (p *parser) parseLambda() (reql.Term, error) {
 }
 
 // parseLambdaParams parses (ident, ...) and returns the parameter names.
-// Validates identifiers and reserved names. Returns error on invalid input.
+// Validates identifiers, reserved names, and duplicates.
 func (p *parser) parseLambdaParams() ([]string, error) {
 	if _, err := p.expect(tokenLParen); err != nil {
 		return nil, err
@@ -266,11 +266,8 @@ func (p *parser) parseLambdaParams() ([]string, error) {
 	var names []string
 	for p.peek().Type != tokenRParen && p.peek().Type != tokenEOF {
 		tok := p.peek()
-		if tok.Type != tokenIdent {
-			return nil, fmt.Errorf("expected identifier in lambda parameter, got %q at position %d", tok.Value, tok.Pos)
-		}
-		if tok.Value == "r" {
-			return nil, fmt.Errorf("reserved parameter name %q at position %d", tok.Value, tok.Pos)
+		if err := validateLambdaParam(tok, names); err != nil {
+			return nil, err
 		}
 		p.advance()
 		names = append(names, tok.Value)
@@ -290,6 +287,22 @@ func (p *parser) parseLambdaParams() ([]string, error) {
 		return nil, fmt.Errorf("lambda requires at least one parameter")
 	}
 	return names, nil
+}
+
+// validateLambdaParam checks that tok is a valid, non-duplicate parameter name.
+func validateLambdaParam(tok token, seen []string) error {
+	if tok.Type != tokenIdent {
+		return fmt.Errorf("expected identifier in lambda parameter, got %q at position %d", tok.Value, tok.Pos)
+	}
+	if tok.Value == "r" {
+		return fmt.Errorf("reserved parameter name %q at position %d", tok.Value, tok.Pos)
+	}
+	for _, existing := range seen {
+		if existing == tok.Value {
+			return fmt.Errorf("duplicate parameter name %q at position %d", tok.Value, tok.Pos)
+		}
+	}
+	return nil
 }
 
 func parseRDesc(p *parser) (reql.Term, error) {
