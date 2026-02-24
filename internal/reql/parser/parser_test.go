@@ -558,3 +558,45 @@ func TestParseLambda_ScopingErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestParseLambda_BodyBoundaries(t *testing.T) {
+	t.Parallel()
+
+	// arrow body is entire x('a').gt(1); outer filter paren closes after lambda
+	t.Run("filter_body_gt", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table('t').filter((x) => x('a').gt(1))`)
+		want := reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("a").Gt(1), 1))
+		assertTermEqual(t, got, want)
+	})
+
+	// arrow body is x('ok'); remaining args "yes","no" are branch args
+	t.Run("branch_arrow_first_arg", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.branch((x) => x('ok'), "yes", "no")`)
+		want := reql.Branch(reql.Func(reql.Var(1).Bracket("ok"), 1), "yes", "no")
+		assertTermEqual(t, got, want)
+	})
+
+	// filter with arrow must not double-wrap: exactly one FUNC(69) in wire output
+	t.Run("filter_no_double_wrap", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table('t').filter((x) => x('a').gt(1))`)
+		b, err := json.Marshal(got)
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		count := strings.Count(string(b), "[69,")
+		if count != 1 {
+			t.Errorf("expected exactly 1 FUNC(69) in wire JSON, got %d: %s", count, b)
+		}
+	})
+
+	// map with arrow: no wrapImplicitVar needed, FUNC passed directly
+	t.Run("map_arrow", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table('t').map((x) => x('price').mul(x('qty')))`)
+		want := reql.Table("t").Map(reql.Func(reql.Var(1).Bracket("price").Mul(reql.Var(1).Bracket("qty")), 1))
+		assertTermEqual(t, got, want)
+	})
+}

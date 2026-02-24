@@ -92,11 +92,11 @@ Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"
 
 ### Task 6: Arrow body boundaries and precedence
 
-- [ ] Test: `r.table('t').filter((x) => x('a').gt(1))` -> body is entire `x('a').gt(1)`, single FUNC in FILTER
-- [ ] Test: `r.branch((x) => x('ok'), "yes", "no")` -> arrow body is `x('ok')`, remaining args are branch args
-- [ ] Test: filter with arrow does not double-wrap -- parse + MarshalJSON -> exactly one FUNC(69) in output
-- [ ] Test: `r.table('t').map((x) => x('price').mul(x('qty')))` -> MAP with FUNC (no wrapImplicitVar needed)
-- [ ] Implement: verify parseExpr terminates arrow body correctly at delimiters
+- [x] Test: `r.table('t').filter((x) => x('a').gt(1))` -> body is entire `x('a').gt(1)`, single FUNC in FILTER
+- [x] Test: `r.branch((x) => x('ok'), "yes", "no")` -> arrow body is `x('ok')`, remaining args are branch args
+- [x] Test: filter with arrow does not double-wrap -- parse + MarshalJSON -> exactly one FUNC(69) in output
+- [x] Test: `r.table('t').map((x) => x('price').mul(x('qty')))` -> MAP with FUNC (no wrapImplicitVar needed)
+- [x] Implement: verify parseExpr terminates arrow body correctly at delimiters
 
 ### Task 7: Integration with chain methods
 
