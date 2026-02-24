@@ -383,6 +383,51 @@ func TestParse_StringKeyedObject(t *testing.T) {
 	assertTermEqual(t, got, want)
 }
 
+func TestParseLambda_ChainMethods(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"filter_compound_predicate",
+			`r.table('t').filter((doc) => doc('status').eq('active').and(doc('age').gt(18)))`,
+			reql.Table("t").Filter(reql.Func(
+				reql.Var(1).Bracket("status").Eq("active").And(reql.Var(1).Bracket("age").Gt(18)),
+				1,
+			)),
+		},
+		{
+			"reduce_two_param",
+			`r.table('t').reduce((a, b) => a.add(b))`,
+			reql.Table("t").Reduce(reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2)),
+		},
+		{
+			"concatMap_one_param",
+			`r.table('t').concatMap((x) => x('items'))`,
+			reql.Table("t").ConcatMap(reql.Func(reql.Var(1).Bracket("items"), 1)),
+		},
+		{
+			"forEach_one_param",
+			`r.table('t').forEach((x) => x('src').add('_copy'))`,
+			reql.Table("t").ForEach(reql.Func(reql.Var(1).Bracket("src").Add("_copy"), 1)),
+		},
+		{
+			"innerJoin_two_param",
+			`r.table('a').innerJoin(r.table('b'), (left, right) => left('id').eq(right('id')))`,
+			reql.Table("a").InnerJoin(reql.Table("b"), reql.Func(
+				reql.Var(1).Bracket("id").Eq(reql.Var(2).Bracket("id")),
+				1, 2,
+			)),
+		},
+		{
+			"outerJoin_two_param",
+			`r.table('a').outerJoin(r.table('b'), (a, b) => a('k').eq(b('k')))`,
+			reql.Table("a").OuterJoin(reql.Table("b"), reql.Func(
+				reql.Var(1).Bracket("k").Eq(reql.Var(2).Bracket("k")),
+				1, 2,
+			)),
+		},
+	})
+}
+
 func TestParse_IntArgError(t *testing.T) {
 	t.Parallel()
 	_, err := Parse(`r.db("test").table("users").limit(3.14)`)

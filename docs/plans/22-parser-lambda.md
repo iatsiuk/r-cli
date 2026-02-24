@@ -100,13 +100,13 @@ Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"
 
 ### Task 7: Integration with chain methods
 
-- [ ] Test: `.filter((doc) => doc('status').eq('active').and(doc('age').gt(18)))` -> wire JSON with compound predicate FUNC
-- [ ] Test: `.reduce((a, b) => a.add(b))` -> wire JSON with 2-param FUNC in REDUCE
-- [ ] Test: `.concatMap((x) => x('items'))` -> wire JSON with FUNC in CONCAT_MAP
-- [ ] Test: `.forEach((x) => x('src').add('_copy'))` -> wire JSON with FUNC in FOR_EACH
-- [ ] Test: `.innerJoin(r.table('b'), (left, right) => left('id').eq(right('id')))` -> wire JSON with 2-param FUNC in INNER_JOIN
-- [ ] Test: `.outerJoin(r.table('b'), (a, b) => a('k').eq(b('k')))` -> wire JSON with 2-param FUNC in OUTER_JOIN
-- [ ] Implement: no parser changes expected; arrow is parsed by parseExpr which chain methods already call
+- [x] Test: `.filter((doc) => doc('status').eq('active').and(doc('age').gt(18)))` -> wire JSON with compound predicate FUNC
+- [x] Test: `.reduce((a, b) => a.add(b))` -> wire JSON with 2-param FUNC in REDUCE
+- [x] Test: `.concatMap((x) => x('items'))` -> wire JSON with FUNC in CONCAT_MAP
+- [x] Test: `.forEach((x) => x('src').add('_copy'))` -> wire JSON with FUNC in FOR_EACH
+- [x] Test: `.innerJoin(r.table('b'), (left, right) => left('id').eq(right('id')))` -> wire JSON with 2-param FUNC in INNER_JOIN
+- [x] Test: `.outerJoin(r.table('b'), (a, b) => a('k').eq(b('k')))` -> wire JSON with 2-param FUNC in OUTER_JOIN
+- [x] Implement: no parser changes expected; arrow is parsed by parseExpr which chain methods already call
 
 ### Task 8: Fuzz testing
 
