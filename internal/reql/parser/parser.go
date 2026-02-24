@@ -127,6 +127,9 @@ func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 
 // parseBareArrowLambda parses `ident => body` (no parentheses) and returns a single-param FUNC term.
 func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
+	if p.params != nil {
+		return reql.Term{}, fmt.Errorf("nested arrow functions are not supported at position %d", tok.Pos)
+	}
 	if err := validateLambdaParam(tok, nil); err != nil {
 		return reql.Term{}, err
 	}
@@ -213,6 +216,9 @@ func parseRDB(p *parser) (reql.Term, error) {
 }
 
 func parseRRow(p *parser) (reql.Term, error) {
+	if p.params != nil {
+		return reql.Term{}, fmt.Errorf("r.row inside arrow function is ambiguous; use the arrow parameter instead")
+	}
 	t := reql.Row()
 	if p.peek().Type != tokenLParen {
 		return t, nil
@@ -256,6 +262,9 @@ func (p *parser) skipLambdaParams(i int) int {
 // parseLambda parses (param, ...) => body and returns a FUNC term.
 // Parameter IDs are assigned starting at 1.
 func (p *parser) parseLambda() (reql.Term, error) {
+	if p.params != nil {
+		return reql.Term{}, fmt.Errorf("nested arrow functions are not supported at position %d", p.peek().Pos)
+	}
 	names, err := p.parseLambdaParams()
 	if err != nil {
 		return reql.Term{}, err

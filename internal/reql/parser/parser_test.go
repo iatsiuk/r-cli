@@ -509,3 +509,52 @@ func TestParseLambda_SingleParamParen_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestParseLambda_ScopingRules(t *testing.T) {
+	t.Parallel()
+
+	// multiple VAR refs: same param ID used in multiple places
+	t.Run("multi_var_refs", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(x) => x('a').add(x('b')).mul(2)`)
+		want := reql.Func(reql.Var(1).Bracket("a").Add(reql.Var(1).Bracket("b")).Mul(2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// chain methods on param
+	t.Run("chain_on_param", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(doc) => doc('name').upcase().match('^A')`)
+		want := reql.Func(reql.Var(1).Bracket("name").Upcase().Match("^A"), 1)
+		assertTermEqual(t, got, want)
+	})
+}
+
+func TestParseLambda_ScopingErrors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		// nested arrow: paren form inside paren form
+		{`(x) => (y) => y`, "nested arrow functions"},
+		// nested arrow: bare form inside paren form
+		{`(x) => y => y`, "nested arrow functions"},
+		// r.row inside arrow
+		{`(x) => r.row('f')`, "r.row inside arrow"},
+		// unknown identifier in body (scope isolation)
+		{`(x) => y`, "unexpected token"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}

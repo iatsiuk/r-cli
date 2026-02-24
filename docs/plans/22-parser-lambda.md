@@ -83,12 +83,12 @@ Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"
 
 ### Task 5: Scoping and nesting rules
 
-- [ ] Test: nested arrow `(x) => (y) => y` -> error "nested arrow functions not supported"
-- [ ] Test: `r.row` inside arrow `(x) => r.row('f')` -> error "r.row inside arrow function is ambiguous"
-- [ ] Test: parameter name used consistently in body -- `(x) => x('a').add(x('b')).mul(2)` -> multiple VAR(1) refs in wire JSON
-- [ ] Test: body with chain methods on param -- `(doc) => doc('name').upcase().match('^A')` -> chained terms on VAR(1)
-- [ ] Test: unknown identifier in body -- `(x) => y` -> error (verifies scope isolation: only declared params resolve to Var)
-- [ ] Implement: parser `params` field (map[string]int), nesting guard, r.row conflict check in `parseRRow`
+- [x] Test: nested arrow `(x) => (y) => y` -> error "nested arrow functions not supported"
+- [x] Test: `r.row` inside arrow `(x) => r.row('f')` -> error "r.row inside arrow function is ambiguous"
+- [x] Test: parameter name used consistently in body -- `(x) => x('a').add(x('b')).mul(2)` -> multiple VAR(1) refs in wire JSON
+- [x] Test: body with chain methods on param -- `(doc) => doc('name').upcase().match('^A')` -> chained terms on VAR(1)
+- [x] Test: unknown identifier in body -- `(x) => y` -> error (verifies scope isolation: only declared params resolve to Var)
+- [x] Implement: parser `params` field (map[string]int), nesting guard, r.row conflict check in `parseRRow`
 
 ### Task 6: Arrow body boundaries and precedence
 
