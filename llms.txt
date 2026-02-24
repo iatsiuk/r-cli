@@ -1,0 +1,75 @@
+# r-cli
+
+RethinkDB command-line client. Execute ReQL queries, manage databases, tables, indexes, users, and permissions from the terminal. Includes an interactive REPL with tab completion.
+
+## Installation
+
+```bash
+go install r-cli/cmd/r-cli@latest
+```
+
+## Quick Usage
+
+```bash
+# interactive REPL
+r-cli
+
+# execute ReQL expression
+r-cli 'r.db("test").tableList()'
+
+# pipe
+echo 'r.table("users").count()' | r-cli -d test
+
+# database/table management
+r-cli db list
+r-cli db create mydb
+r-cli table list --db mydb
+r-cli table create users --db mydb
+
+# bulk insert
+cat data.jsonl | r-cli insert mydb.users
+r-cli insert mydb.users -F data.json --conflict replace
+
+# server status
+r-cli status
+```
+
+## Commands
+
+- (default) - execute expression arg or start REPL on TTY
+- query [expr] - execute a ReQL expression; -F/--file reads from file (--- separates multiple queries); --stop-on-error stops on first failure
+- run [term] - execute a raw ReQL JSON term from arg or stdin
+- repl - start interactive REPL
+- db list|create|drop - database management; drop has --yes/-y
+- table list|create|drop|info|reconfigure|rebalance|wait|sync - table management; requires --db; reconfigure accepts --shards, --replicas, --dry-run
+- index list|create|drop|rename|status|wait - index management; requires --db; create accepts --geo, --multi
+- user list|create|delete|set-password - user management; create accepts --password (prompts on TTY if omitted)
+- grant <user> - grant/revoke permissions; --read, --write; scope: global / --db / --db --table; --read=false revokes
+- insert <db.table> - bulk insert; -F/--file, --batch-size (200), --conflict error|replace|update; reads JSONL from stdin or JSON/JSONL from file
+- status - server info as JSON
+- completion bash|zsh|fish - generate shell completions
+
+## Global Flags
+
+-H/--host (localhost), -P/--port (28015), -d/--db, -u/--user (admin), -p/--password, --password-file, -t/--timeout (30s), -f/--format (auto: json on TTY, jsonl piped), --profile, --time-format native|raw, --binary-format native|raw, --quiet, --verbose, --tls-cert, --tls-client-cert, --tls-key, --insecure-skip-verify
+
+## Environment Variables
+
+RETHINKDB_HOST, RETHINKDB_PORT, RETHINKDB_USER, RETHINKDB_PASSWORD, RETHINKDB_DATABASE override defaults. CLI flags win. NO_COLOR disables color.
+
+## Output Formats
+
+- json - pretty-printed (default on TTY)
+- jsonl - one compact JSON per line (default when piped)
+- raw - strings unquoted, others compact JSON
+- table - aligned ASCII table for object results
+
+## Interactive REPL
+
+Starts when invoked on TTY with no args, or via `r-cli repl`. Tab completion for databases, tables, and ReQL methods. Multiline input with auto-detection. History saved to ~/.r-cli_history.
+
+Dot-commands: .use <db>, .format <fmt>, .help, .exit/.quit
+
+## Exit Codes
+
+0 ok, 1 connection error, 2 query error, 3 auth error, 130 SIGINT/SIGTERM
