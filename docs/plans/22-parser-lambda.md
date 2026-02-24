@@ -118,9 +118,9 @@ Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"
 
 Build tag: `//go:build integration`. Package: `internal/integration`.
 
-- [ ] Test: `filter((x) => x('age').gt(N))` on table with known data -> correct filtered results
-- [ ] Test: `reduce((a, b) => a('val').add(b('val')))` -> correct sum
-- [ ] Test: `map((x) => x('name').upcase())` -> correct transformed results
-- [ ] Test: `innerJoin` with 2-param arrow on two tables -> correct joined docs
-- [ ] Test: CLI binary: `r-cli query 'r.table("t").filter((x) => x("age").gt(21))'` -> valid JSON output with expected rows
-- [ ] Implement: integration test functions using existing test helpers (setupTestDB, createTestTable, newExecutor)
+- [x] Test: `filter((x) => x('age').gt(N))` on table with known data -> correct filtered results
+- [x] Test: `reduce((a, b) => a('val').add(b('val')))` -> correct sum
+- [x] Test: `map((x) => x('name').upcase())` -> correct transformed results
+- [x] Test: `innerJoin` with 2-param arrow on two tables -> correct joined docs
+- [x] Test: CLI binary: `r-cli query 'r.table("t").filter((x) => x("age").gt(21))'` -> valid JSON output with expected rows
+- [x] Implement: integration test functions using existing test helpers (setupTestDB, createTestTable, newExecutor)
