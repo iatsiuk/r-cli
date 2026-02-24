@@ -20,6 +20,11 @@ func FuzzLex(f *testing.F) {
 		``,
 		`!!!`,
 		`r.db(`,
+		`=>`,
+		`(x) => x`,
+		`= `,
+		`a=>b`,
+		`===`,
 	}
 	for _, s := range seeds {
 		f.Add(s)

@@ -47,12 +47,12 @@ Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"
 
 ### Task 1: Lexer -- arrow token
 
-- [ ] Test: tokenize `=>` -> [ARROW] token
-- [ ] Test: tokenize `(x) => x` -> [LPAREN, IDENT:x, RPAREN, ARROW, IDENT:x]
-- [ ] Test: tokenize `=` alone -> error "unexpected character"
-- [ ] Test: tokenize `==` -> error (not supported)
-- [ ] Test: fuzz -- lexer does not panic with `=` in arbitrary positions
-- [ ] Implement: add `tokenArrow` type, handle `=` in lexer
+- [x] Test: tokenize `=>` -> [ARROW] token
+- [x] Test: tokenize `(x) => x` -> [LPAREN, IDENT:x, RPAREN, ARROW, IDENT:x]
+- [x] Test: tokenize `=` alone -> error "unexpected character"
+- [x] Test: tokenize `==` -> error (not supported)
+- [x] Test: fuzz -- lexer does not panic with `=` in arbitrary positions
+- [x] Implement: add `tokenArrow` type, handle `=` in lexer
 
 ### Task 2: Parser -- single-param arrow in parentheses
 

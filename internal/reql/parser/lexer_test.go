@@ -254,3 +254,45 @@ func TestLexer_UnterminatedStringError(t *testing.T) {
 		t.Fatal("expected error for unterminated string, got nil")
 	}
 }
+
+func TestLexer_ArrowToken(t *testing.T) {
+	t.Parallel()
+	got := tokenizeOrFail(t, `=>`)
+	want := []tv{
+		{tokenArrow, "=>"},
+		{tokenEOF, ""},
+	}
+	assertTokens(t, got, want)
+}
+
+func TestLexer_ArrowInLambda(t *testing.T) {
+	t.Parallel()
+	got := tokenizeOrFail(t, `(x) => x`)
+	want := []tv{
+		{tokenLParen, "("},
+		{tokenIdent, "x"},
+		{tokenRParen, ")"},
+		{tokenArrow, "=>"},
+		{tokenIdent, "x"},
+		{tokenEOF, ""},
+	}
+	assertTokens(t, got, want)
+}
+
+func TestLexer_EqualAloneError(t *testing.T) {
+	t.Parallel()
+	l := newLexer(`=`)
+	_, err := l.tokenize()
+	if err == nil {
+		t.Fatal("expected error for '=' alone, got nil")
+	}
+}
+
+func TestLexer_DoubleEqualError(t *testing.T) {
+	t.Parallel()
+	l := newLexer(`==`)
+	_, err := l.tokenize()
+	if err == nil {
+		t.Fatal("expected error for '==', got nil")
+	}
+}

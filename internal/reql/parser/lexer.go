@@ -25,6 +25,7 @@ const (
 	tokenNumber
 	tokenBool
 	tokenNull
+	tokenArrow
 )
 
 // token is a single lexical unit with its type, raw value, and rune index.
@@ -73,10 +74,23 @@ func (l *lexer) next() (token, error) {
 		return token{Type: tokenEOF, Pos: l.pos}, nil
 	}
 	ch := l.input[l.pos]
+	if ch == '=' {
+		return l.readArrow()
+	}
 	if tok, ok := l.punctToken(ch); ok {
 		return tok, nil
 	}
 	return l.readValue(ch)
+}
+
+func (l *lexer) readArrow() (token, error) {
+	start := l.pos
+	l.pos++ // consume '='
+	if l.pos < len(l.input) && l.input[l.pos] == '>' {
+		l.pos++ // consume '>'
+		return token{Type: tokenArrow, Value: "=>", Pos: start}, nil
+	}
+	return token{}, fmt.Errorf("unexpected character '=' at position %d", start)
 }
 
 // punctTypes maps single-character punctuation to its token type.
