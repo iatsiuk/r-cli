@@ -110,9 +110,9 @@ Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"
 
 ### Task 8: Fuzz testing
 
-- [ ] Test: fuzz parser with arrow-containing seeds does not panic
-- [ ] Seed corpus: `(x) => x`, `(a,b) => a.add(b)`, `x => x`, `() => 1`, `(x) => (y) => y`, `=> x`, `(x) =>`
-- [ ] Implement: extend `FuzzParse` seed corpus with lambda patterns
+- [x] Test: fuzz parser with arrow-containing seeds does not panic
+- [x] Seed corpus: `(x) => x`, `(a,b) => a.add(b)`, `x => x`, `() => 1`, `(x) => (y) => y`, `=> x`, `(x) =>`
+- [x] Implement: extend `FuzzParse` seed corpus with lambda patterns
 
 ### Task 9: Integration tests (live RethinkDB)
 
