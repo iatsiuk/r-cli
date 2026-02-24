@@ -452,6 +452,39 @@ func TestParseLambda_MultiParam_Errors(t *testing.T) {
 	}
 }
 
+func TestParseLambda_BareArrow(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"bare_field_gt",
+			`x => x('field').gt(0)`,
+			reql.Func(reql.Var(1).Bracket("field").Gt(0), 1),
+		},
+		{
+			"same_as_paren_form",
+			`x => x('age').gt(21)`,
+			reql.Func(reql.Var(1).Bracket("age").Gt(21), 1),
+		},
+		{
+			"inside_filter",
+			`r.table('t').filter(x => x('age').gt(21))`,
+			reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("age").Gt(21), 1)),
+		},
+	})
+}
+
+func TestParseLambda_BareArrow_FallThrough(t *testing.T) {
+	t.Parallel()
+	// bare ident without => falls through to datum error (unknown identifier)
+	_, err := Parse(`z`)
+	if err == nil {
+		t.Fatal("Parse(\"z\"): expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "unexpected token") {
+		t.Errorf("Parse(\"z\"): error %q does not contain \"unexpected token\"", err.Error())
+	}
+}
+
 func TestParseLambda_SingleParamParen_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

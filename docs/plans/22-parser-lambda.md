@@ -76,10 +76,10 @@ Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"
 
 ### Task 4: Parser -- bare single-param arrow (no parens)
 
-- [ ] Test: parse `x => x('field').gt(0)` -> same wire JSON as `(x) => x('field').gt(0)`
-- [ ] Test: parse `r.table('t').filter(x => x('age').gt(21))` -> FILTER with FUNC
-- [ ] Test: bare ident without `=>` after it -> falls through to existing behavior (error for unknown ident)
-- [ ] Implement: bare identifier arrow detection via peek at next token
+- [x] Test: parse `x => x('field').gt(0)` -> same wire JSON as `(x) => x('field').gt(0)`
+- [x] Test: parse `r.table('t').filter(x => x('age').gt(21))` -> FILTER with FUNC
+- [x] Test: bare ident without `=>` after it -> falls through to existing behavior (error for unknown ident)
+- [x] Implement: bare identifier arrow detection via peek at next token
 
 ### Task 5: Scoping and nesting rules
 

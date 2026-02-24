@@ -106,7 +106,7 @@ func (p *parser) parsePrimary() (reql.Term, error) {
 	}
 }
 
-// parseIdentPrimary handles identifiers: r.* expressions, param vars, and datum fallback.
+// parseIdentPrimary handles identifiers: r.* expressions, param vars, bare arrow lambdas, and datum fallback.
 func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 	if tok.Value == "r" {
 		p.advance()
@@ -118,7 +118,31 @@ func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 			return reql.Var(id), nil
 		}
 	}
+	// bare arrow: ident => body
+	if p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == tokenArrow {
+		return p.parseBareArrowLambda(tok)
+	}
 	return p.parseDatumTerm()
+}
+
+// parseBareArrowLambda parses `ident => body` (no parentheses) and returns a single-param FUNC term.
+func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
+	if err := validateLambdaParam(tok, nil); err != nil {
+		return reql.Term{}, err
+	}
+	p.advance() // consume ident
+	if _, err := p.expect(tokenArrow); err != nil {
+		return reql.Term{}, err
+	}
+	params := map[string]int{tok.Value: 1}
+	old := p.params
+	p.params = params
+	defer func() { p.params = old }()
+	body, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Func(body, 1), nil
 }
 
 func (p *parser) parseRExpr() (reql.Term, error) {
