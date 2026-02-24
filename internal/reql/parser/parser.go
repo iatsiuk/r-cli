@@ -31,6 +31,7 @@ type parser struct {
 	tokens []token
 	pos    int
 	depth  int
+	params map[string]int
 }
 
 func (p *parser) peek() token {
@@ -64,6 +65,7 @@ var tokenNames = map[tokenType]string{
 	tokenNumber:   "number",
 	tokenBool:     "bool",
 	tokenNull:     "null",
+	tokenArrow:    "'=>'",
 }
 
 func (p *parser) expect(tt tokenType) (token, error) {
@@ -91,9 +93,10 @@ func (p *parser) parseExpr() (reql.Term, error) {
 func (p *parser) parsePrimary() (reql.Term, error) {
 	tok := p.peek()
 	switch {
-	case tok.Type == tokenIdent && tok.Value == "r":
-		p.advance()
-		return p.parseRExpr()
+	case tok.Type == tokenLParen && p.isLambdaAhead():
+		return p.parseLambda()
+	case tok.Type == tokenIdent:
+		return p.parseIdentPrimary(tok)
 	case tok.Type == tokenLBrace:
 		return p.parseObjectTerm()
 	case tok.Type == tokenLBracket:
@@ -101,6 +104,21 @@ func (p *parser) parsePrimary() (reql.Term, error) {
 	default:
 		return p.parseDatumTerm()
 	}
+}
+
+// parseIdentPrimary handles identifiers: r.* expressions, param vars, and datum fallback.
+func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
+	if tok.Value == "r" {
+		p.advance()
+		return p.parseRExpr()
+	}
+	if p.params != nil {
+		if id, ok := p.params[tok.Value]; ok {
+			p.advance()
+			return reql.Var(id), nil
+		}
+	}
+	return p.parseDatumTerm()
 }
 
 func (p *parser) parseRExpr() (reql.Term, error) {
@@ -180,6 +198,98 @@ func parseRRow(p *parser) (reql.Term, error) {
 		return reql.Term{}, err
 	}
 	return t.Bracket(field), nil
+}
+
+// isLambdaAhead reports whether the current position starts a lambda expression:
+// LPAREN (token COMMA)* token? RPAREN ARROW
+func (p *parser) isLambdaAhead() bool {
+	i := p.pos
+	if i >= len(p.tokens) || p.tokens[i].Type != tokenLParen {
+		return false
+	}
+	i = p.skipLambdaParams(i + 1)
+	if i >= len(p.tokens) || p.tokens[i].Type != tokenRParen {
+		return false
+	}
+	i++
+	return i < len(p.tokens) && p.tokens[i].Type == tokenArrow
+}
+
+// skipLambdaParams scans forward past any tokens that could form a parameter list,
+// stopping before the closing RPAREN (or at EOF). Returns the new index.
+func (p *parser) skipLambdaParams(i int) int {
+	for i < len(p.tokens) && p.tokens[i].Type != tokenRParen && p.tokens[i].Type != tokenEOF {
+		i++ // accept any token as potential parameter
+		if i < len(p.tokens) && p.tokens[i].Type == tokenComma {
+			i++ // skip comma
+		} else {
+			break
+		}
+	}
+	return i
+}
+
+// parseLambda parses (param, ...) => body and returns a FUNC term.
+// Parameter IDs are assigned starting at 1.
+func (p *parser) parseLambda() (reql.Term, error) {
+	names, err := p.parseLambdaParams()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if _, err := p.expect(tokenArrow); err != nil {
+		return reql.Term{}, err
+	}
+	params := make(map[string]int, len(names))
+	for i, name := range names {
+		params[name] = i + 1
+	}
+	old := p.params
+	p.params = params
+	defer func() { p.params = old }()
+	body, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	ids := make([]int, len(names))
+	for i := range names {
+		ids[i] = i + 1
+	}
+	return reql.Func(body, ids...), nil
+}
+
+// parseLambdaParams parses (ident, ...) and returns the parameter names.
+// Validates identifiers and reserved names. Returns error on invalid input.
+func (p *parser) parseLambdaParams() ([]string, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return nil, err
+	}
+	var names []string
+	for p.peek().Type != tokenRParen && p.peek().Type != tokenEOF {
+		tok := p.peek()
+		if tok.Type != tokenIdent {
+			return nil, fmt.Errorf("expected identifier in lambda parameter, got %q at position %d", tok.Value, tok.Pos)
+		}
+		if tok.Value == "r" {
+			return nil, fmt.Errorf("reserved parameter name %q at position %d", tok.Value, tok.Pos)
+		}
+		p.advance()
+		names = append(names, tok.Value)
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type == tokenRParen {
+				return nil, fmt.Errorf("trailing comma in parameter list at position %d", p.peek().Pos)
+			}
+		} else {
+			break
+		}
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return nil, err
+	}
+	if len(names) == 0 {
+		return nil, fmt.Errorf("lambda requires at least one parameter")
+	}
+	return names, nil
 }
 
 func parseRDesc(p *parser) (reql.Term, error) {

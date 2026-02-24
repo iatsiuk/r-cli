@@ -390,3 +390,49 @@ func TestParse_IntArgError(t *testing.T) {
 		t.Fatal("expected error for float arg to limit(), got nil")
 	}
 }
+
+func TestParseLambda_SingleParamParen(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"field_gt",
+			`(x) => x('age').gt(21)`,
+			reql.Func(reql.Var(1).Bracket("age").Gt(21), 1),
+		},
+		{
+			"eq",
+			`(x) => x.eq(5)`,
+			reql.Func(reql.Var(1).Eq(5), 1),
+		},
+		{
+			"datum_bool",
+			`(x) => true`,
+			reql.Func(reql.Datum(true), 1),
+		},
+	})
+}
+
+func TestParseLambda_SingleParamParen_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`(r) => r('f')`, "reserved parameter name"},
+		{`(false) => 1`, "expected identifier"},
+		{`(null) => 1`, "expected identifier"},
+		{`(x) =>`, "unexpected token"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}

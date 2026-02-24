@@ -56,14 +56,14 @@ Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"
 
 ### Task 2: Parser -- single-param arrow in parentheses
 
-- [ ] Test: parse `(x) => x('age').gt(21)` -> wire JSON `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"]],21]]]]`
-- [ ] Test: parse `(x) => x.eq(5)` -> wire JSON with FUNC wrapping EQ(VAR(1), 5)
-- [ ] Test: parse `(x) => true` -> wire JSON with FUNC wrapping datum true
-- [ ] Test: parse `(r) => r('f')` -> error (reserved parameter name "r")
-- [ ] Test: parse `(false) => 1` -> error (expected identifier, got "false")
-- [ ] Test: parse `(null) => 1` -> error (expected identifier, got "null")
-- [ ] Test: parse `(x) =>` -> error (expected expression after `=>`, got EOF)
-- [ ] Implement: lookahead scan for `(params) =>` pattern, arrow parsing with param scope
+- [x] Test: parse `(x) => x('age').gt(21)` -> wire JSON `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"]],21]]]]`
+- [x] Test: parse `(x) => x.eq(5)` -> wire JSON with FUNC wrapping EQ(VAR(1), 5)
+- [x] Test: parse `(x) => true` -> wire JSON with FUNC wrapping datum true
+- [x] Test: parse `(r) => r('f')` -> error (reserved parameter name "r")
+- [x] Test: parse `(false) => 1` -> error (expected identifier, got "false")
+- [x] Test: parse `(null) => 1` -> error (expected identifier, got "null")
+- [x] Test: parse `(x) =>` -> error (expected expression after `=>`, got EOF)
+- [x] Implement: lookahead scan for `(params) =>` pattern, arrow parsing with param scope
 
 ### Task 3: Parser -- multi-param arrow
 
