@@ -8,7 +8,7 @@ This project is developed using [ralphex](https://github.com/umputun/ralphex) CL
 
 ## Project Files
 
-- `rethink-driver.md` - RethinkDB wire protocol specification for driver implementation (handshake, SCRAM-SHA-256, ReQL serialization, term types, response format, streaming)
+- `docs/protocol-spec.md` - RethinkDB wire protocol specification for driver implementation (handshake, SCRAM-SHA-256, ReQL serialization, term types, response format, streaming)
 - `docs/plans/` - numbered TDD implementation plans (e.g. `04-reql-core.md`); each plan has phases with test cases as checklist
 
 ## Package Structure
