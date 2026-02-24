@@ -53,7 +53,7 @@ func TestConnManager50Concurrent(t *testing.T) {
 // Caller must terminate the returned container.
 func startRethinkDBForRestart(ctx context.Context) (testcontainers.Container, error) {
 	req := testcontainers.ContainerRequest{
-		Image:        "rethinkdb:2.4.4",
+		Image:        "rethinkdb:2.4",
 		ExposedPorts: []string{"28015/tcp"},
 		WaitingFor:   wait.ForLog("Server ready").WithStartupTimeout(2 * time.Minute),
 	}

@@ -22,7 +22,7 @@ func startRethinkDBWithPassword(t *testing.T, password string) (string, int) {
 	t.Helper()
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
-		Image:        "rethinkdb:2.4.4",
+		Image:        "rethinkdb:2.4",
 		ExposedPorts: []string{"28015/tcp"},
 		Cmd:          []string{"rethinkdb", "--initial-password", password, "--bind", "all"},
 		WaitingFor:   wait.ForLog("Server ready").WithStartupTimeout(2 * time.Minute),
