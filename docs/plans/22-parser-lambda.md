@@ -19,67 +19,31 @@ Depends on: `14-parser`
 
 Out of scope: `r.do` is not yet implemented in the parser; adding it is a separate task.
 
+## Design Notes
+
+Lexer: add `tokenArrow` for `=>`. Handle `=` in `next()` before `punctToken`/`readValue`: if followed by `>` produce `tokenArrow`, otherwise error.
+
+Parser -- lambda detection in `parsePrimary`:
+- For `(`: lightweight lookahead scan matching `LPAREN (token COMMA)* token? RPAREN ARROW`. The `token?` means zero or more tokens are accepted, so `() => 1` also matches (the error "at least one parameter required" is produced by `parseLambda`, not the lookahead). The scan accepts any token between parens (not just IDENT) so that `parseLambda` produces specific errors (e.g., `(false) => 1` -> "expected identifier"). If no match, fall through to existing behavior.
+- For `ident` (not `r`): peek next token; if `ARROW`, parse as bare single-param lambda.
+
+Parser -- parameter scope: `params map[string]int` field on parser struct. `parsePrimary` checks params before falling through to `parseDatumTerm`. Chaining on `Var` works naturally (`x('field')` -> `Var(1).Bracket("field")`). Cleanup via `defer` after body parsing.
+
+Scoping rules:
+- `r.row` inside arrow is an error. Check in `parseRRow`: if `p.params != nil`, error immediately. This is the only IMPLICIT_VAR creation point, so it covers all methods. Critical because Map/Reduce/ConcatMap/ForEach do NOT call `wrapImplicitVar`.
+- Nested arrows not supported (max depth 1).
+- Reserved parameter names (`r`, `true`, `false`, `null`) rejected.
+
+Arrow body boundaries: `parseExpr` greedily consumes body including chains. Terminates at `,`/`)` inside argument lists. `chainFilter` uses `parseOneArg` so `filter` with optargs is not supported (pre-existing limitation).
+
+Filter interaction: `wrapImplicitVar` finds no `IMPLICIT_VAR` in FUNC from arrow syntax -> returns unchanged. No double wrapping.
+
+Wire format: `(x) => x('age').gt(21)` -> `[69,[[2,[1]],[21,[[170,[[10,[1]],"age"]],21]]]]` = `FUNC([MAKE_ARRAY([1])], GT(BRACKET(VAR(1), "age"), 21))`. All tests verify wire JSON via `MarshalJSON` roundtrip.
+
 ## Validation Commands
 - `go test ./internal/reql/parser/... -race -count=1`
 - `go test -tags integration ./internal/integration/... -race -count=1 -run TestLambda`
 - `make build`
-
-## Design
-
-### Lexer changes
-
-Add one new token type: `tokenArrow` for `=>`. The lexer must handle `=` carefully:
-- `=>` produces `tokenArrow`
-- `=` alone is an error (not used in ReQL syntax)
-
-This avoids conflicts with existing tokens since `=` is not currently recognized.
-
-### Parser changes
-
-Arrow expressions are parsed as primary expressions (in `parsePrimary`) when the parser sees a pattern that starts a lambda:
-1. `(ident, ident, ...) =>` -- parenthesized parameter list followed by arrow
-2. `ident =>` -- single bare identifier followed by arrow
-
-#### Lambda detection strategy
-
-The parser cannot use general backtracking because `(expr)` grouping is not supported -- there is nothing to backtrack to. Instead, use a lightweight lookahead scan that only inspects token types without consuming them:
-
-- **For `(`**: scan forward from current position: if the tokens match the pattern `LPAREN (token COMMA)* token RPAREN ARROW`, this is a lambda. The scan checks token types in the existing token slice (O(n) where n = number of params), does not modify parser state, and does not call `parseExpr`. The scan accepts any token between LPAREN and RPAREN (not just IDENT) so that `parseLambda` is entered and can produce specific error messages (e.g., `(false) => 1` -> "expected identifier, got `false`"). If the pattern does not match (no RPAREN ARROW sequence), fall through to existing behavior (`parseDatumTerm` error for `(` in primary position).
-- **For `ident` (not `r`)**: peek at the next token. If it is `ARROW`, parse as single-param lambda. Otherwise fall through to existing behavior.
-
-This avoids the complexity of save/restore state and does not require adding `(expr)` grouping support.
-
-#### Parameter scope
-
-Inside the lambda body, parameter names are resolved to `reql.Var(id)`. A parameter scope map (`name -> id`) is stored as a field on the parser struct and maintained during body parsing. When `parsePrimary` encounters a bare identifier that matches a parameter name, it produces `Var(id)` instead of an error. Chaining on `Var` terms works naturally (e.g., `x('field')` -> `Var(1).Bracket("field")`).
-
-Parameter scoping rules:
-- Parameters shadow `r.row` -- using `r.row` inside an arrow function is an error (ambiguous)
-- Nested arrows are not supported (max lambda depth = 1, matches RethinkDB limitation)
-- Parameter names must be valid identifiers; reserved words (`r`, `true`, `false`, `null`) are rejected at the identifier check stage
-
-#### Arrow body boundaries
-
-The `=>` operator has the lowest precedence. The body is parsed by calling `parseExpr` which greedily consumes everything including chains. Inside an argument list (e.g., `branch(...)`), the body naturally terminates at `,` or `)` because `parseExpr` does not consume these tokens. Example:
-- `r.branch((x) => x('a').gt(1), "yes", "no")` -- body ends at comma inside branch
-
-Note: `chainFilter` uses `parseOneArg` (single expression), so `filter` with optargs like `filter((x) => x('a'), {default: true})` is not supported. This is a pre-existing parser limitation unrelated to arrow syntax.
-
-#### Interaction with `wrapImplicitVar` in `Filter`
-
-`term.Filter()` calls `wrapImplicitVar` on its predicate. When the parser produces a `FUNC` term from arrow syntax, `wrapImplicitVar` finds no `IMPLICIT_VAR` inside and returns the term unchanged -- no double wrapping occurs. This must be verified by a wire JSON roundtrip test.
-
-Note: `Map`, `Reduce`, `ConcatMap`, `ForEach` do NOT call `wrapImplicitVar`. This means `r.row` does not work in these methods (existing limitation). Arrow syntax solves this because it produces an explicit `FUNC` term that these methods pass through directly.
-
-### Wire format
-
-`(x) => x('age').gt(21)` serializes as:
-```json
-[69,[[2,[1]],[21,[[170,[[10,[1]],"age"]],21]]]]
-```
-Which is `FUNC([MAKE_ARRAY([1])], GT(BRACKET(VAR(1), "age"), 21))`.
-
-All parser tests verify wire JSON via `MarshalJSON` roundtrip, not just Term structure.
 
 ### Task 1: Lexer -- arrow token
 
@@ -98,6 +62,7 @@ All parser tests verify wire JSON via `MarshalJSON` roundtrip, not just Term str
 - [ ] Test: parse `(r) => r('f')` -> error (reserved parameter name "r")
 - [ ] Test: parse `(false) => 1` -> error (expected identifier, got "false")
 - [ ] Test: parse `(null) => 1` -> error (expected identifier, got "null")
+- [ ] Test: parse `(x) =>` -> error (expected expression after `=>`, got EOF)
 - [ ] Implement: lookahead scan for `(params) =>` pattern, arrow parsing with param scope
 
 ### Task 3: Parser -- multi-param arrow
@@ -122,11 +87,10 @@ All parser tests verify wire JSON via `MarshalJSON` roundtrip, not just Term str
 - [ ] Test: `r.row` inside arrow `(x) => r.row('f')` -> error "r.row inside arrow function is ambiguous"
 - [ ] Test: parameter name used consistently in body -- `(x) => x('a').add(x('b')).mul(2)` -> multiple VAR(1) refs in wire JSON
 - [ ] Test: body with chain methods on param -- `(doc) => doc('name').upcase().match('^A')` -> chained terms on VAR(1)
-- [ ] Implement: parser `params` field (map[string]int), nesting guard, r.row conflict check
+- [ ] Test: unknown identifier in body -- `(x) => y` -> error (verifies scope isolation: only declared params resolve to Var)
+- [ ] Implement: parser `params` field (map[string]int), nesting guard, r.row conflict check in `parseRRow`
 
 ### Task 6: Arrow body boundaries and precedence
-
-The `=>` body is greedy (lowest precedence) but terminates at `,` and `)` inside argument lists.
 
 - [ ] Test: `r.table('t').filter((x) => x('a').gt(1))` -> body is entire `x('a').gt(1)`, single FUNC in FILTER
 - [ ] Test: `r.branch((x) => x('ok'), "yes", "no")` -> arrow body is `x('ok')`, remaining args are branch args
