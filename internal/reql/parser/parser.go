@@ -118,6 +118,9 @@ func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 	}
 	// detect function(params){ ... } syntax
 	if tok.Value == "function" && p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == tokenLParen {
+		if p.params != nil {
+			return reql.Term{}, fmt.Errorf("nested functions are not supported at position %d", tok.Pos)
+		}
 		p.advance() // consume "function"
 		return p.parseFunctionExpr()
 	}
@@ -158,9 +161,6 @@ func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
 // parseFunctionExpr parses function(params){ return? body ;? } and returns a FUNC term.
 // The "function" keyword has already been consumed by the caller.
 func (p *parser) parseFunctionExpr() (reql.Term, error) {
-	if p.params != nil {
-		return reql.Term{}, fmt.Errorf("nested functions are not supported at position %d", p.peek().Pos)
-	}
 	names, err := p.parseLambdaParams()
 	if err != nil {
 		return reql.Term{}, err
