@@ -78,9 +78,10 @@ func cliRun(t *testing.T, stdin string, args ...string) (string, string, int) {
 	return outBuf.String(), errBuf.String(), code
 }
 
-// cliArgs prepends -H <host> -P <port> to extra args.
+// cliArgs prepends -H <host> -P <port> -u admin -p "" to extra args.
+// Explicit credentials override any RETHINKDB_* env vars set in the test environment.
 func cliArgs(extra ...string) []string {
-	base := []string{"-H", containerHost, "-P", strconv.Itoa(containerPort)}
+	base := []string{"-H", containerHost, "-P", strconv.Itoa(containerPort), "-u", "admin", "-p", ""}
 	return append(base, extra...)
 }
 

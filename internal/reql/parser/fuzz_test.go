@@ -20,6 +20,11 @@ func FuzzLex(f *testing.F) {
 		``,
 		`!!!`,
 		`r.db(`,
+		`=>`,
+		`(x) => x`,
+		`= `,
+		`a=>b`,
+		`===`,
 	}
 	for _, s := range seeds {
 		f.Add(s)
@@ -52,6 +57,13 @@ func FuzzParse(f *testing.F) {
 		`r.db(`,
 		`r.unknownThing()`,
 		`42 extra`,
+		`(x) => x`,
+		`(a,b) => a.add(b)`,
+		`x => x`,
+		`() => 1`,
+		`(x) => (y) => y`,
+		`=> x`,
+		`(x) =>`,
 	}
 	for _, s := range seeds {
 		f.Add(s)

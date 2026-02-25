@@ -383,10 +383,270 @@ func TestParse_StringKeyedObject(t *testing.T) {
 	assertTermEqual(t, got, want)
 }
 
+func TestParseLambda_ChainMethods(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"filter_compound_predicate",
+			`r.table('t').filter((doc) => doc('status').eq('active').and(doc('age').gt(18)))`,
+			reql.Table("t").Filter(reql.Func(
+				reql.Var(1).Bracket("status").Eq("active").And(reql.Var(1).Bracket("age").Gt(18)),
+				1,
+			)),
+		},
+		{
+			"reduce_two_param",
+			`r.table('t').reduce((a, b) => a.add(b))`,
+			reql.Table("t").Reduce(reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2)),
+		},
+		{
+			"concatMap_one_param",
+			`r.table('t').concatMap((x) => x('items'))`,
+			reql.Table("t").ConcatMap(reql.Func(reql.Var(1).Bracket("items"), 1)),
+		},
+		{
+			"forEach_one_param",
+			`r.table('t').forEach((x) => x('src').add('_copy'))`,
+			reql.Table("t").ForEach(reql.Func(reql.Var(1).Bracket("src").Add("_copy"), 1)),
+		},
+		{
+			"innerJoin_two_param",
+			`r.table('a').innerJoin(r.table('b'), (left, right) => left('id').eq(right('id')))`,
+			reql.Table("a").InnerJoin(reql.Table("b"), reql.Func(
+				reql.Var(1).Bracket("id").Eq(reql.Var(2).Bracket("id")),
+				1, 2,
+			)),
+		},
+		{
+			"outerJoin_two_param",
+			`r.table('a').outerJoin(r.table('b'), (a, b) => a('k').eq(b('k')))`,
+			reql.Table("a").OuterJoin(reql.Table("b"), reql.Func(
+				reql.Var(1).Bracket("k").Eq(reql.Var(2).Bracket("k")),
+				1, 2,
+			)),
+		},
+	})
+}
+
 func TestParse_IntArgError(t *testing.T) {
 	t.Parallel()
 	_, err := Parse(`r.db("test").table("users").limit(3.14)`)
 	if err == nil {
 		t.Fatal("expected error for float arg to limit(), got nil")
 	}
+}
+
+func TestParseLambda_SingleParamParen(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"field_gt",
+			`(x) => x('age').gt(21)`,
+			reql.Func(reql.Var(1).Bracket("age").Gt(21), 1),
+		},
+		{
+			"eq",
+			`(x) => x.eq(5)`,
+			reql.Func(reql.Var(1).Eq(5), 1),
+		},
+		{
+			"datum_bool",
+			`(x) => true`,
+			reql.Func(reql.Datum(true), 1),
+		},
+	})
+}
+
+func TestParseLambda_MultiParam(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"two_params",
+			`(a, b) => a.add(b)`,
+			reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2),
+		},
+		{
+			"three_params",
+			`(a, b, c) => a.add(b).add(c)`,
+			reql.Func(reql.Var(1).Add(reql.Var(2)).Add(reql.Var(3)), 1, 2, 3),
+		},
+	})
+}
+
+func TestParseLambda_MultiParam_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`(x, x) => x`, "duplicate parameter name"},
+		{`() => 1`, "at least one parameter"},
+		{`(a,) => a`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParseLambda_BareArrow(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"bare_field_gt",
+			`x => x('field').gt(0)`,
+			reql.Func(reql.Var(1).Bracket("field").Gt(0), 1),
+		},
+		{
+			"same_as_paren_form",
+			`x => x('age').gt(21)`,
+			reql.Func(reql.Var(1).Bracket("age").Gt(21), 1),
+		},
+		{
+			"inside_filter",
+			`r.table('t').filter(x => x('age').gt(21))`,
+			reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("age").Gt(21), 1)),
+		},
+		{
+			"multi_var_refs",
+			`x => x('a').add(x('b'))`,
+			reql.Func(reql.Var(1).Bracket("a").Add(reql.Var(1).Bracket("b")), 1),
+		},
+	})
+}
+
+func TestParseLambda_BareArrow_FallThrough(t *testing.T) {
+	t.Parallel()
+	// bare ident without => falls through to datum error (unknown identifier)
+	_, err := Parse(`z`)
+	if err == nil {
+		t.Fatal("Parse(\"z\"): expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "unexpected token") {
+		t.Errorf("Parse(\"z\"): error %q does not contain \"unexpected token\"", err.Error())
+	}
+}
+
+func TestParseLambda_SingleParamParen_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`(r) => r('f')`, "reserved parameter name"},
+		{`(false) => 1`, "expected identifier"},
+		{`(null) => 1`, "expected identifier"},
+		{`(x) =>`, "unexpected token"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParseLambda_ScopingRules(t *testing.T) {
+	t.Parallel()
+
+	// multiple VAR refs: same param ID used in multiple places
+	t.Run("multi_var_refs", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(x) => x('a').add(x('b')).mul(2)`)
+		want := reql.Func(reql.Var(1).Bracket("a").Add(reql.Var(1).Bracket("b")).Mul(2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// chain methods on param
+	t.Run("chain_on_param", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(doc) => doc('name').upcase().match('^A')`)
+		want := reql.Func(reql.Var(1).Bracket("name").Upcase().Match("^A"), 1)
+		assertTermEqual(t, got, want)
+	})
+}
+
+func TestParseLambda_ScopingErrors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		// nested arrow: paren form inside paren form
+		{`(x) => (y) => y`, "nested arrow functions"},
+		// nested arrow: bare form inside paren form
+		{`(x) => y => y`, "nested arrow functions"},
+		// r.row inside arrow
+		{`(x) => r.row('f')`, "r.row inside arrow"},
+		// unknown identifier in body (scope isolation)
+		{`(x) => y`, "unexpected token"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParseLambda_BodyBoundaries(t *testing.T) {
+	t.Parallel()
+
+	// arrow body is entire x('a').gt(1); outer filter paren closes after lambda
+	t.Run("filter_body_gt", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table('t').filter((x) => x('a').gt(1))`)
+		want := reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("a").Gt(1), 1))
+		assertTermEqual(t, got, want)
+	})
+
+	// arrow body is x('ok'); remaining args "yes","no" are branch args
+	t.Run("branch_arrow_first_arg", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.branch((x) => x('ok'), "yes", "no")`)
+		want := reql.Branch(reql.Func(reql.Var(1).Bracket("ok"), 1), "yes", "no")
+		assertTermEqual(t, got, want)
+	})
+
+	// filter with arrow must not double-wrap: exactly one FUNC(69) in wire output
+	t.Run("filter_no_double_wrap", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table('t').filter((x) => x('a').gt(1))`)
+		b, err := json.Marshal(got)
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		count := strings.Count(string(b), "[69,")
+		if count != 1 {
+			t.Errorf("expected exactly 1 FUNC(69) in wire JSON, got %d: %s", count, b)
+		}
+	})
+
+	// map with arrow: no wrapImplicitVar needed, FUNC passed directly
+	t.Run("map_arrow", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table('t').map((x) => x('price').mul(x('qty')))`)
+		want := reql.Table("t").Map(reql.Func(reql.Var(1).Bracket("price").Mul(reql.Var(1).Bracket("qty")), 1))
+		assertTermEqual(t, got, want)
+	})
 }
