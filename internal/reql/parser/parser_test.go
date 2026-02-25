@@ -589,6 +589,8 @@ func TestParseLambda_ScopingErrors(t *testing.T) {
 		{`(x) => (y) => y`, "nested arrow functions"},
 		// nested arrow: bare form inside paren form
 		{`(x) => y => y`, "nested arrow functions"},
+		// function expr inside arrow body
+		{`(x) => function(y){ return y }`, "nested functions"},
 		// r.row inside arrow
 		{`(x) => r.row('f')`, "r.row inside arrow"},
 		// unknown identifier in body (scope isolation)
@@ -776,7 +778,7 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		{`function(x){ return }`, "unexpected token"},
 		{`function(x) x`, "expected '{'"},
 		{`function(x){ return x('a')`, "expected '}'"},
-		{`function(x){ return function(y){ return y } }`, "nested arrow functions"},
+		{`function(x){ return function(y){ return y } }`, "nested functions"},
 		{`function(x){ return r.row('f') }`, "r.row inside arrow"},
 	}
 	for _, tc := range cases {

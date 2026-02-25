@@ -209,7 +209,11 @@ func TestFunctionSyntaxCLI(t *testing.T) {
 		t.Errorf("got %d docs, want 2 (enabled=false)", len(docs))
 	}
 	for _, doc := range docs {
-		enabled, _ := doc["enabled"].(bool)
+		enabled, ok := doc["enabled"].(bool)
+		if !ok {
+			t.Errorf("doc.enabled missing or not bool: %v", doc)
+			continue
+		}
 		if enabled {
 			t.Errorf("doc.enabled should be false: %v", doc)
 		}
@@ -243,7 +247,11 @@ func TestFunctionSyntaxCLIArrowR(t *testing.T) {
 		t.Errorf("got %d docs, want 2 (enabled=false)", len(docs))
 	}
 	for _, doc := range docs {
-		enabled, _ := doc["enabled"].(bool)
+		enabled, ok := doc["enabled"].(bool)
+		if !ok {
+			t.Errorf("doc.enabled missing or not bool: %v", doc)
+			continue
+		}
 		if enabled {
 			t.Errorf("doc.enabled should be false: %v", doc)
 		}

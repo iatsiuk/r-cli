@@ -159,7 +159,7 @@ func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
 // The "function" keyword has already been consumed by the caller.
 func (p *parser) parseFunctionExpr() (reql.Term, error) {
 	if p.params != nil {
-		return reql.Term{}, fmt.Errorf("nested arrow functions are not supported at position %d", p.peek().Pos)
+		return reql.Term{}, fmt.Errorf("nested functions are not supported at position %d", p.peek().Pos)
 	}
 	names, err := p.parseLambdaParams()
 	if err != nil {
