@@ -18,7 +18,7 @@ func TestUserE2E(t *testing.T) {
 	// persistent --password/-p flag because we are not passing -p here.
 	username := sanitizeID(t.Name())
 
-	_, stderr, code := cliRun(t, "", cliArgs("user", "create", username, "--password", "pass123")...)
+	_, stderr, code := cliRun(t, "", cliArgs("user", "create", username, "--new-password", "pass123")...)
 	if code != 0 {
 		t.Fatalf("user create: exit code %d, stderr: %s", code, stderr)
 	}
@@ -65,7 +65,7 @@ func TestGrantE2E(t *testing.T) {
 	createTestTable(t, qexec, dbName, tableName)
 
 	// create user via CLI (no connection password needed)
-	_, stderr, code := cliRun(t, "", cliArgs("user", "create", username, "--password", "userpass")...)
+	_, stderr, code := cliRun(t, "", cliArgs("user", "create", username, "--new-password", "userpass")...)
 	if code != 0 {
 		t.Fatalf("user create: exit code %d, stderr: %s", code, stderr)
 	}

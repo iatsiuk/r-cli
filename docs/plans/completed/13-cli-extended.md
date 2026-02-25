@@ -27,7 +27,7 @@ Depends on: `12-cli-core`
 ### Task 2: `user` subcommands
 
 - [x] Test: `r-cli user list` -> list users from rethinkdb.users table
-- [x] Test: `r-cli user create <name> --password <pwd>` -> insert user
+- [x] Test: `r-cli user create <name> --new-password <pwd>` -> insert user
 - [x] Test: `r-cli user create <name>` (no password flag) -> prompt for password (no echo)
 - [x] Test: `r-cli user delete <name>` -> delete user (with confirmation)
 - [x] Test: `r-cli user set-password <name>` -> prompt and update password (no echo)

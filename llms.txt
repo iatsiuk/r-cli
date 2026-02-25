@@ -43,7 +43,7 @@ r-cli status
 - db list|create|drop - database management; drop has --yes/-y
 - table list|create|drop|info|reconfigure|rebalance|wait|sync - table management; requires --db; reconfigure accepts --shards, --replicas, --dry-run
 - index list|create|drop|rename|status|wait - index management; requires --db; create accepts --geo, --multi
-- user list|create|delete|set-password - user management; create accepts --password (prompts on TTY if omitted)
+- user list|create|delete|set-password - user management; create accepts --new-password (prompts on TTY if omitted)
 - grant <user> - grant/revoke permissions; --read, --write; scope: global / --db / --db --table; --read=false revokes
 - insert <db.table> - bulk insert; -F/--file, --batch-size (200), --conflict error|replace|update; reads JSONL from stdin or JSON/JSONL from file
 - status - server info as JSON

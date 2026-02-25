@@ -74,10 +74,10 @@ func TestUserCreatePasswordFlag(t *testing.T) {
 	t.Parallel()
 	cfg := &rootConfig{}
 	cmd := newUserCreateCmd(cfg)
-	if err := cmd.ParseFlags([]string{"--password", "secret"}); err != nil {
+	if err := cmd.ParseFlags([]string{"--new-password", "secret"}); err != nil {
 		t.Fatal(err)
 	}
-	pwd, err := cmd.Flags().GetString("password")
+	pwd, err := cmd.Flags().GetString("new-password")
 	if err != nil {
 		t.Fatal(err)
 	}

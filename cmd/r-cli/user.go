@@ -45,7 +45,7 @@ func newUserCreateCmd(cfg *rootConfig) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			pwd := password
-			if !cmd.Flags().Changed("password") {
+			if !cmd.Flags().Changed("new-password") {
 				var err error
 				pwd, err = promptPassword(os.Stderr, os.Stdin)
 				if err != nil {
@@ -56,7 +56,7 @@ func newUserCreateCmd(cfg *rootConfig) *cobra.Command {
 			return execTerm(cmd.Context(), cfg, reql.DB("rethinkdb").Table("users").Insert(doc), os.Stdout)
 		},
 	}
-	c.Flags().StringVar(&password, "password", "", "user password")
+	c.Flags().StringVar(&password, "new-password", "", "user password")
 	return c
 }
 
