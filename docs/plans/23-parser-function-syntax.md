@@ -66,9 +66,9 @@ Body boundaries: `parseExpr` consumes greedily up to `}` (which is not a valid e
 
 ### Task 2: Lexer -- `function` and `return` as identifiers (no changes needed, verify)
 
-- [ ] Test: tokenize `function(x){ return x }` -> [IDENT:function, LPAREN, IDENT:x, RPAREN, LBRACE, IDENT:return, IDENT:x, RBRACE]
-- [ ] Test: tokenize `function(){}` -> [IDENT:function, LPAREN, RPAREN, LBRACE, RBRACE]
-- [ ] Implement: no lexer changes; `function` and `return` are already valid identifiers; verify with tests
+- [x] Test: tokenize `function(x){ return x }` -> [IDENT:function, LPAREN, IDENT:x, RPAREN, LBRACE, IDENT:return, IDENT:x, RBRACE]
+- [x] Test: tokenize `function(){}` -> [IDENT:function, LPAREN, RPAREN, LBRACE, RBRACE]
+- [x] Implement: no lexer changes; `function` and `return` are already valid identifiers; verify with tests
 
 ### Task 3: Parser -- `function(params){ return expr }` single param
 

@@ -296,3 +296,34 @@ func TestLexer_DoubleEqualError(t *testing.T) {
 		t.Fatal("expected error for '==', got nil")
 	}
 }
+
+func TestLexer_FunctionKeyword(t *testing.T) {
+	t.Parallel()
+	got := tokenizeOrFail(t, `function(x){ return x }`)
+	want := []tv{
+		{tokenIdent, "function"},
+		{tokenLParen, "("},
+		{tokenIdent, "x"},
+		{tokenRParen, ")"},
+		{tokenLBrace, "{"},
+		{tokenIdent, "return"},
+		{tokenIdent, "x"},
+		{tokenRBrace, "}"},
+		{tokenEOF, ""},
+	}
+	assertTokens(t, got, want)
+}
+
+func TestLexer_FunctionEmpty(t *testing.T) {
+	t.Parallel()
+	got := tokenizeOrFail(t, `function(){}`)
+	want := []tv{
+		{tokenIdent, "function"},
+		{tokenLParen, "("},
+		{tokenRParen, ")"},
+		{tokenLBrace, "{"},
+		{tokenRBrace, "}"},
+		{tokenEOF, ""},
+	}
+	assertTokens(t, got, want)
+}
