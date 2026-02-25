@@ -26,6 +26,7 @@ const (
 	tokenBool
 	tokenNull
 	tokenArrow
+	tokenSemicolon
 )
 
 // token is a single lexical unit with its type, raw value, and rune index.
@@ -104,6 +105,7 @@ var punctTypes = map[rune]tokenType{
 	'}': tokenRBrace,
 	',': tokenComma,
 	':': tokenColon,
+	';': tokenSemicolon,
 }
 
 // punctToken returns a single-character punctuation token if ch matches.

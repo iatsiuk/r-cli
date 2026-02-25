@@ -72,11 +72,11 @@ Body boundaries: `parseExpr` consumes greedily up to `}` (which is not a valid e
 
 ### Task 3: Parser -- `function(params){ return expr }` single param
 
-- [ ] Test: parse `function(x){ return x('age').gt(21) }` -> same wire JSON as `(x) => x('age').gt(21)`
-- [ ] Test: parse `function(x){ x('age').gt(21) }` -> same wire JSON (return keyword optional)
-- [ ] Test: parse `function(x){ return x('age').gt(21); }` -> same wire JSON (trailing semicolon tolerated)
-- [ ] Test: parse `r.table('t').filter(function(x){ return x('age').gt(21) })` -> FILTER with FUNC
-- [ ] Implement: detect `function` ident followed by `(` in `parseIdentPrimary`; add `parseFunctionExpr` method
+- [x] Test: parse `function(x){ return x('age').gt(21) }` -> same wire JSON as `(x) => x('age').gt(21)`
+- [x] Test: parse `function(x){ x('age').gt(21) }` -> same wire JSON (return keyword optional)
+- [x] Test: parse `function(x){ return x('age').gt(21); }` -> same wire JSON (trailing semicolon tolerated)
+- [x] Test: parse `r.table('t').filter(function(x){ return x('age').gt(21) })` -> FILTER with FUNC
+- [x] Implement: detect `function` ident followed by `(` in `parseIdentPrimary`; add `parseFunctionExpr` method
 
 ### Task 4: Parser -- `function(params){ return expr }` with `r` param
 

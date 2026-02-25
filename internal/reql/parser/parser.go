@@ -50,22 +50,23 @@ func (p *parser) advance() token {
 }
 
 var tokenNames = map[tokenType]string{
-	tokenEOF:      "EOF",
-	tokenIdent:    "identifier",
-	tokenDot:      "'.'",
-	tokenLParen:   "'('",
-	tokenRParen:   "')'",
-	tokenLBracket: "'['",
-	tokenRBracket: "']'",
-	tokenLBrace:   "'{'",
-	tokenRBrace:   "'}'",
-	tokenComma:    "','",
-	tokenColon:    "':'",
-	tokenString:   "string literal",
-	tokenNumber:   "number",
-	tokenBool:     "bool",
-	tokenNull:     "null",
-	tokenArrow:    "'=>'",
+	tokenEOF:       "EOF",
+	tokenIdent:     "identifier",
+	tokenDot:       "'.'",
+	tokenLParen:    "'('",
+	tokenRParen:    "')'",
+	tokenLBracket:  "'['",
+	tokenRBracket:  "']'",
+	tokenLBrace:    "'{'",
+	tokenRBrace:    "'}'",
+	tokenComma:     "','",
+	tokenColon:     "':'",
+	tokenString:    "string literal",
+	tokenNumber:    "number",
+	tokenBool:      "bool",
+	tokenNull:      "null",
+	tokenArrow:     "'=>'",
+	tokenSemicolon: "';'",
 }
 
 func (p *parser) expect(tt tokenType) (token, error) {
@@ -115,6 +116,11 @@ func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 			return reql.Var(id), nil
 		}
 	}
+	// detect function(params){ ... } syntax
+	if tok.Value == "function" && p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == tokenLParen {
+		p.advance() // consume "function"
+		return p.parseFunctionExpr()
+	}
 	// bare arrow check before r.* dispatch so that `r => ...` is valid
 	if p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == tokenArrow {
 		return p.parseBareArrowLambda(tok)
@@ -147,6 +153,46 @@ func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
 		return reql.Term{}, err
 	}
 	return reql.Func(body, 1), nil
+}
+
+// parseFunctionExpr parses function(params){ return? body ;? } and returns a FUNC term.
+// The "function" keyword has already been consumed by the caller.
+func (p *parser) parseFunctionExpr() (reql.Term, error) {
+	if p.params != nil {
+		return reql.Term{}, fmt.Errorf("nested arrow functions are not supported at position %d", p.peek().Pos)
+	}
+	names, err := p.parseLambdaParams()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if _, err := p.expect(tokenLBrace); err != nil {
+		return reql.Term{}, err
+	}
+	// optional "return" keyword
+	if p.peek().Type == tokenIdent && p.peek().Value == "return" {
+		p.advance()
+	}
+	params := make(map[string]int, len(names))
+	ids := make([]int, len(names))
+	for i, name := range names {
+		id := i + 1
+		params[name] = id
+		ids[i] = id
+	}
+	old := p.params
+	p.params = params
+	defer func() { p.params = old }()
+	body, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenSemicolon {
+		p.advance()
+	}
+	if _, err := p.expect(tokenRBrace); err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Func(body, ids...), nil
 }
 
 func (p *parser) parseRExpr() (reql.Term, error) {

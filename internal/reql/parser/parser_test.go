@@ -650,6 +650,32 @@ func TestParseLambda_BodyBoundaries(t *testing.T) {
 	})
 }
 
+func TestParseFunctionExpr_SingleParam(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"with_return",
+			`function(x){ return x('age').gt(21) }`,
+			reql.Func(reql.Var(1).Bracket("age").Gt(21), 1),
+		},
+		{
+			"without_return",
+			`function(x){ x('age').gt(21) }`,
+			reql.Func(reql.Var(1).Bracket("age").Gt(21), 1),
+		},
+		{
+			"trailing_semicolon",
+			`function(x){ return x('age').gt(21); }`,
+			reql.Func(reql.Var(1).Bracket("age").Gt(21), 1),
+		},
+		{
+			"in_filter",
+			`r.table('t').filter(function(x){ return x('age').gt(21) })`,
+			reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("age").Gt(21), 1)),
+		},
+	})
+}
+
 func TestParseLambda_RAsParam(t *testing.T) {
 	t.Parallel()
 
