@@ -327,3 +327,21 @@ func TestLexer_FunctionEmpty(t *testing.T) {
 	}
 	assertTokens(t, got, want)
 }
+
+func TestLexer_FunctionWithSemicolon(t *testing.T) {
+	t.Parallel()
+	got := tokenizeOrFail(t, `function(x){ return x; }`)
+	want := []tv{
+		{tokenIdent, "function"},
+		{tokenLParen, "("},
+		{tokenIdent, "x"},
+		{tokenRParen, ")"},
+		{tokenLBrace, "{"},
+		{tokenIdent, "return"},
+		{tokenIdent, "x"},
+		{tokenSemicolon, ";"},
+		{tokenRBrace, "}"},
+		{tokenEOF, ""},
+	}
+	assertTokens(t, got, want)
+}

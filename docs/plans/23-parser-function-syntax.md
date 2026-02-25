@@ -101,8 +101,8 @@ Body boundaries: `parseExpr` consumes greedily up to `}` (which is not a valid e
 
 ### Task 6: Parser -- semicolon handling in lexer
 
-- [ ] Test: tokenize `function(x){ return x; }` -> tokens include IDENT:x followed by some representation of `;`
-- [ ] Implement: add `;` as a recognized punctuation token (`tokenSemicolon`) so the parser can optionally consume it before `}`; alternatively, if `;` is not in the lexer, it will error -- must handle it
+- [x] Test: tokenize `function(x){ return x; }` -> tokens include IDENT:x followed by some representation of `;`
+- [x] Implement: add `;` as a recognized punctuation token (`tokenSemicolon`) so the parser can optionally consume it before `}`; alternatively, if `;` is not in the lexer, it will error -- must handle it
 
 ### Task 7: Fuzz testing
 
