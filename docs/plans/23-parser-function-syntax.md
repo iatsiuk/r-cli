@@ -87,17 +87,17 @@ Body boundaries: `parseExpr` consumes greedily up to `}` (which is not a valid e
 
 ### Task 5: Parser -- `function` multi-param and error cases
 
-- [ ] Test: parse `function(a, b){ return a.add(b) }` -> same wire JSON as `(a, b) => a.add(b)`
-- [ ] Test: parse `function(a, b, c){ return a.add(b).add(c) }` -> 3-param FUNC
-- [ ] Test: parse `function(){ return 1 }` -> error "lambda requires at least one parameter"
-- [ ] Test: parse `function(x, x){ return x }` -> error "duplicate parameter name"
-- [ ] Test: parse `function(x){ }` -> error (empty body, expected expression)
-- [ ] Test: parse `function(x){ return }` -> error (missing expression after return)
-- [ ] Test: parse `function(x) x` -> error (missing `{`)
-- [ ] Test: parse `function(x){ return x('a')` -> error (missing `}`)
-- [ ] Test: nested `function(x){ return function(y){ return y } }` -> error "nested arrow functions are not supported"
-- [ ] Test: `function(x){ return r.row('f') }` -> error "r.row inside arrow function is ambiguous"
-- [ ] Implement: error handling in `parseFunctionExpr`
+- [x] Test: parse `function(a, b){ return a.add(b) }` -> same wire JSON as `(a, b) => a.add(b)`
+- [x] Test: parse `function(a, b, c){ return a.add(b).add(c) }` -> 3-param FUNC
+- [x] Test: parse `function(){ return 1 }` -> error "lambda requires at least one parameter"
+- [x] Test: parse `function(x, x){ return x }` -> error "duplicate parameter name"
+- [x] Test: parse `function(x){ }` -> error (empty body, expected expression)
+- [x] Test: parse `function(x){ return }` -> error (missing expression after return)
+- [x] Test: parse `function(x) x` -> error (missing `{`)
+- [x] Test: parse `function(x){ return x('a')` -> error (missing `}`)
+- [x] Test: nested `function(x){ return function(y){ return y } }` -> error "nested arrow functions are not supported"
+- [x] Test: `function(x){ return r.row('f') }` -> error "r.row inside arrow function is ambiguous"
+- [x] Implement: error handling in `parseFunctionExpr`
 
 ### Task 6: Parser -- semicolon handling in lexer
 

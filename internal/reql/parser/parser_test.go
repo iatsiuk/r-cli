@@ -747,3 +747,48 @@ func TestParseFunctionExpr_RAsParam(t *testing.T) {
 		assertTermEqual(t, arrow, fn)
 	})
 }
+
+func TestParseFunctionExpr_MultiParam(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"two_params",
+			`function(a, b){ return a.add(b) }`,
+			reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2),
+		},
+		{
+			"three_params",
+			`function(a, b, c){ return a.add(b).add(c) }`,
+			reql.Func(reql.Var(1).Add(reql.Var(2)).Add(reql.Var(3)), 1, 2, 3),
+		},
+	})
+}
+
+func TestParseFunctionExpr_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`function(){ return 1 }`, "at least one parameter"},
+		{`function(x, x){ return x }`, "duplicate parameter name"},
+		{`function(x){ }`, "unexpected token"},
+		{`function(x){ return }`, "unexpected token"},
+		{`function(x) x`, "expected '{'"},
+		{`function(x){ return x('a')`, "expected '}'"},
+		{`function(x){ return function(y){ return y } }`, "nested arrow functions"},
+		{`function(x){ return r.row('f') }`, "r.row inside arrow"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
