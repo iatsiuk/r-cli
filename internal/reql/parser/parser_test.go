@@ -515,6 +515,11 @@ func TestParseLambda_BareArrow(t *testing.T) {
 			`r.table('t').filter(x => x('age').gt(21))`,
 			reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("age").Gt(21), 1)),
 		},
+		{
+			"multi_var_refs",
+			`x => x('a').add(x('b'))`,
+			reql.Func(reql.Var(1).Bracket("a").Add(reql.Var(1).Bracket("b")), 1),
+		},
 	})
 }
 
