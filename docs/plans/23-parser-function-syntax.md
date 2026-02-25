@@ -116,9 +116,9 @@ Build tag: `//go:build integration`. Package: `internal/integration`.
 
 These tests use the exact expressions from the user's requirements.
 
-- [ ] Test `TestFunctionSyntaxFilter`: seed table `routes` with `{id: "1", enabled: true}, {id: "2", enabled: false}, {id: "3", enabled: false}`; parse and execute `r.db('<db>').table('routes').filter(function(r){ return r('enabled').eq(false) })` -> returns exactly 2 docs with `enabled: false`
-- [ ] Test `TestFunctionSyntaxArrowWithR`: same table; parse and execute `r.db('<db>').table('routes').filter((r) => r('enabled').eq(false))` -> returns same 2 docs
-- [ ] Test `TestFunctionSyntaxEquivalence`: verify both syntaxes produce identical result sets on the same data
-- [ ] Test `TestFunctionSyntaxCLI`: run CLI binary with `r.db('<db>').table('routes').filter(function(r){ return r('enabled').eq(false) })` -> valid JSON output with expected rows
-- [ ] Test `TestFunctionSyntaxCLIArrowR`: run CLI binary with `r.db('<db>').table('routes').filter((r) => r('enabled').eq(false))` -> same result
-- [ ] Implement: integration test functions using existing test helpers (setupTestDB, createTestTable, seedTable, newExecutor, cliRun)
+- [x] Test `TestFunctionSyntaxFilter`: seed table `routes` with `{id: "1", enabled: true}, {id: "2", enabled: false}, {id: "3", enabled: false}`; parse and execute `r.db('<db>').table('routes').filter(function(r){ return r('enabled').eq(false) })` -> returns exactly 2 docs with `enabled: false`
+- [x] Test `TestFunctionSyntaxArrowWithR`: same table; parse and execute `r.db('<db>').table('routes').filter((r) => r('enabled').eq(false))` -> returns same 2 docs
+- [x] Test `TestFunctionSyntaxEquivalence`: verify both syntaxes produce identical result sets on the same data
+- [x] Test `TestFunctionSyntaxCLI`: run CLI binary with `r.db('<db>').table('routes').filter(function(r){ return r('enabled').eq(false) })` -> valid JSON output with expected rows
+- [x] Test `TestFunctionSyntaxCLIArrowR`: run CLI binary with `r.db('<db>').table('routes').filter((r) => r('enabled').eq(false))` -> same result
+- [x] Implement: integration test functions using existing test helpers (setupTestDB, createTestTable, seedTable, newExecutor, cliRun)
