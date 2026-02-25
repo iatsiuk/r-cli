@@ -779,6 +779,8 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		{`function(x) x`, "expected '{'"},
 		{`function(x){ return x('a')`, "expected '}'"},
 		{`function(x){ return function(y){ return y } }`, "nested functions"},
+		{`function(x){ return (y) => y }`, "nested arrow functions"},
+		{`function(x){ return y => y }`, "nested arrow functions"},
 		{`function(x){ return r.row('f') }`, "r.row inside arrow"},
 		{`function(return){ return return }`, "reserved word"}, //nolint:dupword
 		{`function(function){ return function }`, "reserved word"},
