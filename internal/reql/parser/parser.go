@@ -374,6 +374,9 @@ func validateLambdaParam(tok token, seen []string) error {
 	if tok.Type != tokenIdent {
 		return fmt.Errorf("expected identifier in lambda parameter, got %q at position %d", tok.Value, tok.Pos)
 	}
+	if tok.Value == "return" || tok.Value == "function" {
+		return fmt.Errorf("reserved word %q cannot be used as parameter name at position %d", tok.Value, tok.Pos)
+	}
 	for _, existing := range seen {
 		if existing == tok.Value {
 			return fmt.Errorf("duplicate parameter name %q at position %d", tok.Value, tok.Pos)

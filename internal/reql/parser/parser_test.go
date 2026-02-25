@@ -780,6 +780,9 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		{`function(x){ return x('a')`, "expected '}'"},
 		{`function(x){ return function(y){ return y } }`, "nested functions"},
 		{`function(x){ return r.row('f') }`, "r.row inside arrow"},
+		{`function(return){ return return }`, "reserved word"}, //nolint:dupword
+		{`function(function){ return function }`, "reserved word"},
+		{`(return) => return`, "reserved word"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
