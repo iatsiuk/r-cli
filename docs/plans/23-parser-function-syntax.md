@@ -80,10 +80,10 @@ Body boundaries: `parseExpr` consumes greedily up to `}` (which is not a valid e
 
 ### Task 4: Parser -- `function(params){ return expr }` with `r` param
 
-- [ ] Test: parse `function(r){ return r('enabled').eq(false) }` -> wire JSON with FUNC wrapping EQ(BRACKET(VAR(1), "enabled"), false)
-- [ ] Test: parse `r.db('restored').table('routes').filter(function(r){ return r('enabled').eq(false) })` -> full chain with FUNC
-- [ ] Test: parse `r.table('t').filter((r) => r('enabled').eq(false))` -> same wire JSON as function syntax equivalent
-- [ ] Implement: reuse task 1 param scoping; `r` inside function body resolves to Var when in params
+- [x] Test: parse `function(r){ return r('enabled').eq(false) }` -> wire JSON with FUNC wrapping EQ(BRACKET(VAR(1), "enabled"), false)
+- [x] Test: parse `r.db('restored').table('routes').filter(function(r){ return r('enabled').eq(false) })` -> full chain with FUNC
+- [x] Test: parse `r.table('t').filter((r) => r('enabled').eq(false))` -> same wire JSON as function syntax equivalent
+- [x] Implement: reuse task 1 param scoping; `r` inside function body resolves to Var when in params
 
 ### Task 5: Parser -- `function` multi-param and error cases
 

@@ -724,3 +724,26 @@ func TestParseLambda_RAsParam(t *testing.T) {
 		}
 	})
 }
+
+func TestParseFunctionExpr_RAsParam(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"function_r_eq_false",
+			`function(r){ return r('enabled').eq(false) }`,
+			reql.Func(reql.Var(1).Bracket("enabled").Eq(false), 1),
+		},
+		{
+			"full_chain_function_r",
+			`r.db('restored').table('routes').filter(function(r){ return r('enabled').eq(false) })`,
+			reql.DB("restored").Table("routes").Filter(reql.Func(reql.Var(1).Bracket("enabled").Eq(false), 1)),
+		},
+	})
+
+	t.Run("arrow_r_same_as_function_r", func(t *testing.T) {
+		t.Parallel()
+		arrow := mustParse(t, `r.table('t').filter((r) => r('enabled').eq(false))`)
+		fn := mustParse(t, `r.table('t').filter(function(r){ return r('enabled').eq(false) })`)
+		assertTermEqual(t, arrow, fn)
+	})
+}
