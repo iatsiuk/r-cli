@@ -106,9 +106,9 @@ Body boundaries: `parseExpr` consumes greedily up to `}` (which is not a valid e
 
 ### Task 7: Fuzz testing
 
-- [ ] Test: fuzz parser with function-syntax seeds does not panic
-- [ ] Seed corpus: `function(x){ return x }`, `function(a,b){ return a.add(b) }`, `function(r){ return r('f') }`, `function(){ return 1 }`, `function(x){}`, `function(x){ return }`, `function x`, `function`, `(r) => r('f')`
-- [ ] Implement: extend `FuzzParse` seed corpus with function-syntax patterns
+- [x] Test: fuzz parser with function-syntax seeds does not panic
+- [x] Seed corpus: `function(x){ return x }`, `function(a,b){ return a.add(b) }`, `function(r){ return r('f') }`, `function(){ return 1 }`, `function(x){}`, `function(x){ return }`, `function x`, `function`, `(r) => r('f')`
+- [x] Implement: extend `FuzzParse` seed corpus with function-syntax patterns
 
 ### Task 8: Integration tests (live RethinkDB)
 

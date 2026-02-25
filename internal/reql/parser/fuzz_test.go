@@ -64,6 +64,15 @@ func FuzzParse(f *testing.F) {
 		`(x) => (y) => y`,
 		`=> x`,
 		`(x) =>`,
+		`function(x){ return x }`,
+		`function(a,b){ return a.add(b) }`,
+		`function(r){ return r('f') }`,
+		`function(){ return 1 }`,
+		`function(x){}`,
+		`function(x){ return }`,
+		`function x`,
+		`function`,
+		`(r) => r('f')`,
 	}
 	for _, s := range seeds {
 		f.Add(s)
