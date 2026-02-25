@@ -108,19 +108,20 @@ func (p *parser) parsePrimary() (reql.Term, error) {
 
 // parseIdentPrimary handles identifiers: r.* expressions, param vars, bare arrow lambdas, and datum fallback.
 func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
-	if tok.Value == "r" {
-		p.advance()
-		return p.parseRExpr()
-	}
+	// param lookup takes priority over r.* dispatch when inside a lambda
 	if p.params != nil {
 		if id, ok := p.params[tok.Value]; ok {
 			p.advance()
 			return reql.Var(id), nil
 		}
 	}
-	// bare arrow: ident => body
+	// bare arrow check before r.* dispatch so that `r => ...` is valid
 	if p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == tokenArrow {
 		return p.parseBareArrowLambda(tok)
+	}
+	if tok.Value == "r" {
+		p.advance()
+		return p.parseRExpr()
 	}
 	return p.parseDatumTerm()
 }
@@ -326,9 +327,6 @@ func (p *parser) parseLambdaParams() ([]string, error) {
 func validateLambdaParam(tok token, seen []string) error {
 	if tok.Type != tokenIdent {
 		return fmt.Errorf("expected identifier in lambda parameter, got %q at position %d", tok.Value, tok.Pos)
-	}
-	if tok.Value == "r" {
-		return fmt.Errorf("reserved parameter name %q at position %d", tok.Value, tok.Pos)
 	}
 	for _, existing := range seen {
 		if existing == tok.Value {

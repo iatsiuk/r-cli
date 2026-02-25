@@ -56,13 +56,13 @@ Body boundaries: `parseExpr` consumes greedily up to `}` (which is not a valid e
 
 ### Task 1: Allow `r` as lambda parameter name
 
-- [ ] Test: parse `(r) => r('enabled').eq(false)` -> wire JSON with FUNC wrapping EQ(BRACKET(VAR(1), "enabled"), false)
-- [ ] Test: parse `r.table('t').filter((r) => r('age').gt(21))` -> FILTER with FUNC, VAR(1) in body
-- [ ] Test: parse `(r) => r('a').add(r('b'))` -> multiple VAR(1) refs
-- [ ] Test: parse `r => r('field')` -> bare arrow with `r` param works
-- [ ] Test: parse `r.db('test')` -> still works (no regression outside lambda)
-- [ ] Test: parse `r.table('t').filter((r) => r.row('f'))` -> error (`r` resolves as Var, `.row` is unknown chain method -- natural error)
-- [ ] Implement: reorder `parseIdentPrimary` to check `p.params` before `r` dispatch; remove `r` from `validateLambdaParam` reserved check
+- [x] Test: parse `(r) => r('enabled').eq(false)` -> wire JSON with FUNC wrapping EQ(BRACKET(VAR(1), "enabled"), false)
+- [x] Test: parse `r.table('t').filter((r) => r('age').gt(21))` -> FILTER with FUNC, VAR(1) in body
+- [x] Test: parse `(r) => r('a').add(r('b'))` -> multiple VAR(1) refs
+- [x] Test: parse `r => r('field')` -> bare arrow with `r` param works
+- [x] Test: parse `r.db('test')` -> still works (no regression outside lambda)
+- [x] Test: parse `r.table('t').filter((r) => r.row('f'))` -> error (`r` resolves as Var, `.row` is unknown chain method -- natural error)
+- [x] Implement: reorder `parseIdentPrimary` to check `p.params` before `r` dispatch; remove `r` from `validateLambdaParam` reserved check
 
 ### Task 2: Lexer -- `function` and `return` as identifiers (no changes needed, verify)
 

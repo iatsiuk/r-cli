@@ -541,7 +541,6 @@ func TestParseLambda_SingleParamParen_Errors(t *testing.T) {
 		input   string
 		wantMsg string
 	}{
-		{`(r) => r('f')`, "reserved parameter name"},
 		{`(false) => 1`, "expected identifier"},
 		{`(null) => 1`, "expected identifier"},
 		{`(x) =>`, "unexpected token"},
@@ -648,5 +647,54 @@ func TestParseLambda_BodyBoundaries(t *testing.T) {
 		got := mustParse(t, `r.table('t').map((x) => x('price').mul(x('qty')))`)
 		want := reql.Table("t").Map(reql.Func(reql.Var(1).Bracket("price").Mul(reql.Var(1).Bracket("qty")), 1))
 		assertTermEqual(t, got, want)
+	})
+}
+
+func TestParseLambda_RAsParam(t *testing.T) {
+	t.Parallel()
+
+	t.Run("paren_r_eq", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(r) => r('enabled').eq(false)`)
+		want := reql.Func(reql.Var(1).Bracket("enabled").Eq(false), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	t.Run("filter_r_gt", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table('t').filter((r) => r('age').gt(21))`)
+		want := reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("age").Gt(21), 1))
+		assertTermEqual(t, got, want)
+	})
+
+	t.Run("multi_var_refs_r", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(r) => r('a').add(r('b'))`)
+		want := reql.Func(reql.Var(1).Bracket("a").Add(reql.Var(1).Bracket("b")), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	t.Run("bare_arrow_r", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r => r('field')`)
+		want := reql.Func(reql.Var(1).Bracket("field"), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	t.Run("r_db_regression", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.db('test')`)
+		assertTermEqual(t, got, reql.DB("test"))
+	})
+
+	t.Run("r_param_row_chain_error", func(t *testing.T) {
+		t.Parallel()
+		_, err := Parse(`r.table('t').filter((r) => r.row('f'))`)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "unknown method") {
+			t.Errorf("expected 'unknown method' error, got: %v", err)
+		}
 	})
 }
