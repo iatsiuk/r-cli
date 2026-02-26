@@ -997,6 +997,70 @@ func TestParse_ParenGrouping_Errors(t *testing.T) {
 	}
 }
 
+func TestParseNestedFunctionsChain(t *testing.T) {
+	t.Parallel()
+
+	// map with function containing nested filter with function
+	t.Run("map_function_nested_filter_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map(function(doc){ return doc("items").filter(function(i){ return i("active").eq(true) }) })`)
+		want := reql.Table("t").Map(
+			reql.Func(
+				reql.Var(1).Bracket("items").Filter(
+					reql.Func(reql.Var(2).Bracket("active").Eq(true), 2),
+				),
+				1,
+			),
+		)
+		assertTermEqual(t, got, want)
+	})
+
+	// same structure with arrow syntax
+	t.Run("map_arrow_nested_filter_arrow", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map((doc) => doc("items").filter((i) => i("active").eq(true)))`)
+		want := reql.Table("t").Map(
+			reql.Func(
+				reql.Var(1).Bracket("items").Filter(
+					reql.Func(reql.Var(2).Bracket("active").Eq(true), 2),
+				),
+				1,
+			),
+		)
+		assertTermEqual(t, got, want)
+	})
+
+	// filter with nested contains and function predicate
+	t.Run("filter_function_nested_contains_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").filter(function(doc){ return doc("tags").contains(function(tag){ return tag.eq("hot") }) })`)
+		want := reql.Table("t").Filter(
+			reql.Func(
+				reql.Var(1).Bracket("tags").Contains(
+					reql.Func(reql.Var(2).Eq("hot"), 2),
+				),
+				1,
+			),
+		)
+		assertTermEqual(t, got, want)
+	})
+
+	// map with function and merge containing no inner function (regression)
+	t.Run("map_function_merge_no_inner_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map(function(doc){ return doc.merge({count: doc("items").count()}) })`)
+		want := reql.Table("t").Map(
+			reql.Func(
+				reql.Var(1).Merge(reql.Datum(map[string]interface{}{
+					"count": reql.Var(1).Bracket("items").Count(),
+				})),
+				1,
+			),
+		)
+		assertTermEqual(t, got, want)
+	})
+}
+
 func TestParse_BracketNumericIndex_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

@@ -160,12 +160,12 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 ### Task 6: Nested functions -- integration with chain methods
 
-- [ ] Test: parse `r.table("t").map(function(doc){ return doc("items").filter(function(i){ return i("active").eq(true) }) })` -> MAP with outer FUNC wrapping FILTER with inner FUNC
-- [ ] Test: parse `r.table("t").map((doc) => doc("items").filter((i) => i("active").eq(true)))` -> same structure, arrow syntax
-- [ ] Test: parse `r.table("t").filter(function(doc){ return doc("tags").contains(function(tag){ return tag.eq("hot") }) })` -> FILTER with nested CONTAINS FUNC
-- [ ] Test: parse `r.table("t").map(function(doc){ return doc.merge({count: doc("items").count()}) })` -> MAP with FUNC, MERGE with nested expression (no inner function -- verify no regression)
-- [ ] Implement: verify chain methods work with nested functions via existing infrastructure
-- [ ] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
+- [x] Test: parse `r.table("t").map(function(doc){ return doc("items").filter(function(i){ return i("active").eq(true) }) })` -> MAP with outer FUNC wrapping FILTER with inner FUNC
+- [x] Test: parse `r.table("t").map((doc) => doc("items").filter((i) => i("active").eq(true)))` -> same structure, arrow syntax
+- [x] Test: parse `r.table("t").filter(function(doc){ return doc("tags").contains(function(tag){ return tag.eq("hot") }) })` -> FILTER with nested CONTAINS FUNC
+- [x] Test: parse `r.table("t").map(function(doc){ return doc.merge({count: doc("items").count()}) })` -> MAP with FUNC, MERGE with nested expression (no inner function -- verify no regression)
+- [x] Implement: verify chain methods work with nested functions via existing infrastructure
+- [x] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
 
 ### Task 7a: Update `Delete` builder to accept OptArgs
 
