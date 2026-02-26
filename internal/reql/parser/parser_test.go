@@ -585,14 +585,10 @@ func TestParseLambda_ScopingErrors(t *testing.T) {
 		input   string
 		wantMsg string
 	}{
-		// nested arrow: paren form inside paren form
-		{`(x) => (y) => y`, "nested arrow functions"},
-		// nested arrow: bare form inside paren form
-		{`(x) => y => y`, "nested arrow functions"},
-		// function expr inside arrow body
-		{`(x) => function(y){ return y }`, "nested functions"},
 		// r.row inside arrow
 		{`(x) => r.row('f')`, "r.row inside arrow"},
+		// r.row inside nested arrow
+		{`(x) => (y) => r.row("f")`, "r.row inside arrow"},
 		// unknown identifier in body (scope isolation)
 		{`(x) => y`, "unexpected token"},
 	}
@@ -608,6 +604,86 @@ func TestParseLambda_ScopingErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseNestedFunctions(t *testing.T) {
+	t.Parallel()
+
+	// function(a){ return function(b){ return b } } -> outer FUNC(VAR(1)), inner FUNC(VAR(2))
+	t.Run("function_in_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `function(a){ return function(b){ return b } }`)
+		want := reql.Func(reql.Func(reql.Var(2), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// (a) => (b) => b -> outer FUNC(VAR(1)), inner FUNC(VAR(2))
+	t.Run("arrow_in_arrow", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(a) => (b) => b`)
+		want := reql.Func(reql.Func(reql.Var(2), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// function(x){ return (y) => y("f") } -> mixed: outer function, inner arrow
+	t.Run("arrow_in_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `function(x){ return (y) => y("f") }`)
+		want := reql.Func(reql.Func(reql.Var(2).Bracket("f"), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// (x) => function(y){ return y("f") } -> mixed: outer arrow, inner function
+	t.Run("function_in_arrow", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(x) => function(y){ return y("f") }`)
+		want := reql.Func(reql.Func(reql.Var(2).Bracket("f"), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// parameter shadowing (x) => (x) => x -> inner x is VAR(2), not VAR(1)
+	t.Run("param_shadowing", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(x) => (x) => x`)
+		want := reql.Func(reql.Func(reql.Var(2), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// outer param accessible in inner body (a) => (b) => a.add(b)
+	t.Run("outer_param_in_inner_body", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(a) => (b) => a.add(b)`)
+		want := reql.Func(reql.Func(reql.Var(1).Add(reql.Var(2)), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// r.row inside nested lambda -> error
+	t.Run("row_inside_nested", func(t *testing.T) {
+		t.Parallel()
+		_, err := Parse(`(x) => (y) => r.row("f")`)
+		if err == nil {
+			t.Fatal("expected error for r.row inside nested lambda")
+		}
+		if !strings.Contains(err.Error(), "r.row inside arrow") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	// three levels (a) => (b) => (c) => c
+	t.Run("three_levels", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(a) => (b) => (c) => c`)
+		want := reql.Func(reql.Func(reql.Func(reql.Var(3), 3), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// bare arrow nested: (x) => y => y
+	t.Run("bare_arrow_nested", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(x) => y => y`)
+		want := reql.Func(reql.Func(reql.Var(2), 2), 1)
+		assertTermEqual(t, got, want)
+	})
 }
 
 func TestParseLambda_BodyBoundaries(t *testing.T) {
@@ -778,9 +854,6 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		{`function(x){ return }`, "unexpected token"},
 		{`function(x) x`, "expected '{'"},
 		{`function(x){ return x('a')`, "expected '}'"},
-		{`function(x){ return function(y){ return y } }`, "nested functions"},
-		{`function(x){ return (y) => y }`, "nested arrow functions"},
-		{`function(x){ return y => y }`, "nested arrow functions"},
 		{`function(x){ return r.row('f') }`, "r.row inside arrow"},
 		{`function(return){ return return }`, "reserved word"}, //nolint:dupword
 		{`function(function){ return function }`, "reserved word"},

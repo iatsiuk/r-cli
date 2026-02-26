@@ -147,16 +147,16 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 ### Task 5: Nested functions -- scoping infrastructure
 
-- [ ] Test: parse `function(a){ return function(b){ return b } }` -> outer FUNC(VAR(1)), inner FUNC(VAR(2))
-- [ ] Test: parse `(a) => (b) => b` -> outer FUNC(VAR(1)), inner FUNC(VAR(2))
-- [ ] Test: parse `function(x){ return (y) => y("f") }` -> mixed nesting: outer function, inner arrow
-- [ ] Test: parse `(x) => function(y){ return y("f") }` -> mixed nesting: outer arrow, inner function
-- [ ] Test: parameter shadowing `(x) => (x) => x` -> inner `x` is VAR(2), not VAR(1)
-- [ ] Test: outer param accessible in inner body `(a) => (b) => a.add(b)` -> VAR(1).add(VAR(2))
-- [ ] Test: `r.row` inside any nesting level -> error "r.row inside arrow function is ambiguous"
-- [ ] Test: three levels `(a) => (b) => (c) => c` -> 3 nested FUNC terms with VAR(1), VAR(2), VAR(3)
-- [ ] Implement: replace `params map[string]int` with `paramsStack []map[string]int` and `nextVarID int` on parser struct; push/pop on lambda enter/exit; when stack empty IDs start at 1 (backward compat), when nested IDs start at max(active IDs)+1; update param lookup to walk stack top-to-bottom; update `r.row` guard to check `len(paramsStack) > 0`; update all nesting guards in `parseLambda`, `parseFunctionExpr`, `parseBareArrowLambda`
-- [ ] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
+- [x] Test: parse `function(a){ return function(b){ return b } }` -> outer FUNC(VAR(1)), inner FUNC(VAR(2))
+- [x] Test: parse `(a) => (b) => b` -> outer FUNC(VAR(1)), inner FUNC(VAR(2))
+- [x] Test: parse `function(x){ return (y) => y("f") }` -> mixed nesting: outer function, inner arrow
+- [x] Test: parse `(x) => function(y){ return y("f") }` -> mixed nesting: outer arrow, inner function
+- [x] Test: parameter shadowing `(x) => (x) => x` -> inner `x` is VAR(2), not VAR(1)
+- [x] Test: outer param accessible in inner body `(a) => (b) => a.add(b)` -> VAR(1).add(VAR(2))
+- [x] Test: `r.row` inside any nesting level -> error "r.row inside arrow function is ambiguous"
+- [x] Test: three levels `(a) => (b) => (c) => c` -> 3 nested FUNC terms with VAR(1), VAR(2), VAR(3)
+- [x] Implement: replace `params map[string]int` with `paramsStack []map[string]int` and `nextVarID int` on parser struct; push/pop on lambda enter/exit; when stack empty IDs start at 1 (backward compat), when nested IDs start at max(active IDs)+1; update param lookup to walk stack top-to-bottom; update `r.row` guard to check `len(paramsStack) > 0`; update all nesting guards in `parseLambda`, `parseFunctionExpr`, `parseBareArrowLambda`
+- [x] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
 
 ### Task 6: Nested functions -- integration with chain methods
 

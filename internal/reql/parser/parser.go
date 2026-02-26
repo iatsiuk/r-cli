@@ -28,10 +28,52 @@ func Parse(input string) (reql.Term, error) {
 const maxDepth = 256
 
 type parser struct {
-	tokens []token
-	pos    int
-	depth  int
-	params map[string]int
+	tokens      []token
+	pos         int
+	depth       int
+	paramsStack []map[string]int
+	nextVarID   int
+}
+
+func (p *parser) inLambda() bool {
+	return len(p.paramsStack) > 0
+}
+
+func (p *parser) lookupParam(name string) (int, bool) {
+	for i := len(p.paramsStack) - 1; i >= 0; i-- {
+		if id, ok := p.paramsStack[i][name]; ok {
+			return id, true
+		}
+	}
+	return 0, false
+}
+
+// pushScope allocates IDs for names, pushes a new scope, and returns the IDs.
+// When the stack is empty (top-level lambda), IDs restart from 1 for backward compat.
+// When nested, IDs continue from nextVarID+1 to avoid collisions.
+func (p *parser) pushScope(names []string) []int {
+	if len(p.paramsStack) == 0 {
+		p.nextVarID = 0
+	}
+	scope := make(map[string]int, len(names))
+	ids := make([]int, len(names))
+	for i, name := range names {
+		p.nextVarID++
+		scope[name] = p.nextVarID
+		ids[i] = p.nextVarID
+	}
+	p.paramsStack = append(p.paramsStack, scope)
+	return ids
+}
+
+// popScope removes the innermost scope. If the stack becomes empty, resets nextVarID.
+func (p *parser) popScope() {
+	if len(p.paramsStack) > 0 {
+		p.paramsStack = p.paramsStack[:len(p.paramsStack)-1]
+	}
+	if len(p.paramsStack) == 0 {
+		p.nextVarID = 0
+	}
 }
 
 func (p *parser) peek() token {
@@ -121,17 +163,14 @@ func (p *parser) parsePrimary() (reql.Term, error) {
 // parseIdentPrimary handles identifiers: r.* expressions, param vars, bare arrow lambdas, and datum fallback.
 func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 	// param lookup takes priority over r.* dispatch when inside a lambda
-	if p.params != nil {
-		if id, ok := p.params[tok.Value]; ok {
+	if p.inLambda() {
+		if id, ok := p.lookupParam(tok.Value); ok {
 			p.advance()
 			return reql.Var(id), nil
 		}
 	}
 	// detect function(params){ ... } syntax
 	if tok.Value == "function" && p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == tokenLParen {
-		if p.params != nil {
-			return reql.Term{}, fmt.Errorf("nested functions are not supported at position %d", tok.Pos)
-		}
 		p.advance() // consume "function"
 		return p.parseFunctionExpr()
 	}
@@ -148,9 +187,6 @@ func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 
 // parseBareArrowLambda parses `ident => body` (no parentheses) and returns a single-param FUNC term.
 func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
-	if p.params != nil {
-		return reql.Term{}, fmt.Errorf("nested arrow functions are not supported at position %d", tok.Pos)
-	}
 	if err := validateLambdaParam(tok, nil); err != nil {
 		return reql.Term{}, err
 	}
@@ -158,15 +194,13 @@ func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
 	if _, err := p.expect(tokenArrow); err != nil {
 		return reql.Term{}, err
 	}
-	params := map[string]int{tok.Value: 1}
-	old := p.params
-	p.params = params
-	defer func() { p.params = old }()
+	ids := p.pushScope([]string{tok.Value})
+	defer p.popScope()
 	body, err := p.parseExpr()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return reql.Func(body, 1), nil
+	return reql.Func(body, ids...), nil
 }
 
 // parseFunctionExpr parses function(params){ return? body ;? } and returns a FUNC term.
@@ -183,16 +217,8 @@ func (p *parser) parseFunctionExpr() (reql.Term, error) {
 	if p.peek().Type == tokenIdent && p.peek().Value == "return" {
 		p.advance()
 	}
-	params := make(map[string]int, len(names))
-	ids := make([]int, len(names))
-	for i, name := range names {
-		id := i + 1
-		params[name] = id
-		ids[i] = id
-	}
-	old := p.params
-	p.params = params
-	defer func() { p.params = old }()
+	ids := p.pushScope(names)
+	defer p.popScope()
 	body, err := p.parseExpr()
 	if err != nil {
 		return reql.Term{}, err
@@ -274,7 +300,7 @@ func parseRDB(p *parser) (reql.Term, error) {
 }
 
 func parseRRow(p *parser) (reql.Term, error) {
-	if p.params != nil {
+	if p.inLambda() {
 		return reql.Term{}, fmt.Errorf("r.row inside arrow function is ambiguous; use the arrow parameter instead")
 	}
 	t := reql.Row()
@@ -318,11 +344,8 @@ func (p *parser) skipLambdaParams(i int) int {
 }
 
 // parseLambda parses (param, ...) => body and returns a FUNC term.
-// Parameter IDs are assigned starting at 1.
+// Top-level lambdas start IDs at 1; nested lambdas continue from the current nextVarID.
 func (p *parser) parseLambda() (reql.Term, error) {
-	if p.params != nil {
-		return reql.Term{}, fmt.Errorf("nested arrow functions are not supported at position %d", p.peek().Pos)
-	}
 	names, err := p.parseLambdaParams()
 	if err != nil {
 		return reql.Term{}, err
@@ -330,20 +353,11 @@ func (p *parser) parseLambda() (reql.Term, error) {
 	if _, err := p.expect(tokenArrow); err != nil {
 		return reql.Term{}, err
 	}
-	params := make(map[string]int, len(names))
-	for i, name := range names {
-		params[name] = i + 1
-	}
-	old := p.params
-	p.params = params
-	defer func() { p.params = old }()
+	ids := p.pushScope(names)
+	defer p.popScope()
 	body, err := p.parseExpr()
 	if err != nil {
 		return reql.Term{}, err
-	}
-	ids := make([]int, len(names))
-	for i := range names {
-		ids[i] = i + 1
 	}
 	return reql.Func(body, ids...), nil
 }
