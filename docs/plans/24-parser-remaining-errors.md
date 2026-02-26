@@ -202,15 +202,15 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 Build tag: `//go:build integration`. Package: `internal/integration`.
 
-- [ ] Test `TestParserFixesBracketNumericIndex`: seed table with 3 docs; parse and execute `r.db('<db>').table('t').orderBy("id").limit(1)(0)` -> returns single doc (atom, not array)
-- [ ] Test `TestParserFixesSample`: seed table with 10 docs; parse and execute `r.db('<db>').table('t').sample(3)` -> returns exactly 3 docs
-- [ ] Test `TestParserFixesNestedFunction`: seed table with docs containing nested array field `items: [{type: "a"}, {type: "b"}]`; parse and execute `r.db('<db>').table('t').map(function(doc){ return doc("items").filter(function(i){ return i("type").eq("a") }) })` -> returns filtered inner arrays
-- [ ] Test `TestParserFixesNestedArrow`: same data; parse and execute `r.db('<db>').table('t').map((doc) => doc("items").filter((i) => i("type").eq("a")))` -> same result as nested function syntax
-- [ ] Test `TestParserFixesInsertOptArgs`: parse and execute `r.db('<db>').table('t').insert({id: "new", val: 1}, {return_changes: true})` -> result contains `changes` array with `new_val`
-- [ ] Test `TestParserFixesArrowParenObject`: seed table with `{id: "1", first: "Alice", last: "Smith"}`; parse and execute `r.db('<db>').table('t').map(row => ({full: row("first").add(" ").add(row("last"))}))` -> returns `[{full: "Alice Smith"}]`
-- [ ] Test `TestParserFixesCLI`: run CLI binary with `r.db('<db>').table('t').sample(3)` -> valid JSON output, exit code 0
-- [ ] Implement: integration test functions using existing test helpers (setupTestDB, createTestTable, seedTable, newExecutor, cliRun)
-- [ ] Run `go test -tags integration ./internal/integration/... -race -count=1 -run TestParserFixes` -- must pass before next task
+- [x] Test `TestParserFixesBracketNumericIndex`: seed table with 3 docs; parse and execute `r.db('<db>').table('t').orderBy("id").limit(1)(0)` -> returns single doc (atom, not array)
+- [x] Test `TestParserFixesSample`: seed table with 10 docs; parse and execute `r.db('<db>').table('t').sample(3)` -> returns exactly 3 docs
+- [x] Test `TestParserFixesNestedFunction`: seed table with docs containing nested array field `items: [{type: "a"}, {type: "b"}]`; parse and execute `r.db('<db>').table('t').map(function(doc){ return doc("items").filter(function(i){ return i("type").eq("a") }) })` -> returns filtered inner arrays
+- [x] Test `TestParserFixesNestedArrow`: same data; parse and execute `r.db('<db>').table('t').map((doc) => doc("items").filter((i) => i("type").eq("a")))` -> same result as nested function syntax
+- [x] Test `TestParserFixesInsertOptArgs`: parse and execute `r.db('<db>').table('t').insert({id: "new", val: 1}, {return_changes: true})` -> result contains `changes` array with `new_val`
+- [x] Test `TestParserFixesArrowParenObject`: seed table with `{id: "1", first: "Alice", last: "Smith"}`; parse and execute `r.db('<db>').table('t').map(row => ({full: row("first").add(" ").add(row("last"))}))` -> returns `[{full: "Alice Smith"}]`
+- [x] Test `TestParserFixesCLI`: run CLI binary with `r.db('<db>').table('t').sample(3)` -> valid JSON output, exit code 0
+- [x] Implement: integration test functions using existing test helpers (setupTestDB, createTestTable, seedTable, newExecutor, cliRun)
+- [x] Run `go test -tags integration ./internal/integration/... -race -count=1 -run TestParserFixes` -- must pass before next task
 
 ### Task 10: Verify acceptance criteria
 
