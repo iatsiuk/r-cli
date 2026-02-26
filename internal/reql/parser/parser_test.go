@@ -906,6 +906,11 @@ func TestParse_BracketNumericIndex(t *testing.T) {
 			`r.table("t")(-1)`,
 			reql.Table("t").Nth(-1),
 		},
+		{
+			"row_nth",
+			`r.row(0)`,
+			reql.Row().Nth(0),
+		},
 	})
 }
 
@@ -982,6 +987,7 @@ func TestParse_ParenGrouping_Errors(t *testing.T) {
 		wantMsg string
 	}{
 		{`(`, "unexpected token"},
+		{`(r.table("t")`, "expected ')'"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
@@ -1117,6 +1123,9 @@ func TestParse_InsertUpdateDeleteOptArgs_Errors(t *testing.T) {
 		wantMsg string
 	}{
 		{`r.table("t").insert({a: 1}, "bad")`, "insert: second argument must be an optargs object"},
+		{`r.table("t").update({x: 1}, "bad")`, "update: second argument must be an optargs object"},
+		{`r.table("t").delete("bad")`, "delete: argument must be an optargs object"},
+		{`r.table("t").insert({a: 1}, {return_changes: true,})`, "trailing comma in optargs"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
@@ -1139,6 +1148,7 @@ func TestParse_BracketNumericIndex_Errors(t *testing.T) {
 		wantMsg string
 	}{
 		{`r.table("t")(0.5)`, "bracket index must be an integer"},
+		{`r.table("t")(true)`, "expected string or integer in bracket notation"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {

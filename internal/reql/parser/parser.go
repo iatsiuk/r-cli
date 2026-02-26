@@ -307,11 +307,7 @@ func parseRRow(p *parser) (reql.Term, error) {
 	if p.peek().Type != tokenLParen {
 		return t, nil
 	}
-	field, err := p.parseOneStringArg()
-	if err != nil {
-		return reql.Term{}, err
-	}
-	return t.Bracket(field), nil
+	return p.parseBracketArg(t)
 }
 
 // isLambdaAhead reports whether the current position starts a lambda expression:
