@@ -169,10 +169,10 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 ### Task 7a: Update `Delete` builder to accept OptArgs
 
-- [ ] Test: `reql.Table("t").Delete()` -> wire JSON `[54,[[15,["t"]]]]` (no regression)
-- [ ] Test: `reql.Table("t").Delete(reql.OptArgs{"durability": "soft"})` -> wire JSON with optargs
-- [ ] Implement: change `Delete()` to `Delete(opts ...OptArgs) Term` in `term.go`; add optargs handling matching Insert/Update pattern
-- [ ] Run `go test ./internal/reql/... -race -count=1` -- must pass before next task
+- [x] Test: `reql.Table("t").Delete()` -> wire JSON `[54,[[15,["t"]]]]` (no regression)
+- [x] Test: `reql.Table("t").Delete(reql.OptArgs{"durability": "soft"})` -> wire JSON with optargs
+- [x] Implement: change `Delete()` to `Delete(opts ...OptArgs) Term` in `term.go`; add optargs handling matching Insert/Update pattern
+- [x] Run `go test ./internal/reql/... -race -count=1` -- must pass before next task
 
 ### Task 7b: OptArgs in `insert()`, `update()`, `delete()` -- parser
 

@@ -545,6 +545,16 @@ func TestTermOptargs(t *testing.T) {
 			table.OrderBy("age", OptArgs{"index": "name"}),
 			`[41,[[15,[[14,["test"]],"users"]],"age"],{"index":"name"}]`,
 		},
+		{
+			"delete_no_opts",
+			table.Delete(),
+			`[54,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"delete_durability",
+			table.Delete(OptArgs{"durability": "soft"}),
+			`[54,[[15,[[14,["test"]],"users"]]],{"durability":"soft"}]`,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

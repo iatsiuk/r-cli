@@ -183,9 +183,13 @@ func (t Term) Update(doc interface{}, opts ...OptArgs) Term {
 	return term
 }
 
-// Delete creates a DELETE term ([54, [table]]).
-func (t Term) Delete() Term {
-	return Term{termType: proto.TermDelete, args: []Term{t}}
+// Delete creates a DELETE term ([54, [table]], opts?).
+func (t Term) Delete(opts ...OptArgs) Term {
+	term := Term{termType: proto.TermDelete, args: []Term{t}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
 }
 
 // Replace creates a REPLACE term ([55, [table, doc]]).
