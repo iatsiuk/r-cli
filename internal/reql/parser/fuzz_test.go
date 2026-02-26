@@ -73,6 +73,32 @@ func FuzzParse(f *testing.F) {
 		`function x`,
 		`function`,
 		`(r) => r('f')`,
+		// bracket numeric index seeds
+		`r.table("t")(0)`,
+		`r.table("t")(0)("f")`,
+		`r.table("t")(-1)`,
+		`r.table("t")(0.5)`,
+		// sample seeds
+		`r.table("t").sample(1)`,
+		`r.table("t").sample(5).pluck("id")`,
+		// insert/update/delete optargs seeds
+		`r.table("t").insert({a:1},{return_changes:true})`,
+		`r.table("t").insert({a:1},{conflict:"replace"})`,
+		`r.table("t").update({x:1},{durability:"soft"})`,
+		`r.table("t").delete({durability:"soft"})`,
+		`r.table("t").insert({a:1},)`,
+		// parenthesized expression seeds
+		`row => ({a: row("b")})`,
+		`(x) => ({id: x("id")})`,
+		`(x) => ({a: x("x"), b: x("y")})`,
+		`=> ({})`,
+		`(()`,
+		// nested function seeds
+		`function(a){ return function(b){ return b } }`,
+		`(x) => (y) => y("f")`,
+		`function(x){ return (y) => y("f") }`,
+		`(x) => function(y){ return y("f") }`,
+		`function(x){ return function(y){ return function(z){ return z } } }`,
 	}
 	for _, s := range seeds {
 		f.Add(s)

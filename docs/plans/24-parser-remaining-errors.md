@@ -190,13 +190,13 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 ### Task 8: Fuzz testing
 
-- [ ] Test: fuzz parser does not panic with bracket-numeric seeds
-- [ ] Test: fuzz parser does not panic with nested function seeds
-- [ ] Test: fuzz parser does not panic with parenthesized expression seeds
-- [ ] Test: fuzz parser does not panic with insert optargs seeds
-- [ ] Seed corpus: `r.table("t")(0)`, `r.table("t")(0)("f")`, `r.table("t").sample(1)`, `r.table("t").insert({a:1},{return_changes:true})`, `row => ({a: row("b")})`, `(x) => (y) => y`, `function(a){ return function(b){ return b } }`, `r.table("t")(0.5)`, `r.table("t").insert({a:1},)`, `=> ({})`, `(()`, `function(x){ return function(y){ return function(z){ return z } } }`
-- [ ] Implement: extend `FuzzParse` seed corpus
-- [ ] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
+- [x] Test: fuzz parser does not panic with bracket-numeric seeds
+- [x] Test: fuzz parser does not panic with nested function seeds
+- [x] Test: fuzz parser does not panic with parenthesized expression seeds
+- [x] Test: fuzz parser does not panic with insert optargs seeds
+- [x] Seed corpus: `r.table("t")(0)`, `r.table("t")(0)("f")`, `r.table("t").sample(1)`, `r.table("t").insert({a:1},{return_changes:true})`, `row => ({a: row("b")})`, `(x) => (y) => y`, `function(a){ return function(b){ return b } }`, `r.table("t")(0.5)`, `r.table("t").insert({a:1},)`, `=> ({})`, `(()`, `function(x){ return function(y){ return function(z){ return z } } }`
+- [x] Implement: extend `FuzzParse` seed corpus
+- [x] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
 
 ### Task 9: Integration tests (live RethinkDB)
 
