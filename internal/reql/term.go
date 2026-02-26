@@ -183,9 +183,13 @@ func (t Term) Update(doc interface{}, opts ...OptArgs) Term {
 	return term
 }
 
-// Delete creates a DELETE term ([54, [table]]).
-func (t Term) Delete() Term {
-	return Term{termType: proto.TermDelete, args: []Term{t}}
+// Delete creates a DELETE term ([54, [table]], opts?).
+func (t Term) Delete(opts ...OptArgs) Term {
+	term := Term{termType: proto.TermDelete, args: []Term{t}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
 }
 
 // Replace creates a REPLACE term ([55, [table, doc]]).
@@ -279,6 +283,11 @@ func (t Term) Limit(n int) Term {
 // Skip creates a SKIP term ([70, [term, n]]).
 func (t Term) Skip(n int) Term {
 	return Term{termType: proto.TermSkip, args: []Term{t, Datum(n)}}
+}
+
+// Sample creates a SAMPLE term ([81, [term, n]]).
+func (t Term) Sample(n int) Term {
+	return Term{termType: proto.TermSample, args: []Term{t, Datum(n)}}
 }
 
 // Count creates a COUNT term ([43, [term]]).

@@ -28,10 +28,52 @@ func Parse(input string) (reql.Term, error) {
 const maxDepth = 256
 
 type parser struct {
-	tokens []token
-	pos    int
-	depth  int
-	params map[string]int
+	tokens      []token
+	pos         int
+	depth       int
+	paramsStack []map[string]int
+	nextVarID   int
+}
+
+func (p *parser) inLambda() bool {
+	return len(p.paramsStack) > 0
+}
+
+func (p *parser) lookupParam(name string) (int, bool) {
+	for i := len(p.paramsStack) - 1; i >= 0; i-- {
+		if id, ok := p.paramsStack[i][name]; ok {
+			return id, true
+		}
+	}
+	return 0, false
+}
+
+// pushScope allocates IDs for names, pushes a new scope, and returns the IDs.
+// When the stack is empty (top-level lambda), IDs restart from 1 for backward compat.
+// When nested, IDs continue from nextVarID+1 to avoid collisions.
+func (p *parser) pushScope(names []string) []int {
+	if len(p.paramsStack) == 0 {
+		p.nextVarID = 0
+	}
+	scope := make(map[string]int, len(names))
+	ids := make([]int, len(names))
+	for i, name := range names {
+		p.nextVarID++
+		scope[name] = p.nextVarID
+		ids[i] = p.nextVarID
+	}
+	p.paramsStack = append(p.paramsStack, scope)
+	return ids
+}
+
+// popScope removes the innermost scope. If the stack becomes empty, resets nextVarID.
+func (p *parser) popScope() {
+	if len(p.paramsStack) > 0 {
+		p.paramsStack = p.paramsStack[:len(p.paramsStack)-1]
+	}
+	if len(p.paramsStack) == 0 {
+		p.nextVarID = 0
+	}
 }
 
 func (p *parser) peek() token {
@@ -96,6 +138,17 @@ func (p *parser) parsePrimary() (reql.Term, error) {
 	switch {
 	case tok.Type == tokenLParen && p.isLambdaAhead():
 		return p.parseLambda()
+	case tok.Type == tokenLParen:
+		// grouped expression: ( expr )
+		p.advance()
+		expr, err := p.parseExpr()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return expr, nil
 	case tok.Type == tokenIdent:
 		return p.parseIdentPrimary(tok)
 	case tok.Type == tokenLBrace:
@@ -110,17 +163,14 @@ func (p *parser) parsePrimary() (reql.Term, error) {
 // parseIdentPrimary handles identifiers: r.* expressions, param vars, bare arrow lambdas, and datum fallback.
 func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 	// param lookup takes priority over r.* dispatch when inside a lambda
-	if p.params != nil {
-		if id, ok := p.params[tok.Value]; ok {
+	if p.inLambda() {
+		if id, ok := p.lookupParam(tok.Value); ok {
 			p.advance()
 			return reql.Var(id), nil
 		}
 	}
 	// detect function(params){ ... } syntax
 	if tok.Value == "function" && p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Type == tokenLParen {
-		if p.params != nil {
-			return reql.Term{}, fmt.Errorf("nested functions are not supported at position %d", tok.Pos)
-		}
 		p.advance() // consume "function"
 		return p.parseFunctionExpr()
 	}
@@ -137,9 +187,6 @@ func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 
 // parseBareArrowLambda parses `ident => body` (no parentheses) and returns a single-param FUNC term.
 func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
-	if p.params != nil {
-		return reql.Term{}, fmt.Errorf("nested arrow functions are not supported at position %d", tok.Pos)
-	}
 	if err := validateLambdaParam(tok, nil); err != nil {
 		return reql.Term{}, err
 	}
@@ -147,15 +194,13 @@ func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
 	if _, err := p.expect(tokenArrow); err != nil {
 		return reql.Term{}, err
 	}
-	params := map[string]int{tok.Value: 1}
-	old := p.params
-	p.params = params
-	defer func() { p.params = old }()
+	ids := p.pushScope([]string{tok.Value})
+	defer p.popScope()
 	body, err := p.parseExpr()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return reql.Func(body, 1), nil
+	return reql.Func(body, ids...), nil
 }
 
 // parseFunctionExpr parses function(params){ return? body ;? } and returns a FUNC term.
@@ -172,16 +217,8 @@ func (p *parser) parseFunctionExpr() (reql.Term, error) {
 	if p.peek().Type == tokenIdent && p.peek().Value == "return" {
 		p.advance()
 	}
-	params := make(map[string]int, len(names))
-	ids := make([]int, len(names))
-	for i, name := range names {
-		id := i + 1
-		params[name] = id
-		ids[i] = id
-	}
-	old := p.params
-	p.params = params
-	defer func() { p.params = old }()
+	ids := p.pushScope(names)
+	defer p.popScope()
 	body, err := p.parseExpr()
 	if err != nil {
 		return reql.Term{}, err
@@ -240,12 +277,12 @@ func (p *parser) parseChain(t reql.Term) (reql.Term, error) {
 				return reql.Term{}, err
 			}
 		case tokenLParen:
-			// bracket notation: term("field")
-			field, err := p.parseOneStringArg()
+			// bracket notation: term("field") or term(0)
+			var err error
+			t, err = p.parseBracketArg(t)
 			if err != nil {
 				return reql.Term{}, err
 			}
-			t = t.Bracket(field)
 		default:
 			return t, nil
 		}
@@ -263,18 +300,14 @@ func parseRDB(p *parser) (reql.Term, error) {
 }
 
 func parseRRow(p *parser) (reql.Term, error) {
-	if p.params != nil {
+	if p.inLambda() {
 		return reql.Term{}, fmt.Errorf("r.row inside arrow function is ambiguous; use the arrow parameter instead")
 	}
 	t := reql.Row()
 	if p.peek().Type != tokenLParen {
 		return t, nil
 	}
-	field, err := p.parseOneStringArg()
-	if err != nil {
-		return reql.Term{}, err
-	}
-	return t.Bracket(field), nil
+	return p.parseBracketArg(t)
 }
 
 // isLambdaAhead reports whether the current position starts a lambda expression:
@@ -307,11 +340,8 @@ func (p *parser) skipLambdaParams(i int) int {
 }
 
 // parseLambda parses (param, ...) => body and returns a FUNC term.
-// Parameter IDs are assigned starting at 1.
+// Top-level lambdas start IDs at 1; nested lambdas continue from the current nextVarID.
 func (p *parser) parseLambda() (reql.Term, error) {
-	if p.params != nil {
-		return reql.Term{}, fmt.Errorf("nested arrow functions are not supported at position %d", p.peek().Pos)
-	}
 	names, err := p.parseLambdaParams()
 	if err != nil {
 		return reql.Term{}, err
@@ -319,20 +349,11 @@ func (p *parser) parseLambda() (reql.Term, error) {
 	if _, err := p.expect(tokenArrow); err != nil {
 		return reql.Term{}, err
 	}
-	params := make(map[string]int, len(names))
-	for i, name := range names {
-		params[name] = i + 1
-	}
-	old := p.params
-	p.params = params
-	defer func() { p.params = old }()
+	ids := p.pushScope(names)
+	defer p.popScope()
 	body, err := p.parseExpr()
 	if err != nil {
 		return reql.Term{}, err
-	}
-	ids := make([]int, len(names))
-	for i := range names {
-		ids[i] = i + 1
 	}
 	return reql.Func(body, ids...), nil
 }
@@ -572,11 +593,80 @@ func chainGet(p *parser, t reql.Term) (reql.Term, error) {
 }
 
 func chainInsert(p *parser, t reql.Term) (reql.Term, error) {
-	arg, err := p.parseOneArg()
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	doc, err := p.parseExpr()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.Insert(arg), nil
+	if p.peek().Type == tokenComma {
+		p.advance()
+		if p.peek().Type != tokenLBrace {
+			return reql.Term{}, fmt.Errorf("insert: second argument must be an optargs object at position %d", p.peek().Pos)
+		}
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.Insert(doc, opts), nil
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return t.Insert(doc), nil
+}
+
+func chainUpdate(p *parser, t reql.Term) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	doc, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenComma {
+		p.advance()
+		if p.peek().Type != tokenLBrace {
+			return reql.Term{}, fmt.Errorf("update: second argument must be an optargs object at position %d", p.peek().Pos)
+		}
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.Update(doc, opts), nil
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return t.Update(doc), nil
+}
+
+func chainDelete(p *parser, t reql.Term) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenRParen {
+		p.advance()
+		return t.Delete(), nil
+	}
+	if p.peek().Type != tokenLBrace {
+		return reql.Term{}, fmt.Errorf("delete: argument must be an optargs object at position %d", p.peek().Pos)
+	}
+	opts, err := p.parseOptArgs()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return t.Delete(opts), nil
 }
 
 func chainOrderBy(p *parser, t reql.Term) (reql.Term, error) {
@@ -948,8 +1038,8 @@ func registerCoreChain(m map[string]chainFn) {
 	m["get"] = chainGet
 	m["getAll"] = chainGetAll
 	m["insert"] = chainInsert
-	m["update"] = oneArgChain(func(t, doc reql.Term) reql.Term { return t.Update(doc) })
-	m["delete"] = noArgChain(func(t reql.Term) reql.Term { return t.Delete() })
+	m["update"] = chainUpdate
+	m["delete"] = chainDelete
 	m["replace"] = oneArgChain(func(t, doc reql.Term) reql.Term { return t.Replace(doc) })
 	m["between"] = chainBetween
 	m["orderBy"] = chainOrderBy
@@ -959,6 +1049,7 @@ func registerCoreChain(m map[string]chainFn) {
 	m["distinct"] = noArgChain(func(t reql.Term) reql.Term { return t.Distinct() })
 	m["union"] = chainUnion
 	m["nth"] = intArgChain(func(t reql.Term, n int) reql.Term { return t.Nth(n) })
+	m["sample"] = intArgChain(func(t reql.Term, n int) reql.Term { return t.Sample(n) })
 	m["isEmpty"] = noArgChain(func(t reql.Term) reql.Term { return t.IsEmpty() })
 	m["contains"] = chainContains
 	m["eqJoin"] = chainEqJoin
@@ -1100,6 +1191,35 @@ func (p *parser) parseOneArg() (reql.Term, error) {
 	return t, nil
 }
 
+// parseBracketArg parses term("field") or term(0) bracket notation.
+// String arg -> Bracket(field); integer arg -> Nth(n); float -> error.
+func (p *parser) parseBracketArg(t reql.Term) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	tok := p.peek()
+	switch tok.Type {
+	case tokenString:
+		p.advance()
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.Bracket(tok.Value), nil
+	case tokenNumber:
+		p.advance()
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		n, err := strconv.Atoi(tok.Value)
+		if err != nil {
+			return reql.Term{}, fmt.Errorf("bracket index must be an integer, got %q at position %d", tok.Value, tok.Pos)
+		}
+		return t.Nth(n), nil
+	default:
+		return reql.Term{}, fmt.Errorf("expected string or integer in bracket notation at position %d", tok.Pos)
+	}
+}
+
 // parseOneStringArg parses (string_literal) and returns the string value.
 func (p *parser) parseOneStringArg() (string, error) {
 	if _, err := p.expect(tokenLParen); err != nil {
@@ -1173,6 +1293,58 @@ func (p *parser) parseNoArgs() error {
 		return err
 	}
 	return nil
+}
+
+// parseOptArgs parses {key: val, ...} into a reql.OptArgs.
+// Values are restricted to datum literals: string, number, bool, null.
+func (p *parser) parseOptArgs() (reql.OptArgs, error) {
+	if _, err := p.expect(tokenLBrace); err != nil {
+		return nil, err
+	}
+	opts := reql.OptArgs{}
+	for p.peek().Type != tokenRBrace && p.peek().Type != tokenEOF {
+		key, err := p.parseObjectKey()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := p.expect(tokenColon); err != nil {
+			return nil, err
+		}
+		val, err := p.parseOptArgValue()
+		if err != nil {
+			return nil, err
+		}
+		opts[key] = val
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type == tokenRBrace {
+				return nil, fmt.Errorf("trailing comma in optargs at position %d", p.peek().Pos)
+			}
+		}
+	}
+	if _, err := p.expect(tokenRBrace); err != nil {
+		return nil, err
+	}
+	return opts, nil
+}
+
+func (p *parser) parseOptArgValue() (interface{}, error) {
+	tok := p.peek()
+	switch tok.Type {
+	case tokenString:
+		p.advance()
+		return tok.Value, nil
+	case tokenNumber:
+		p.advance()
+		return parseNumberValue(tok.Value)
+	case tokenBool:
+		p.advance()
+		return tok.Value == "true", nil
+	case tokenNull:
+		p.advance()
+		return nil, nil
+	}
+	return nil, fmt.Errorf("expected datum literal in optargs at position %d, got %q", tok.Pos, tok.Value)
 }
 
 // parseStringList parses ("s1", "s2", ...) and returns the string values.

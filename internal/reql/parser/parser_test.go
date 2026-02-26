@@ -585,14 +585,10 @@ func TestParseLambda_ScopingErrors(t *testing.T) {
 		input   string
 		wantMsg string
 	}{
-		// nested arrow: paren form inside paren form
-		{`(x) => (y) => y`, "nested arrow functions"},
-		// nested arrow: bare form inside paren form
-		{`(x) => y => y`, "nested arrow functions"},
-		// function expr inside arrow body
-		{`(x) => function(y){ return y }`, "nested functions"},
 		// r.row inside arrow
 		{`(x) => r.row('f')`, "r.row inside arrow"},
+		// r.row inside nested arrow
+		{`(x) => (y) => r.row("f")`, "r.row inside arrow"},
 		// unknown identifier in body (scope isolation)
 		{`(x) => y`, "unexpected token"},
 	}
@@ -608,6 +604,86 @@ func TestParseLambda_ScopingErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseNestedFunctions(t *testing.T) {
+	t.Parallel()
+
+	// function(a){ return function(b){ return b } } -> outer FUNC(VAR(1)), inner FUNC(VAR(2))
+	t.Run("function_in_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `function(a){ return function(b){ return b } }`)
+		want := reql.Func(reql.Func(reql.Var(2), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// (a) => (b) => b -> outer FUNC(VAR(1)), inner FUNC(VAR(2))
+	t.Run("arrow_in_arrow", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(a) => (b) => b`)
+		want := reql.Func(reql.Func(reql.Var(2), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// function(x){ return (y) => y("f") } -> mixed: outer function, inner arrow
+	t.Run("arrow_in_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `function(x){ return (y) => y("f") }`)
+		want := reql.Func(reql.Func(reql.Var(2).Bracket("f"), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// (x) => function(y){ return y("f") } -> mixed: outer arrow, inner function
+	t.Run("function_in_arrow", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(x) => function(y){ return y("f") }`)
+		want := reql.Func(reql.Func(reql.Var(2).Bracket("f"), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// parameter shadowing (x) => (x) => x -> inner x is VAR(2), not VAR(1)
+	t.Run("param_shadowing", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(x) => (x) => x`)
+		want := reql.Func(reql.Func(reql.Var(2), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// outer param accessible in inner body (a) => (b) => a.add(b)
+	t.Run("outer_param_in_inner_body", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(a) => (b) => a.add(b)`)
+		want := reql.Func(reql.Func(reql.Var(1).Add(reql.Var(2)), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// r.row inside nested lambda -> error
+	t.Run("row_inside_nested", func(t *testing.T) {
+		t.Parallel()
+		_, err := Parse(`(x) => (y) => r.row("f")`)
+		if err == nil {
+			t.Fatal("expected error for r.row inside nested lambda")
+		}
+		if !strings.Contains(err.Error(), "r.row inside arrow") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	// three levels (a) => (b) => (c) => c
+	t.Run("three_levels", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(a) => (b) => (c) => c`)
+		want := reql.Func(reql.Func(reql.Func(reql.Var(3), 3), 2), 1)
+		assertTermEqual(t, got, want)
+	})
+
+	// bare arrow nested: (x) => y => y
+	t.Run("bare_arrow_nested", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `(x) => y => y`)
+		want := reql.Func(reql.Func(reql.Var(2), 2), 1)
+		assertTermEqual(t, got, want)
+	})
 }
 
 func TestParseLambda_BodyBoundaries(t *testing.T) {
@@ -778,13 +854,312 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		{`function(x){ return }`, "unexpected token"},
 		{`function(x) x`, "expected '{'"},
 		{`function(x){ return x('a')`, "expected '}'"},
-		{`function(x){ return function(y){ return y } }`, "nested functions"},
-		{`function(x){ return (y) => y }`, "nested arrow functions"},
-		{`function(x){ return y => y }`, "nested arrow functions"},
 		{`function(x){ return r.row('f') }`, "r.row inside arrow"},
 		{`function(return){ return return }`, "reserved word"}, //nolint:dupword
 		{`function(function){ return function }`, "reserved word"},
 		{`(return) => return`, "reserved word"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParse_BracketNumericIndex(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"limit_then_nth",
+			`r.table("t").limit(1)(0)`,
+			reql.Table("t").Limit(1).Nth(0),
+		},
+		{
+			"row_bracket_then_nth",
+			`r.row("items")(0)`,
+			reql.Row().Bracket("items").Nth(0),
+		},
+		{
+			"insert_bracket_nth_bracket",
+			`r.table("t").insert({a: 1})("changes")(0)("new_val")`,
+			reql.Table("t").Insert(reql.Datum(map[string]interface{}{"a": 1})).Bracket("changes").Nth(0).Bracket("new_val"),
+		},
+		{
+			"table_nth_then_bracket",
+			`r.table("t")(0)("name")`,
+			reql.Table("t").Nth(0).Bracket("name"),
+		},
+		{
+			"table_bracket_string_no_regression",
+			`r.table("t")("field")`,
+			reql.Table("t").Bracket("field"),
+		},
+		{
+			"negative_index",
+			`r.table("t")(-1)`,
+			reql.Table("t").Nth(-1),
+		},
+		{
+			"row_nth",
+			`r.row(0)`,
+			reql.Row().Nth(0),
+		},
+	})
+}
+
+func TestParse_Sample(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"sample_5",
+			`r.table("t").sample(5)`,
+			reql.Table("t").Sample(5),
+		},
+		{
+			"sample_1",
+			`r.table("t").sample(1)`,
+			reql.Table("t").Sample(1),
+		},
+		{
+			"sample_0_edge_case",
+			`r.table("t").sample(0)`,
+			reql.Table("t").Sample(0),
+		},
+		{
+			"sample_chained_pluck",
+			`r.table("t").sample(1).pluck("id", "name")`,
+			reql.Table("t").Sample(1).Pluck("id", "name"),
+		},
+	})
+}
+
+func TestParse_ParenGrouping(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"arrow_paren_object_one_field",
+			`r.table("t").map(row => ({name: row("name")}))`,
+			reql.Table("t").Map(reql.Func(
+				reql.Datum(map[string]interface{}{"name": reql.Var(1).Bracket("name")}),
+				1,
+			)),
+		},
+		{
+			"arrow_paren_object_two_fields",
+			`r.table("t").map(row => ({a: row("x"), b: row("y")}))`,
+			reql.Table("t").Map(reql.Func(
+				reql.Datum(map[string]interface{}{"a": reql.Var(1).Bracket("x"), "b": reql.Var(1).Bracket("y")}),
+				1,
+			)),
+		},
+		{
+			"paren_arrow_object_with_chain",
+			`r.table("t").map((x) => ({id: x("id"), n: x("name").upcase()}))`,
+			reql.Table("t").Map(reql.Func(
+				reql.Datum(map[string]interface{}{"id": reql.Var(1).Bracket("id"), "n": reql.Var(1).Bracket("name").Upcase()}),
+				1,
+			)),
+		},
+		{
+			"arrow_no_paren_no_regression",
+			`r.table("t").map(row => row("name"))`,
+			reql.Table("t").Map(reql.Func(reql.Var(1).Bracket("name"), 1)),
+		},
+		{
+			"filter_no_regression",
+			`r.table("t").filter(row => row("age").gt(21))`,
+			reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("age").Gt(21), 1)),
+		},
+	})
+}
+
+func TestParse_ParenGrouping_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`(`, "unexpected token"},
+		{`(r.table("t")`, "expected ')'"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParseNestedFunctionsChain(t *testing.T) {
+	t.Parallel()
+
+	// map with function containing nested filter with function
+	t.Run("map_function_nested_filter_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map(function(doc){ return doc("items").filter(function(i){ return i("active").eq(true) }) })`)
+		want := reql.Table("t").Map(
+			reql.Func(
+				reql.Var(1).Bracket("items").Filter(
+					reql.Func(reql.Var(2).Bracket("active").Eq(true), 2),
+				),
+				1,
+			),
+		)
+		assertTermEqual(t, got, want)
+	})
+
+	// same structure with arrow syntax
+	t.Run("map_arrow_nested_filter_arrow", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map((doc) => doc("items").filter((i) => i("active").eq(true)))`)
+		want := reql.Table("t").Map(
+			reql.Func(
+				reql.Var(1).Bracket("items").Filter(
+					reql.Func(reql.Var(2).Bracket("active").Eq(true), 2),
+				),
+				1,
+			),
+		)
+		assertTermEqual(t, got, want)
+	})
+
+	// filter with nested contains and function predicate
+	t.Run("filter_function_nested_contains_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").filter(function(doc){ return doc("tags").contains(function(tag){ return tag.eq("hot") }) })`)
+		want := reql.Table("t").Filter(
+			reql.Func(
+				reql.Var(1).Bracket("tags").Contains(
+					reql.Func(reql.Var(2).Eq("hot"), 2),
+				),
+				1,
+			),
+		)
+		assertTermEqual(t, got, want)
+	})
+
+	// map with function and merge containing no inner function (regression)
+	t.Run("map_function_merge_no_inner_function", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map(function(doc){ return doc.merge({count: doc("items").count()}) })`)
+		want := reql.Table("t").Map(
+			reql.Func(
+				reql.Var(1).Merge(reql.Datum(map[string]interface{}{
+					"count": reql.Var(1).Bracket("items").Count(),
+				})),
+				1,
+			),
+		)
+		assertTermEqual(t, got, want)
+	})
+}
+
+func TestParseNestedFunctionsChain_SiblingLambdaVarIDs(t *testing.T) {
+	t.Parallel()
+	// sibling lambdas must independently use VAR(1) to preserve backward compat
+	// (each top-level lambda resets nextVarID to 0 after the previous one pops)
+	got := mustParse(t, `r.table("t").map(x => x).filter(y => y)`)
+	want := reql.Table("t").
+		Map(reql.Func(reql.Var(1), 1)).
+		Filter(reql.Func(reql.Var(1), 1))
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_InsertUpdateDeleteOptArgs(t *testing.T) {
+	t.Parallel()
+	tbl := reql.Table("t")
+	doc1 := reql.Datum(map[string]interface{}{"a": int64(1)})
+	cases := []parseTest{
+		{
+			"insert_return_changes",
+			`r.table("t").insert({a: 1}, {return_changes: true})`,
+			tbl.Insert(doc1, reql.OptArgs{"return_changes": true}),
+		},
+		{
+			"insert_conflict_replace",
+			`r.table("t").insert({a: 1}, {conflict: "replace"})`,
+			tbl.Insert(doc1, reql.OptArgs{"conflict": "replace"}),
+		},
+		{
+			"insert_multi_optargs",
+			`r.table("t").insert({a: 1}, {durability: "soft", return_changes: true})`,
+			tbl.Insert(doc1, reql.OptArgs{"durability": "soft", "return_changes": true}),
+		},
+		{
+			"insert_no_optargs",
+			`r.table("t").insert({a: 1})`,
+			tbl.Insert(doc1),
+		},
+		{
+			"update_optargs",
+			`r.table("t").update({x: 1}, {durability: "soft"})`,
+			tbl.Update(reql.Datum(map[string]interface{}{"x": int64(1)}), reql.OptArgs{"durability": "soft"}),
+		},
+		{
+			"delete_optargs",
+			`r.table("t").delete({durability: "soft"})`,
+			tbl.Delete(reql.OptArgs{"durability": "soft"}),
+		},
+		{
+			"delete_no_optargs",
+			`r.table("t").delete()`,
+			tbl.Delete(),
+		},
+		{
+			"insert_optargs_chained",
+			`r.table("t").insert({a: 1}, {return_changes: true})("changes")(0)("new_val")`,
+			tbl.Insert(doc1, reql.OptArgs{"return_changes": true}).Bracket("changes").Nth(0).Bracket("new_val"),
+		},
+	}
+	runParseTests(t, cases)
+}
+
+func TestParse_InsertUpdateDeleteOptArgs_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.table("t").insert({a: 1}, "bad")`, "insert: second argument must be an optargs object"},
+		{`r.table("t").update({x: 1}, "bad")`, "update: second argument must be an optargs object"},
+		{`r.table("t").delete("bad")`, "delete: argument must be an optargs object"},
+		{`r.table("t").insert({a: 1}, {return_changes: true,})`, "trailing comma in optargs"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParse_BracketNumericIndex_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.table("t")(0.5)`, "bracket index must be an integer"},
+		{`r.table("t")(true)`, "expected string or integer in bracket notation"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {

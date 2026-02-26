@@ -105,6 +105,9 @@ func TestReadOperations(t *testing.T) {
 		{"orderby_desc", table.OrderBy(Desc("age")), `[41,[[15,[[14,["test"]],"users"]],[74,["age"]]]]`},
 		{"limit", table.Limit(10), `[71,[[15,[[14,["test"]],"users"]],10]]`},
 		{"skip", table.Skip(5), `[70,[[15,[[14,["test"]],"users"]],5]]`},
+		{"sample_5", table.Sample(5), `[81,[[15,[[14,["test"]],"users"]],5]]`},
+		{"sample_1", table.Sample(1), `[81,[[15,[[14,["test"]],"users"]],1]]`},
+		{"sample_0", table.Sample(0), `[81,[[15,[[14,["test"]],"users"]],0]]`},
 		{"count", table.Count(), `[43,[[15,[[14,["test"]],"users"]]]]`},
 		{"pluck", table.Pluck("name", "age"), `[33,[[15,[[14,["test"]],"users"]],"name","age"]]`},
 		{"without", table.Without("password"), `[34,[[15,[[14,["test"]],"users"]],"password"]]`},
@@ -541,6 +544,16 @@ func TestTermOptargs(t *testing.T) {
 			"orderby_field_and_index",
 			table.OrderBy("age", OptArgs{"index": "name"}),
 			`[41,[[15,[[14,["test"]],"users"]],"age"],{"index":"name"}]`,
+		},
+		{
+			"delete_no_opts",
+			table.Delete(),
+			`[54,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"delete_durability",
+			table.Delete(OptArgs{"durability": "soft"}),
+			`[54,[[15,[[14,["test"]],"users"]]],{"durability":"soft"}]`,
 		},
 	}
 	for _, tc := range tests {
