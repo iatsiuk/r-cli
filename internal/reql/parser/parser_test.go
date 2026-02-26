@@ -799,3 +799,61 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestParse_BracketNumericIndex(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"limit_then_nth",
+			`r.table("t").limit(1)(0)`,
+			reql.Table("t").Limit(1).Nth(0),
+		},
+		{
+			"row_bracket_then_nth",
+			`r.row("items")(0)`,
+			reql.Row().Bracket("items").Nth(0),
+		},
+		{
+			"insert_bracket_nth_bracket",
+			`r.table("t").insert({a: 1})("changes")(0)("new_val")`,
+			reql.Table("t").Insert(reql.Datum(map[string]interface{}{"a": 1})).Bracket("changes").Nth(0).Bracket("new_val"),
+		},
+		{
+			"table_nth_then_bracket",
+			`r.table("t")(0)("name")`,
+			reql.Table("t").Nth(0).Bracket("name"),
+		},
+		{
+			"table_bracket_string_no_regression",
+			`r.table("t")("field")`,
+			reql.Table("t").Bracket("field"),
+		},
+		{
+			"negative_index",
+			`r.table("t")(-1)`,
+			reql.Table("t").Nth(-1),
+		},
+	})
+}
+
+func TestParse_BracketNumericIndex_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.table("t")(0.5)`, "bracket index must be an integer"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}

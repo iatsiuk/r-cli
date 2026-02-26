@@ -240,12 +240,12 @@ func (p *parser) parseChain(t reql.Term) (reql.Term, error) {
 				return reql.Term{}, err
 			}
 		case tokenLParen:
-			// bracket notation: term("field")
-			field, err := p.parseOneStringArg()
+			// bracket notation: term("field") or term(0)
+			var err error
+			t, err = p.parseBracketArg(t)
 			if err != nil {
 				return reql.Term{}, err
 			}
-			t = t.Bracket(field)
 		default:
 			return t, nil
 		}
@@ -1098,6 +1098,35 @@ func (p *parser) parseOneArg() (reql.Term, error) {
 		return reql.Term{}, err
 	}
 	return t, nil
+}
+
+// parseBracketArg parses term("field") or term(0) bracket notation.
+// String arg -> Bracket(field); integer arg -> Nth(n); float -> error.
+func (p *parser) parseBracketArg(t reql.Term) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	tok := p.peek()
+	switch tok.Type {
+	case tokenString:
+		p.advance()
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.Bracket(tok.Value), nil
+	case tokenNumber:
+		p.advance()
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		n, err := strconv.Atoi(tok.Value)
+		if err != nil {
+			return reql.Term{}, fmt.Errorf("bracket index must be an integer, got %q at position %d", tok.Value, tok.Pos)
+		}
+		return t.Nth(n), nil
+	default:
+		return reql.Term{}, fmt.Errorf("expected string or integer in bracket notation at position %d", tok.Pos)
+	}
 }
 
 // parseOneStringArg parses (string_literal) and returns the string value.

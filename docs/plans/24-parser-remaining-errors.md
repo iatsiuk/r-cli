@@ -108,15 +108,15 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 ### Task 1: Bracket notation with numeric index
 
-- [ ] Test: parse `r.table("t").limit(1)(0)` -> wire JSON with NTH term `[45,[...,0]]`
-- [ ] Test: parse `r.row("items")(0)` -> NTH on BRACKET(IMPLICIT_VAR, "items")
-- [ ] Test: parse `r.table("t").insert({a: 1})("changes")(0)("new_val")` -> chained BRACKET, NTH, BRACKET
-- [ ] Test: parse `r.table("t")(0)("name")` -> NTH then BRACKET
-- [ ] Test: parse `r.table("t")("field")` -> BRACKET (no regression, still works)
-- [ ] Test: parse `r.table("t")(0.5)` -> error (float in bracket not valid)
-- [ ] Test: parse `r.table("t")(-1)` -> NTH with negative index (valid ReQL, last element)
-- [ ] Implement: add `parseBracketArg()` helper; dispatch to `Nth(n)` for integers, `Bracket(s)` for strings; replace `parseOneStringArg()` call in `parseChain` bracket case
-- [ ] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
+- [x] Test: parse `r.table("t").limit(1)(0)` -> wire JSON with NTH term `[45,[...,0]]`
+- [x] Test: parse `r.row("items")(0)` -> NTH on BRACKET(IMPLICIT_VAR, "items")
+- [x] Test: parse `r.table("t").insert({a: 1})("changes")(0)("new_val")` -> chained BRACKET, NTH, BRACKET
+- [x] Test: parse `r.table("t")(0)("name")` -> NTH then BRACKET
+- [x] Test: parse `r.table("t")("field")` -> BRACKET (no regression, still works)
+- [x] Test: parse `r.table("t")(0.5)` -> error (float in bracket not valid)
+- [x] Test: parse `r.table("t")(-1)` -> NTH with negative index (valid ReQL, last element)
+- [x] Implement: add `parseBracketArg()` helper; dispatch to `Nth(n)` for integers, `Bracket(s)` for strings; replace `parseOneStringArg()` call in `parseChain` bracket case
+- [x] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
 
 ### Task 2: `.sample()` method -- reql builder
 
