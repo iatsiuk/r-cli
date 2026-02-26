@@ -281,6 +281,11 @@ func (t Term) Skip(n int) Term {
 	return Term{termType: proto.TermSkip, args: []Term{t, Datum(n)}}
 }
 
+// Sample creates a SAMPLE term ([81, [term, n]]).
+func (t Term) Sample(n int) Term {
+	return Term{termType: proto.TermSample, args: []Term{t, Datum(n)}}
+}
+
 // Count creates a COUNT term ([43, [term]]).
 func (t Term) Count() Term {
 	return Term{termType: proto.TermCount, args: []Term{t}}

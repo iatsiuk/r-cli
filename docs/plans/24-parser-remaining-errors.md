@@ -120,11 +120,11 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 ### Task 2: `.sample()` method -- reql builder
 
-- [ ] Test: `reql.Table("t").Sample(5)` -> wire JSON `[81,[[15,["t"]],5]]`
-- [ ] Test: `reql.Table("t").Sample(1)` -> wire JSON `[81,[[15,["t"]],1]]`
-- [ ] Test: `reql.Table("t").Sample(0)` -> wire JSON `[81,[[15,["t"]],0]]`
-- [ ] Implement: add `Sample(n int) Term` method to `term.go`
-- [ ] Run `go test ./internal/reql/... -race -count=1` -- must pass before next task
+- [x] Test: `reql.Table("t").Sample(5)` -> wire JSON `[81,[[15,["t"]],5]]`
+- [x] Test: `reql.Table("t").Sample(1)` -> wire JSON `[81,[[15,["t"]],1]]`
+- [x] Test: `reql.Table("t").Sample(0)` -> wire JSON `[81,[[15,["t"]],0]]`
+- [x] Implement: add `Sample(n int) Term` method to `term.go`
+- [x] Run `go test ./internal/reql/... -race -count=1` -- must pass before next task
 
 ### Task 3: `.sample()` method -- parser
 
