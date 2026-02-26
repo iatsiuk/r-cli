@@ -959,6 +959,7 @@ func registerCoreChain(m map[string]chainFn) {
 	m["distinct"] = noArgChain(func(t reql.Term) reql.Term { return t.Distinct() })
 	m["union"] = chainUnion
 	m["nth"] = intArgChain(func(t reql.Term, n int) reql.Term { return t.Nth(n) })
+	m["sample"] = intArgChain(func(t reql.Term, n int) reql.Term { return t.Sample(n) })
 	m["isEmpty"] = noArgChain(func(t reql.Term) reql.Term { return t.IsEmpty() })
 	m["contains"] = chainContains
 	m["eqJoin"] = chainEqJoin

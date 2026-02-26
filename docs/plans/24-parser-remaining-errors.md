@@ -128,11 +128,11 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 ### Task 3: `.sample()` method -- parser
 
-- [ ] Test: parse `r.table("t").sample(5)` -> wire JSON `[81,[[15,["t"]],5]]`
-- [ ] Test: parse `r.table("t").sample(1).pluck("id","name")` -> SAMPLE chained with PLUCK
-- [ ] Test: parse `r.table("t").sample(0)` -> wire JSON (edge case, valid ReQL)
-- [ ] Implement: register `"sample"` in `registerCoreChain()` via `intArgChain`
-- [ ] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
+- [x] Test: parse `r.table("t").sample(5)` -> wire JSON `[81,[[15,["t"]],5]]`
+- [x] Test: parse `r.table("t").sample(1).pluck("id","name")` -> SAMPLE chained with PLUCK
+- [x] Test: parse `r.table("t").sample(0)` -> wire JSON (edge case, valid ReQL)
+- [x] Implement: register `"sample"` in `registerCoreChain()` via `intArgChain`
+- [x] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
 
 ### Task 4: Parenthesized expressions (`(expr)` grouping)
 

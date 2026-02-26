@@ -836,6 +836,32 @@ func TestParse_BracketNumericIndex(t *testing.T) {
 	})
 }
 
+func TestParse_Sample(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"sample_5",
+			`r.table("t").sample(5)`,
+			reql.Table("t").Sample(5),
+		},
+		{
+			"sample_1",
+			`r.table("t").sample(1)`,
+			reql.Table("t").Sample(1),
+		},
+		{
+			"sample_0_edge_case",
+			`r.table("t").sample(0)`,
+			reql.Table("t").Sample(0),
+		},
+		{
+			"sample_chained_pluck",
+			`r.table("t").sample(1).pluck("id", "name")`,
+			reql.Table("t").Sample(1).Pluck("id", "name"),
+		},
+	})
+}
+
 func TestParse_BracketNumericIndex_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
