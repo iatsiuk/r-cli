@@ -862,6 +862,68 @@ func TestParse_Sample(t *testing.T) {
 	})
 }
 
+func TestParse_ParenGrouping(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"arrow_paren_object_one_field",
+			`r.table("t").map(row => ({name: row("name")}))`,
+			reql.Table("t").Map(reql.Func(
+				reql.Datum(map[string]interface{}{"name": reql.Var(1).Bracket("name")}),
+				1,
+			)),
+		},
+		{
+			"arrow_paren_object_two_fields",
+			`r.table("t").map(row => ({a: row("x"), b: row("y")}))`,
+			reql.Table("t").Map(reql.Func(
+				reql.Datum(map[string]interface{}{"a": reql.Var(1).Bracket("x"), "b": reql.Var(1).Bracket("y")}),
+				1,
+			)),
+		},
+		{
+			"paren_arrow_object_with_chain",
+			`r.table("t").map((x) => ({id: x("id"), n: x("name").upcase()}))`,
+			reql.Table("t").Map(reql.Func(
+				reql.Datum(map[string]interface{}{"id": reql.Var(1).Bracket("id"), "n": reql.Var(1).Bracket("name").Upcase()}),
+				1,
+			)),
+		},
+		{
+			"arrow_no_paren_no_regression",
+			`r.table("t").map(row => row("name"))`,
+			reql.Table("t").Map(reql.Func(reql.Var(1).Bracket("name"), 1)),
+		},
+		{
+			"filter_no_regression",
+			`r.table("t").filter(row => row("age").gt(21))`,
+			reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("age").Gt(21), 1)),
+		},
+	})
+}
+
+func TestParse_ParenGrouping_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`(`, "unexpected token"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
 func TestParse_BracketNumericIndex_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

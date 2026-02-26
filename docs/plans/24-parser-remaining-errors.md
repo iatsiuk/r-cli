@@ -136,14 +136,14 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 ### Task 4: Parenthesized expressions (`(expr)` grouping)
 
-- [ ] Test: parse `r.table("t").map(row => ({name: row("name")}))` -> FUNC wrapping datum object `{"name": BRACKET(VAR(1), "name")}`
-- [ ] Test: parse `r.table("t").map(row => ({a: row("x"), b: row("y")}))` -> datum object with two fields
-- [ ] Test: parse `r.table("t").map((x) => ({id: x("id"), n: x("name").upcase()}))` -> datum object with chain in value
-- [ ] Test: parse `r.table("t").map(row => row("name"))` -> no regression, arrow without parens still works
-- [ ] Test: parse `r.table("t").filter(row => row("age").gt(21))` -> no regression
-- [ ] Test: parse `(` -> error (unclosed paren, expected expression)
-- [ ] Implement: add `tokenLParen && !isLambdaAhead()` case in `parsePrimary`: consume `(`, `parseExpr()`, expect `)`
-- [ ] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
+- [x] Test: parse `r.table("t").map(row => ({name: row("name")}))` -> FUNC wrapping datum object `{"name": BRACKET(VAR(1), "name")}`
+- [x] Test: parse `r.table("t").map(row => ({a: row("x"), b: row("y")}))` -> datum object with two fields
+- [x] Test: parse `r.table("t").map((x) => ({id: x("id"), n: x("name").upcase()}))` -> datum object with chain in value
+- [x] Test: parse `r.table("t").map(row => row("name"))` -> no regression, arrow without parens still works
+- [x] Test: parse `r.table("t").filter(row => row("age").gt(21))` -> no regression
+- [x] Test: parse `(` -> error (unclosed paren, expected expression)
+- [x] Implement: add `tokenLParen && !isLambdaAhead()` case in `parsePrimary`: consume `(`, `parseExpr()`, expect `)`
+- [x] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
 
 ### Task 5: Nested functions -- scoping infrastructure
 

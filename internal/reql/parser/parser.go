@@ -96,6 +96,17 @@ func (p *parser) parsePrimary() (reql.Term, error) {
 	switch {
 	case tok.Type == tokenLParen && p.isLambdaAhead():
 		return p.parseLambda()
+	case tok.Type == tokenLParen:
+		// grouped expression: ( expr )
+		p.advance()
+		expr, err := p.parseExpr()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return expr, nil
 	case tok.Type == tokenIdent:
 		return p.parseIdentPrimary(tok)
 	case tok.Type == tokenLBrace:
