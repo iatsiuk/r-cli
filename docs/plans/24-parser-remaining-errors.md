@@ -214,8 +214,8 @@ Build tag: `//go:build integration`. Package: `internal/integration`.
 
 ### Task 10: Verify acceptance criteria
 
-- [ ] Verify all 5 parser errors from Overview are fixed
-- [ ] Verify edge cases are handled (float in bracket, empty optargs, deeply nested functions)
-- [ ] Run full test suite: `go test ./internal/reql/... -race -count=1`
-- [ ] Run full parser tests: `go test ./internal/reql/parser/... -race -count=1`
-- [ ] Run linter: `make build` -- all issues must be fixed
+- [x] Verify all 5 parser errors from Overview are fixed
+- [x] Verify edge cases are handled (float in bracket, empty optargs, deeply nested functions)
+- [x] Run full test suite: `go test ./internal/reql/... -race -count=1`
+- [x] Run full parser tests: `go test ./internal/reql/parser/... -race -count=1`
+- [x] Run linter: `make build` -- all issues must be fixed
