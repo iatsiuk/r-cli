@@ -597,11 +597,80 @@ func chainGet(p *parser, t reql.Term) (reql.Term, error) {
 }
 
 func chainInsert(p *parser, t reql.Term) (reql.Term, error) {
-	arg, err := p.parseOneArg()
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	doc, err := p.parseExpr()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.Insert(arg), nil
+	if p.peek().Type == tokenComma {
+		p.advance()
+		if p.peek().Type != tokenLBrace {
+			return reql.Term{}, fmt.Errorf("insert: second argument must be an optargs object at position %d", p.peek().Pos)
+		}
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.Insert(doc, opts), nil
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return t.Insert(doc), nil
+}
+
+func chainUpdate(p *parser, t reql.Term) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	doc, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenComma {
+		p.advance()
+		if p.peek().Type != tokenLBrace {
+			return reql.Term{}, fmt.Errorf("update: second argument must be an optargs object at position %d", p.peek().Pos)
+		}
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.Update(doc, opts), nil
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return t.Update(doc), nil
+}
+
+func chainDelete(p *parser, t reql.Term) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenRParen {
+		p.advance()
+		return t.Delete(), nil
+	}
+	if p.peek().Type != tokenLBrace {
+		return reql.Term{}, fmt.Errorf("delete: argument must be an optargs object at position %d", p.peek().Pos)
+	}
+	opts, err := p.parseOptArgs()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return t.Delete(opts), nil
 }
 
 func chainOrderBy(p *parser, t reql.Term) (reql.Term, error) {
@@ -973,8 +1042,8 @@ func registerCoreChain(m map[string]chainFn) {
 	m["get"] = chainGet
 	m["getAll"] = chainGetAll
 	m["insert"] = chainInsert
-	m["update"] = oneArgChain(func(t, doc reql.Term) reql.Term { return t.Update(doc) })
-	m["delete"] = noArgChain(func(t reql.Term) reql.Term { return t.Delete() })
+	m["update"] = chainUpdate
+	m["delete"] = chainDelete
 	m["replace"] = oneArgChain(func(t, doc reql.Term) reql.Term { return t.Replace(doc) })
 	m["between"] = chainBetween
 	m["orderBy"] = chainOrderBy
@@ -1228,6 +1297,58 @@ func (p *parser) parseNoArgs() error {
 		return err
 	}
 	return nil
+}
+
+// parseOptArgs parses {key: val, ...} into a reql.OptArgs.
+// Values are restricted to datum literals: string, number, bool, null.
+func (p *parser) parseOptArgs() (reql.OptArgs, error) {
+	if _, err := p.expect(tokenLBrace); err != nil {
+		return nil, err
+	}
+	opts := reql.OptArgs{}
+	for p.peek().Type != tokenRBrace && p.peek().Type != tokenEOF {
+		key, err := p.parseObjectKey()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := p.expect(tokenColon); err != nil {
+			return nil, err
+		}
+		val, err := p.parseOptArgValue()
+		if err != nil {
+			return nil, err
+		}
+		opts[key] = val
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type == tokenRBrace {
+				return nil, fmt.Errorf("trailing comma in optargs at position %d", p.peek().Pos)
+			}
+		}
+	}
+	if _, err := p.expect(tokenRBrace); err != nil {
+		return nil, err
+	}
+	return opts, nil
+}
+
+func (p *parser) parseOptArgValue() (interface{}, error) {
+	tok := p.peek()
+	switch tok.Type {
+	case tokenString:
+		p.advance()
+		return tok.Value, nil
+	case tokenNumber:
+		p.advance()
+		return parseNumberValue(tok.Value)
+	case tokenBool:
+		p.advance()
+		return tok.Value == "true", nil
+	case tokenNull:
+		p.advance()
+		return nil, nil
+	}
+	return nil, fmt.Errorf("expected datum literal in optargs at position %d, got %q", tok.Pos, tok.Value)
 }
 
 // parseStringList parses ("s1", "s2", ...) and returns the string values.

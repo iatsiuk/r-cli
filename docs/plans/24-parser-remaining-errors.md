@@ -176,17 +176,17 @@ Wire JSON: `row => ({name: row("name")})` -> `[69,[[2,[1]],{"name":[170,[[10,[1]
 
 ### Task 7b: OptArgs in `insert()`, `update()`, `delete()` -- parser
 
-- [ ] Test: parse `r.table("t").insert({a: 1}, {return_changes: true})` -> INSERT with optargs `{"return_changes": true}`
-- [ ] Test: parse `r.table("t").insert({a: 1}, {conflict: "replace"})` -> INSERT with optargs `{"conflict": "replace"}`
-- [ ] Test: parse `r.table("t").insert({a: 1}, {durability: "soft", return_changes: true})` -> INSERT with multiple optargs
-- [ ] Test: parse `r.table("t").insert({a: 1})` -> INSERT without optargs (no regression)
-- [ ] Test: parse `r.table("t").insert({a: 1}, "bad")` -> error (second arg must be object)
-- [ ] Test: parse `r.table("t").update({x: 1}, {durability: "soft"})` -> UPDATE with optargs
-- [ ] Test: parse `r.table("t").delete({durability: "soft"})` -> DELETE with optargs (1-arg pattern: opts only, no doc)
-- [ ] Test: parse `r.table("t").delete()` -> DELETE without optargs (no regression)
-- [ ] Test: parse `r.table("t").insert({a: 1}, {return_changes: true})("changes")(0)("new_val")` -> INSERT with optargs chained with BRACKET and NTH (depends on task 1)
-- [ ] Implement: add `parseOptArgs()` helper that directly parses `{key: val}` into `reql.OptArgs` (avoids cross-package access to unexported Term fields); modify `chainInsert` and `chainUpdate` to use `parseArgList` with optional second optargs; replace `chainDelete` with custom function: `()` -> `Delete()`, `({...})` -> `Delete(opts)`
-- [ ] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
+- [x] Test: parse `r.table("t").insert({a: 1}, {return_changes: true})` -> INSERT with optargs `{"return_changes": true}`
+- [x] Test: parse `r.table("t").insert({a: 1}, {conflict: "replace"})` -> INSERT with optargs `{"conflict": "replace"}`
+- [x] Test: parse `r.table("t").insert({a: 1}, {durability: "soft", return_changes: true})` -> INSERT with multiple optargs
+- [x] Test: parse `r.table("t").insert({a: 1})` -> INSERT without optargs (no regression)
+- [x] Test: parse `r.table("t").insert({a: 1}, "bad")` -> error (second arg must be object)
+- [x] Test: parse `r.table("t").update({x: 1}, {durability: "soft"})` -> UPDATE with optargs
+- [x] Test: parse `r.table("t").delete({durability: "soft"})` -> DELETE with optargs (1-arg pattern: opts only, no doc)
+- [x] Test: parse `r.table("t").delete()` -> DELETE without optargs (no regression)
+- [x] Test: parse `r.table("t").insert({a: 1}, {return_changes: true})("changes")(0)("new_val")` -> INSERT with optargs chained with BRACKET and NTH (depends on task 1)
+- [x] Implement: add `parseOptArgs()` helper that directly parses `{key: val}` into `reql.OptArgs` (avoids cross-package access to unexported Term fields); modify `chainInsert` and `chainUpdate` to use `parseArgList` with optional second optargs; replace `chainDelete` with custom function: `()` -> `Delete()`, `({...})` -> `Delete(opts)`
+- [x] Run `go test ./internal/reql/parser/... -race -count=1` -- must pass before next task
 
 ### Task 8: Fuzz testing
 

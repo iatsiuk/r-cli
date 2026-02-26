@@ -1061,6 +1061,77 @@ func TestParseNestedFunctionsChain(t *testing.T) {
 	})
 }
 
+func TestParse_InsertUpdateDeleteOptArgs(t *testing.T) {
+	t.Parallel()
+	tbl := reql.Table("t")
+	doc1 := reql.Datum(map[string]interface{}{"a": int64(1)})
+	cases := []parseTest{
+		{
+			"insert_return_changes",
+			`r.table("t").insert({a: 1}, {return_changes: true})`,
+			tbl.Insert(doc1, reql.OptArgs{"return_changes": true}),
+		},
+		{
+			"insert_conflict_replace",
+			`r.table("t").insert({a: 1}, {conflict: "replace"})`,
+			tbl.Insert(doc1, reql.OptArgs{"conflict": "replace"}),
+		},
+		{
+			"insert_multi_optargs",
+			`r.table("t").insert({a: 1}, {durability: "soft", return_changes: true})`,
+			tbl.Insert(doc1, reql.OptArgs{"durability": "soft", "return_changes": true}),
+		},
+		{
+			"insert_no_optargs",
+			`r.table("t").insert({a: 1})`,
+			tbl.Insert(doc1),
+		},
+		{
+			"update_optargs",
+			`r.table("t").update({x: 1}, {durability: "soft"})`,
+			tbl.Update(reql.Datum(map[string]interface{}{"x": int64(1)}), reql.OptArgs{"durability": "soft"}),
+		},
+		{
+			"delete_optargs",
+			`r.table("t").delete({durability: "soft"})`,
+			tbl.Delete(reql.OptArgs{"durability": "soft"}),
+		},
+		{
+			"delete_no_optargs",
+			`r.table("t").delete()`,
+			tbl.Delete(),
+		},
+		{
+			"insert_optargs_chained",
+			`r.table("t").insert({a: 1}, {return_changes: true})("changes")(0)("new_val")`,
+			tbl.Insert(doc1, reql.OptArgs{"return_changes": true}).Bracket("changes").Nth(0).Bracket("new_val"),
+		},
+	}
+	runParseTests(t, cases)
+}
+
+func TestParse_InsertUpdateDeleteOptArgs_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.table("t").insert({a: 1}, "bad")`, "insert: second argument must be an optargs object"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
 func TestParse_BracketNumericIndex_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
