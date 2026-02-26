@@ -1067,6 +1067,17 @@ func TestParseNestedFunctionsChain(t *testing.T) {
 	})
 }
 
+func TestParseNestedFunctionsChain_SiblingLambdaVarIDs(t *testing.T) {
+	t.Parallel()
+	// sibling lambdas must independently use VAR(1) to preserve backward compat
+	// (each top-level lambda resets nextVarID to 0 after the previous one pops)
+	got := mustParse(t, `r.table("t").map(x => x).filter(y => y)`)
+	want := reql.Table("t").
+		Map(reql.Func(reql.Var(1), 1)).
+		Filter(reql.Func(reql.Var(1), 1))
+	assertTermEqual(t, got, want)
+}
+
 func TestParse_InsertUpdateDeleteOptArgs(t *testing.T) {
 	t.Parallel()
 	tbl := reql.Table("t")
