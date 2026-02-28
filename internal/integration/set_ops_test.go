@@ -230,4 +230,56 @@ func TestSetOpsOnTableFields(t *testing.T) {
 			t.Errorf("setUnion element %d = %v, want %v", i, union[i], v)
 		}
 	}
+
+	// setIntersection -- intersect [1,2,3] with [2,3,5] -> [2,3]
+	intersectFn := reql.Func(
+		reql.Var(1).GetField("tags").SetIntersection(reql.Array(2, 3, 5)),
+		1,
+	)
+	_, cur3, err := exec.Run(ctx, reql.DB(dbName).Table("docs").Map(intersectFn), nil)
+	if err != nil {
+		t.Fatalf("map setIntersection: %v", err)
+	}
+	raw3, err := cur3.Next()
+	closeCursor(cur3)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var intersection []float64
+	if err := json.Unmarshal(raw3, &intersection); err != nil {
+		t.Fatalf("unmarshal intersection: %v", err)
+	}
+	sort.Float64s(intersection)
+	if len(intersection) != 2 {
+		t.Errorf("setIntersection on table field: got %v, want 2 elements", intersection)
+	}
+	if intersection[0] != 2 || intersection[1] != 3 {
+		t.Errorf("setIntersection = %v, want [2 3]", intersection)
+	}
+
+	// setDifference -- [1,2,3] minus [2] -> [1,3]
+	diffFn := reql.Func(
+		reql.Var(1).GetField("tags").SetDifference(reql.Array(2)),
+		1,
+	)
+	_, cur4, err := exec.Run(ctx, reql.DB(dbName).Table("docs").Map(diffFn), nil)
+	if err != nil {
+		t.Fatalf("map setDifference: %v", err)
+	}
+	raw4, err := cur4.Next()
+	closeCursor(cur4)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var diff []float64
+	if err := json.Unmarshal(raw4, &diff); err != nil {
+		t.Fatalf("unmarshal diff: %v", err)
+	}
+	sort.Float64s(diff)
+	if len(diff) != 2 {
+		t.Errorf("setDifference on table field: got %v, want 2 elements", diff)
+	}
+	if diff[0] != 1 || diff[1] != 3 {
+		t.Errorf("setDifference = %v, want [1 3]", diff)
+	}
 }

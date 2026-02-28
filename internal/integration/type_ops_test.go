@@ -54,6 +54,34 @@ func TestTypeOf(t *testing.T) {
 	}
 }
 
+func TestTypeOfTable(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "typed")
+
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("typed").TypeOf(), nil)
+	if err != nil {
+		t.Fatalf("typeOf table: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got string
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != "TABLE" {
+		t.Errorf("typeOf table=%q, want TABLE", got)
+	}
+}
+
 func TestCoerceToNumberToString(t *testing.T) {
 	t.Parallel()
 	exec := newExecutor(t)
