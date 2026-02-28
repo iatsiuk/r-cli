@@ -1174,3 +1174,60 @@ func TestParse_BracketNumericIndex_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestParse_GeoConstructors(t *testing.T) {
+	t.Parallel()
+	p1 := reql.Point(-73.9857, 40.7484)
+	p2 := reql.Point(-73.9712, 40.7614)
+	p3 := reql.Point(-73.9442, 40.6782)
+	runParseTests(t, []parseTest{
+		{
+			"line_two_points",
+			`r.line(r.point(-73.9857, 40.7484), r.point(-73.9712, 40.7614))`,
+			reql.Line(p1, p2),
+		},
+		{
+			"line_three_points",
+			`r.line(r.point(-73.9857, 40.7484), r.point(-73.9712, 40.7614), r.point(-73.9442, 40.6782))`,
+			reql.Line(p1, p2, p3),
+		},
+		{
+			"polygon_three_points",
+			`r.polygon(r.point(-73.9857, 40.7484), r.point(-73.9712, 40.7614), r.point(-73.9442, 40.6782))`,
+			reql.Polygon(p1, p2, p3),
+		},
+		{
+			"circle_no_opts",
+			`r.circle(r.point(-73.9857, 40.7484), 1000)`,
+			reql.Circle(p1, 1000),
+		},
+		{
+			"circle_with_opts",
+			`r.circle(r.point(-73.9857, 40.7484), 1000, {num_vertices: 32})`,
+			reql.Circle(p1, 1000, reql.OptArgs{"num_vertices": int64(32)}),
+		},
+	})
+}
+
+func TestParse_GeoConstructors_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.line(r.point(-73.9857, 40.7484))`, "r.line requires at least 2"},
+		{`r.polygon(r.point(-73.9857, 40.7484), r.point(-73.9712, 40.7614))`, "r.polygon requires at least 3"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}

@@ -55,19 +55,19 @@ All term type constants already exist in `internal/proto/term.go`.
 
 reql functions `Line()`, `Polygon()`, `Circle()` already exist. Need parser support + tests.
 
-- [ ] write parser tests for `r.line(point1, point2, ...)` with 2+ points (parser_test.go)
-- [ ] write parser tests for `r.polygon(point1, point2, point3, ...)` with 3+ points (parser_test.go)
-- [ ] write parser tests for `r.circle(center, radius)` and `r.circle(center, radius, {opts})` (parser_test.go)
-- [ ] write parser error tests: r.line with <2 points, r.polygon with <3 points
-- [ ] implement `parseRLine` -- parse variadic point args, call `reql.Line()` (parser.go)
-- [ ] implement `parseRPolygon` -- parse variadic point args, call `reql.Polygon()` (parser.go)
-- [ ] implement `parseRCircle` -- parse center + radius + optional opts, call `reql.Circle()` (parser.go)
-- [ ] register `"line"`, `"polygon"`, `"circle"` in `buildRBuilders()` (parser.go)
-- [ ] run unit tests -- must pass
-- [ ] write integration test: insert geo doc with `r.line()`, verify with `toGeoJSON()` (integration)
-- [ ] write integration test: insert geo doc with `r.polygon()`, verify with `toGeoJSON()` (integration)
-- [ ] write integration test: create `r.circle()`, verify it returns polygon geometry (integration)
-- [ ] run `make build` + `make test-integration` -- must pass
+- [x] write parser tests for `r.line(point1, point2, ...)` with 2+ points (parser_test.go)
+- [x] write parser tests for `r.polygon(point1, point2, point3, ...)` with 3+ points (parser_test.go)
+- [x] write parser tests for `r.circle(center, radius)` and `r.circle(center, radius, {opts})` (parser_test.go)
+- [x] write parser error tests: r.line with <2 points, r.polygon with <3 points
+- [x] implement `parseRLine` -- parse variadic point args, call `reql.Line()` (parser.go)
+- [x] implement `parseRPolygon` -- parse variadic point args, call `reql.Polygon()` (parser.go)
+- [x] implement `parseRCircle` -- parse center + radius + optional opts, call `reql.Circle()` (parser.go)
+- [x] register `"line"`, `"polygon"`, `"circle"` in `buildRBuilders()` (parser.go)
+- [x] run unit tests -- must pass
+- [x] write integration test: insert geo doc with `r.line()`, verify with `toGeoJSON()` (integration)
+- [x] write integration test: insert geo doc with `r.polygon()`, verify with `toGeoJSON()` (integration)
+- [x] write integration test: create `r.circle()`, verify it returns polygon geometry (integration)
+- [x] run `make build` + `make test-integration` -- must pass
 
 ### Task 2: r.time and r.binary (parser only)
 

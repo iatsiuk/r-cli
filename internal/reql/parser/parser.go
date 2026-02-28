@@ -566,6 +566,64 @@ func parseRGeoJSON(p *parser) (reql.Term, error) {
 	return reql.GeoJSON(arg), nil
 }
 
+func parseRLine(p *parser) (reql.Term, error) {
+	args, err := p.parseArgList()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if len(args) < 2 {
+		return reql.Term{}, fmt.Errorf("r.line requires at least 2 points, got %d", len(args))
+	}
+	return reql.Line(args...), nil
+}
+
+func parseRPolygon(p *parser) (reql.Term, error) {
+	args, err := p.parseArgList()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if len(args) < 3 {
+		return reql.Term{}, fmt.Errorf("r.polygon requires at least 3 points, got %d", len(args))
+	}
+	return reql.Polygon(args...), nil
+}
+
+func parseRCircle(p *parser) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	center, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, err
+	}
+	radTok, err := p.expect(tokenNumber)
+	if err != nil {
+		return reql.Term{}, err
+	}
+	radius, err := strconv.ParseFloat(radTok.Value, 64)
+	if err != nil {
+		return reql.Term{}, fmt.Errorf("invalid radius %q: %w", radTok.Value, err)
+	}
+	if p.peek().Type == tokenComma {
+		p.advance()
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return reql.Circle(center, radius, opts), nil
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Circle(center, radius), nil
+}
+
 // ---- Chain builder: specific implementations ----
 
 func chainTable(p *parser, t reql.Term) (reql.Term, error) {
@@ -1016,6 +1074,9 @@ func buildRBuilders() map[string]rBuilderFn {
 		"literal":   parseRLiteral,
 		"point":     parseRPoint,
 		"geoJSON":   parseRGeoJSON,
+		"line":      parseRLine,
+		"polygon":   parseRPolygon,
+		"circle":    parseRCircle,
 	}
 }
 
