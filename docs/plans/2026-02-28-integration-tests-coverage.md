@@ -68,16 +68,16 @@ File: `internal/integration/collection_ops_test.go` (new)
 
 File: `internal/integration/array_ops_test.go` (new)
 
-- [ ] test `Append` -- `r.expr([1,2]).append(3)` returns `[1,2,3]`
-- [ ] test `Prepend` -- `r.expr([2,3]).prepend(1)` returns `[1,2,3]`
-- [ ] test `Slice` -- `r.expr([0,1,2,3,4]).slice(1,3)` returns `[1,2]`; single arg `slice(2)` returns `[2,3,4]`
-- [ ] test `Difference` -- `r.expr([1,2,3,2]).difference([2])` returns `[1,3]`
-- [ ] test `InsertAt` -- `r.expr([0,1,3]).insertAt(2, 2)` returns `[0,1,2,3]`
-- [ ] test `DeleteAt` -- `r.expr([0,1,2,3]).deleteAt(1)` returns `[0,2,3]`
-- [ ] test `ChangeAt` -- `r.expr([0,1,2]).changeAt(1, 9)` returns `[0,9,2]`
-- [ ] test `SpliceAt` -- `r.expr([0,3,4]).spliceAt(1, [1,2])` returns `[0,1,2,3,4]`
-- [ ] test array ops on table fields -- seed docs with array fields, update using append/prepend, read back and verify
-- [ ] run `make test-integration` -- must pass
+- [x] test `Append` -- `r.expr([1,2]).append(3)` returns `[1,2,3]`
+- [x] test `Prepend` -- `r.expr([2,3]).prepend(1)` returns `[1,2,3]`
+- [x] test `Slice` -- `r.expr([0,1,2,3,4]).slice(1,3)` returns `[1,2]`; single arg `slice(2)` returns `[2,3,4]`
+- [x] test `Difference` -- `r.expr([1,2,3,2]).difference([2])` returns `[1,3]`
+- [x] test `InsertAt` -- `r.expr([0,1,3]).insertAt(2, 2)` returns `[0,1,2,3]`
+- [x] test `DeleteAt` -- `r.expr([0,1,2,3]).deleteAt(1)` returns `[0,2,3]`
+- [x] test `ChangeAt` -- `r.expr([0,1,2]).changeAt(1, 9)` returns `[0,9,2]`
+- [x] test `SpliceAt` -- `r.expr([0,3,4]).spliceAt(1, [1,2])` returns `[0,1,2,3,4]`
+- [x] test array ops on table fields -- seed docs with array fields, update using append/prepend, read back and verify
+- [x] run `make test-integration` -- must pass
 
 ### Task 6: Set operations (setInsert, setIntersection, setUnion, setDifference)
 
