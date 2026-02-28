@@ -55,14 +55,14 @@ File: `internal/integration/string_time_join_test.go` (append to existing)
 
 File: `internal/integration/collection_ops_test.go` (new)
 
-- [ ] test `IsEmpty` -- empty table returns true, non-empty returns false, empty filter result returns true
-- [ ] test `Contains` -- `r.expr([1,2,3]).contains(2)` returns true, `contains(5)` returns false; table `.contains({"id":"x"})` variant
-- [ ] test `ConcatMap` -- `r.expr([[1,2],[3,4]]).concatMap(fn)` flattens to `[1,2,3,4]`; table with array field, concatMap to extract nested arrays
-- [ ] test `Union` -- `r.expr([1,2]).union([3,4])` returns `[1,2,3,4]`; union of two table queries
-- [ ] test `WithFields` -- seed docs with optional fields, `withFields("name","email")` returns only docs that have both fields
-- [ ] test `Keys` -- `r.expr({"a":1,"b":2}).keys()` returns `["a","b"]`; on table row via map
-- [ ] test `Values` -- `r.expr({"a":1,"b":2}).values()` returns `[1,2]`; on table row via map
-- [ ] run `make test-integration` -- must pass
+- [x] test `IsEmpty` -- empty table returns true, non-empty returns false, empty filter result returns true
+- [x] test `Contains` -- `r.expr([1,2,3]).contains(2)` returns true, `contains(5)` returns false; table `.contains({"id":"x"})` variant
+- [x] test `ConcatMap` -- `r.expr([[1,2],[3,4]]).concatMap(fn)` flattens to `[1,2,3,4]`; table with array field, concatMap to extract nested arrays
+- [x] test `Union` -- `r.expr([1,2]).union([3,4])` returns `[1,2,3,4]`; union of two table queries
+- [x] test `WithFields` -- seed docs with optional fields, `withFields("name","email")` returns only docs that have both fields
+- [x] test `Keys` -- `r.expr({"a":1,"b":2}).keys()` returns `["a","b"]`; on table row via map
+- [x] test `Values` -- `r.expr({"a":1,"b":2}).values()` returns `[1,2]`; on table row via map
+- [x] run `make test-integration` -- must pass
 
 ### Task 5: Array mutation operations (append, prepend, slice, difference, insertAt, deleteAt, changeAt, spliceAt)
 
