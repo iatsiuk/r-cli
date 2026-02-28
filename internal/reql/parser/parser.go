@@ -698,6 +698,26 @@ func parseRRandom(p *parser) (reql.Term, error) {
 }
 
 func (p *parser) parseRandomArgs() ([]interface{}, error) {
+	args, err := p.parseRandomNumericArgs()
+	if err != nil {
+		return nil, err
+	}
+	switch p.peek().Type {
+	case tokenLBrace:
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, opts)
+	case tokenRParen:
+		// no opts
+	default:
+		return nil, fmt.Errorf("r.random accepts 0, 1, or 2 arguments at position %d", p.peek().Pos)
+	}
+	return args, nil
+}
+
+func (p *parser) parseRandomNumericArgs() ([]interface{}, error) {
 	var args []interface{}
 	for len(args) < 2 {
 		next := p.peek().Type
@@ -713,18 +733,9 @@ func (p *parser) parseRandomArgs() ([]interface{}, error) {
 			break
 		}
 		p.advance()
-	}
-	switch p.peek().Type {
-	case tokenLBrace:
-		opts, err := p.parseOptArgs()
-		if err != nil {
-			return nil, err
+		if p.peek().Type == tokenRParen {
+			return nil, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
 		}
-		args = append(args, opts)
-	case tokenRParen:
-		// no opts
-	default:
-		return nil, fmt.Errorf("r.random accepts 0, 1, or 2 arguments at position %d", p.peek().Pos)
 	}
 	return args, nil
 }
