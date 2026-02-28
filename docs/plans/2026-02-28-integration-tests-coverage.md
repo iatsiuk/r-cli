@@ -116,10 +116,10 @@ File for geo: `internal/integration/geo_test.go` (append to existing)
 
 ### Task 9: Verify all operations covered
 
-- [ ] run full `make test-integration` -- all tests pass
-- [ ] run `make build` (includes linter) -- no issues
-- [ ] verify every operation from `without-tests.md` has at least one integration test
-- [ ] mark all items in `without-tests.md` as `[x]`
+- [x] run full `make test-integration` -- all tests pass
+- [x] run `make build` (includes linter) -- no issues
+- [x] verify every operation from `without-tests.md` has at least one integration test
+- [x] mark all items in `without-tests.md` as `[x]`
 
 ## Technical Details
 

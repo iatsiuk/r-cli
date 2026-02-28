@@ -4,67 +4,67 @@ Parser + unit tests present, integration tests missing.
 
 ## Top-level constructors
 
-- [ ] r.minval
-- [ ] r.maxval
-- [ ] r.error()
-- [ ] r.args()
-- [ ] r.literal()
-- [ ] r.geoJSON()
+- [x] r.minval
+- [x] r.maxval
+- [x] r.error()
+- [x] r.args()
+- [x] r.literal()
+- [x] r.geoJSON()
 
 ## Arithmetic
 
-- [ ] sub
-- [ ] div
-- [ ] mod
-- [ ] floor
-- [ ] ceil
-- [ ] round
+- [x] sub
+- [x] div
+- [x] mod
+- [x] floor
+- [x] ceil
+- [x] round
 
 ## Type operations
 
-- [ ] coerceTo
-- [ ] typeOf
+- [x] coerceTo
+- [x] typeOf
 
 ## String operations
 
-- [ ] toJSONString
+- [x] toJSONString
 
 ## Sequence/collection operations
 
-- [ ] concatMap
-- [ ] isEmpty
-- [ ] contains
-- [ ] union
-- [ ] withFields
-- [ ] keys
-- [ ] values
+- [x] concatMap
+- [x] isEmpty
+- [x] contains
+- [x] union
+- [x] withFields
+- [x] keys
+- [x] values
 
 ## Array mutation operations
 
-- [ ] append
-- [ ] prepend
-- [ ] slice
-- [ ] difference
-- [ ] insertAt
-- [ ] deleteAt
-- [ ] changeAt
-- [ ] spliceAt
+- [x] append
+- [x] prepend
+- [x] slice
+- [x] difference
+- [x] insertAt
+- [x] deleteAt
+- [x] changeAt
+- [x] spliceAt
 
 ## Set operations
 
-- [ ] setInsert
-- [ ] setIntersection
-- [ ] setUnion
-- [ ] setDifference
+- [x] setInsert
+- [x] setIntersection
+- [x] setUnion
+- [x] setDifference
 
 ## Time operations
 
-- [ ] during
+- [x] during
 
 ## Geo operations
 
-- [ ] toGeoJSON
-- [ ] intersects
-- [ ] includes
-- [ ] fill
-- [ ] polygonSub
+- [x] toGeoJSON
+- [x] intersects
+- [x] includes
+- [x] fill
+- [x] polygonSub
