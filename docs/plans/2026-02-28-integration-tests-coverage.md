@@ -39,10 +39,10 @@ File: `internal/integration/arithmetic_test.go` (new)
 
 File: `internal/integration/type_ops_test.go` (new)
 
-- [ ] test `TypeOf` -- `r.expr(1).typeOf()` returns `"NUMBER"`, `r.expr("s").typeOf()` returns `"STRING"`, `r.expr([]).typeOf()` returns `"ARRAY"`, `r.expr(null).typeOf()` returns `"NULL"`, table typeOf returns `"TABLE"`
-- [ ] test `CoerceTo` -- number to string `r.expr(42).coerceTo("STRING")` returns `"42"`, string to number `r.expr("123").coerceTo("NUMBER")` returns 123, invalid coercion returns error
-- [ ] test `CoerceTo` on table field -- seed docs, map field with coerceTo
-- [ ] run `make test-integration` -- must pass
+- [x] test `TypeOf` -- `r.expr(1).typeOf()` returns `"NUMBER"`, `r.expr("s").typeOf()` returns `"STRING"`, `r.expr([]).typeOf()` returns `"ARRAY"`, `r.expr(null).typeOf()` returns `"NULL"`, table typeOf returns `"TABLE"`
+- [x] test `CoerceTo` -- number to string `r.expr(42).coerceTo("STRING")` returns `"42"`, string to number `r.expr("123").coerceTo("NUMBER")` returns 123, invalid coercion returns error
+- [x] test `CoerceTo` on table field -- seed docs, map field with coerceTo
+- [x] run `make test-integration` -- must pass
 
 ### Task 3: String operation (toJSONString)
 
