@@ -76,17 +76,17 @@ File: `internal/integration/string_time_join_test.go` (append)
 ### Task 5: Time operation tests (11 methods)
 File: `internal/integration/time_ops_test.go` (append)
 
-- [ ] `TestToISO8601` -- `reql.EpochTime(1704067200).ToISO8601()` -> ISO string containing "2024-01-01"
-- [ ] `TestInTimezone` -- `reql.EpochTime(epoch).InTimezone("+05:00").Hours()` -> verify shifted hour
-- [ ] `TestTimezone` -- `reql.EpochTime(epoch).InTimezone("+03:00").Timezone()` -> `"+03:00"`
-- [ ] `TestDate` -- `reql.EpochTime(epoch).Date().ToEpochTime()` -> midnight of that day
-- [ ] `TestTimeOfDay` -- `reql.EpochTime(epoch).TimeOfDay()` -> seconds since midnight
-- [ ] `TestMonth` -- `reql.EpochTime(1704067200).Month()` -> 1 (January)
-- [ ] `TestDay` -- `reql.EpochTime(1704067200).Day()` -> 1
-- [ ] `TestDayOfWeek` -- `reql.EpochTime(1704067200).DayOfWeek()` -> 1 (Monday, 2024-01-01)
-- [ ] `TestDayOfYear` -- `reql.EpochTime(1704067200).DayOfYear()` -> 1
-- [ ] `TestHoursMinutesSeconds` -- `reql.Time(2024, 1, 15, 14, 30, 45, "+00:00")` -> verify `.Hours()` = 14, `.Minutes()` = 30, `.Seconds()` = 45
-- [ ] run `make test-integration` -- must pass
+- [x] `TestToISO8601` -- `reql.EpochTime(1704067200).ToISO8601()` -> ISO string containing "2024-01-01"
+- [x] `TestInTimezone` -- `reql.EpochTime(epoch).InTimezone("+05:00").Hours()` -> verify shifted hour
+- [x] `TestTimezone` -- `reql.EpochTime(epoch).InTimezone("+03:00").Timezone()` -> `"+03:00"`
+- [x] `TestDate` -- `reql.EpochTime(epoch).Date().ToEpochTime()` -> midnight of that day
+- [x] `TestTimeOfDay` -- `reql.EpochTime(epoch).TimeOfDay()` -> seconds since midnight
+- [x] `TestMonth` -- `reql.EpochTime(1704067200).Month()` -> 1 (January)
+- [x] `TestDay` -- `reql.EpochTime(1704067200).Day()` -> 1
+- [x] `TestDayOfWeek` -- `reql.EpochTime(1704067200).DayOfWeek()` -> 1 (Monday, 2024-01-01)
+- [x] `TestDayOfYear` -- `reql.EpochTime(1704067200).DayOfYear()` -> 1
+- [x] `TestHoursMinutesSeconds` -- `reql.EpochTime(1705329045)` (2024-01-15 14:30:45 UTC) -> verify `.Hours()` = 14, `.Minutes()` = 30, `.Seconds()` = 45
+- [x] run `make test-integration` -- must pass
 
 ### Task 6: Administration tests (sync, rebalance, reconfigure)
 File: `internal/integration/table_test.go` (append)

@@ -5,10 +5,264 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"r-cli/internal/reql"
 )
+
+func TestToISO8601(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// 1704067200 = 2024-01-01 00:00:00 UTC
+	_, cur, err := exec.Run(ctx, reql.EpochTime(1704067200).ToISO8601(), nil)
+	if err != nil {
+		t.Fatalf("toISO8601: %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got string
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !strings.Contains(got, "2024-01-01") {
+		t.Errorf("toISO8601=%q does not contain 2024-01-01", got)
+	}
+}
+
+func TestInTimezone(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// 1704067200 = 2024-01-01 00:00:00 UTC; in +05:00 the hour is 5
+	_, cur, err := exec.Run(ctx, reql.EpochTime(1704067200).InTimezone("+05:00").Hours(), nil)
+	if err != nil {
+		t.Fatalf("inTimezone.hours: %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got float64
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 5 {
+		t.Errorf("inTimezone(+05:00).hours=%v, want 5", got)
+	}
+}
+
+func TestTimezone(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	_, cur, err := exec.Run(ctx, reql.EpochTime(1704067200).InTimezone("+03:00").Timezone(), nil)
+	if err != nil {
+		t.Fatalf("timezone: %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got string
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != "+03:00" {
+		t.Errorf("timezone=%q, want +03:00", got)
+	}
+}
+
+func TestDate(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// 1704103200 = 2024-01-01 10:00:00 UTC; date() truncates to midnight = 1704067200
+	_, cur, err := exec.Run(ctx, reql.EpochTime(1704103200).Date().ToEpochTime(), nil)
+	if err != nil {
+		t.Fatalf("date: %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got float64
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 1704067200 {
+		t.Errorf("date().toEpochTime=%v, want 1704067200", got)
+	}
+}
+
+func TestTimeOfDay(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// 1704103200 = 2024-01-01 10:00:00 UTC; timeOfDay = 10*3600 = 36000 seconds
+	_, cur, err := exec.Run(ctx, reql.EpochTime(1704103200).TimeOfDay(), nil)
+	if err != nil {
+		t.Fatalf("timeOfDay: %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got float64
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 36000 {
+		t.Errorf("timeOfDay=%v, want 36000", got)
+	}
+}
+
+func TestMonth(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// 1704067200 = 2024-01-01 -> month 1
+	_, cur, err := exec.Run(ctx, reql.EpochTime(1704067200).Month(), nil)
+	if err != nil {
+		t.Fatalf("month: %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got float64
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 1 {
+		t.Errorf("month=%v, want 1", got)
+	}
+}
+
+func TestDay(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// 1704067200 = 2024-01-01 -> day 1
+	_, cur, err := exec.Run(ctx, reql.EpochTime(1704067200).Day(), nil)
+	if err != nil {
+		t.Fatalf("day: %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got float64
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 1 {
+		t.Errorf("day=%v, want 1", got)
+	}
+}
+
+func TestDayOfWeek(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// 1704067200 = 2024-01-01 = Monday -> dayOfWeek 1
+	_, cur, err := exec.Run(ctx, reql.EpochTime(1704067200).DayOfWeek(), nil)
+	if err != nil {
+		t.Fatalf("dayOfWeek: %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got float64
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 1 {
+		t.Errorf("dayOfWeek=%v, want 1 (Monday)", got)
+	}
+}
+
+func TestDayOfYear(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// 1704067200 = 2024-01-01 -> dayOfYear 1
+	_, cur, err := exec.Run(ctx, reql.EpochTime(1704067200).DayOfYear(), nil)
+	if err != nil {
+		t.Fatalf("dayOfYear: %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var got float64
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 1 {
+		t.Errorf("dayOfYear=%v, want 1", got)
+	}
+}
+
+func TestHoursMinutesSeconds(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// 1705329045 = 2024-01-15 14:30:45 UTC
+	ts := reql.EpochTime(1705329045)
+
+	checks := []struct {
+		name string
+		term reql.Term
+		want float64
+	}{
+		{"hours", ts.Hours(), 14},
+		{"minutes", ts.Minutes(), 30},
+		{"seconds", ts.Seconds(), 45},
+	}
+
+	for _, c := range checks {
+		_, cur, err := exec.Run(ctx, c.term, nil)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		raw, err := cur.Next()
+		closeCursor(cur)
+		if err != nil {
+			t.Fatalf("%s cursor next: %v", c.name, err)
+		}
+		var got float64
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Fatalf("%s unmarshal: %v", c.name, err)
+		}
+		if got != c.want {
+			t.Errorf("%s=%v, want %v", c.name, got, c.want)
+		}
+	}
+}
 
 func TestDuringBasicFilter(t *testing.T) {
 	t.Parallel()
