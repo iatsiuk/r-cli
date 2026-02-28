@@ -25,15 +25,15 @@ Add integration tests for all operations listed in `without-tests.md` -- 39 oper
 
 File: `internal/integration/arithmetic_test.go` (new)
 
-- [ ] create test file with build tag and helpers
-- [ ] test `Sub` -- `r.expr(10).sub(3)` returns 7, chained `r.expr(10).sub(3).sub(2)` returns 5
-- [ ] test `Div` -- `r.expr(10).div(3)` returns float, division by zero returns error
-- [ ] test `Mod` -- `r.expr(10).mod(3)` returns 1, mod by zero returns error
-- [ ] test `Floor` -- `r.expr(3.7).floor()` returns 3, negative `r.expr(-2.3).floor()` returns -3
-- [ ] test `Ceil` -- `r.expr(3.2).ceil()` returns 4, negative `r.expr(-2.7).ceil()` returns -2
-- [ ] test `Round` -- `r.expr(3.5).round()` returns 4, `r.expr(3.4).round()` returns 3
-- [ ] test arithmetic on table fields -- seed docs with numeric fields, `map` with `Sub`/`Div`/`Mod`/`Floor`/`Ceil`/`Round` via `Func`+`Var`
-- [ ] run `make test-integration` -- must pass
+- [x] create test file with build tag and helpers
+- [x] test `Sub` -- `r.expr(10).sub(3)` returns 7, chained `r.expr(10).sub(3).sub(2)` returns 5
+- [x] test `Div` -- `r.expr(10).div(3)` returns float, division by zero returns error
+- [x] test `Mod` -- `r.expr(10).mod(3)` returns 1, mod by zero returns error
+- [x] test `Floor` -- `r.expr(3.7).floor()` returns 3, negative `r.expr(-2.3).floor()` returns -3
+- [x] test `Ceil` -- `r.expr(3.2).ceil()` returns 4, negative `r.expr(-2.7).ceil()` returns -2
+- [x] test `Round` -- `r.expr(3.5).round()` returns 4, `r.expr(3.4).round()` returns 3
+- [x] test arithmetic on table fields -- seed docs with numeric fields, `map` with `Sub`/`Div`/`Mod`/`Floor`/`Ceil`/`Round` via `Func`+`Var`
+- [x] run `make test-integration` -- must pass
 
 ### Task 2: Type operations (coerceTo, typeOf)
 
