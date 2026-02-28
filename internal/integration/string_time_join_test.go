@@ -258,6 +258,86 @@ func TestEqJoinSecondaryIndex(t *testing.T) {
 	}
 }
 
+func TestToJSONString(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	cases := []struct {
+		name  string
+		term  reql.Term
+		check func(t *testing.T, got string)
+	}{
+		{
+			name: "object",
+			term: reql.Datum(map[string]interface{}{"a": 1}).ToJSONString(),
+			check: func(t *testing.T, got string) {
+				// normalize both sides to compare key/value pairs
+				var obj map[string]interface{}
+				if err := json.Unmarshal([]byte(got), &obj); err != nil {
+					t.Fatalf("toJSONString(object) result not valid JSON: %q, err: %v", got, err)
+				}
+				if obj["a"] != float64(1) {
+					t.Errorf("toJSONString(object)[a]=%v, want 1", obj["a"])
+				}
+			},
+		},
+		{
+			name: "array",
+			term: reql.Array(1, 2).ToJSONString(),
+			check: func(t *testing.T, got string) {
+				var arr []float64
+				if err := json.Unmarshal([]byte(got), &arr); err != nil {
+					t.Fatalf("toJSONString(array) result not valid JSON: %q, err: %v", got, err)
+				}
+				if len(arr) != 2 || arr[0] != 1 || arr[1] != 2 {
+					t.Errorf("toJSONString(array)=%v, want [1,2]", arr)
+				}
+			},
+		},
+		{
+			name: "string",
+			term: reql.Datum("hello").ToJSONString(),
+			check: func(t *testing.T, got string) {
+				// toJSONString of a string wraps it in JSON quotes
+				if got != `"hello"` {
+					t.Errorf("toJSONString(string)=%q, want %q", got, `"hello"`)
+				}
+			},
+		},
+		{
+			name: "number",
+			term: reql.Datum(42).ToJSONString(),
+			check: func(t *testing.T, got string) {
+				if got != "42" {
+					t.Errorf("toJSONString(number)=%q, want %q", got, "42")
+				}
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, cur, err := exec.Run(ctx, tc.term, nil)
+			if err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			defer closeCursor(cur)
+
+			raw, err := cur.Next()
+			if err != nil {
+				t.Fatalf("cursor next: %v", err)
+			}
+			var got string
+			if err := json.Unmarshal(raw, &got); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			tc.check(t, got)
+		})
+	}
+}
+
 func TestEqJoinZip(t *testing.T) {
 	t.Parallel()
 	exec := newExecutor(t)

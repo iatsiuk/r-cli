@@ -190,3 +190,233 @@ func TestGeoDistance(t *testing.T) {
 		t.Errorf("distance=%f meters, expected roughly 2100 (between 1000 and 5000)", dist)
 	}
 }
+
+func TestToGeoJSON(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	pt := reql.Point(-73.9857, 40.7484)
+	_, cur, err := exec.Run(ctx, pt.ToGeoJSON(), nil)
+	if err != nil {
+		t.Fatalf("toGeoJSON: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var gj struct {
+		Type        string    `json:"type"`
+		Coordinates []float64 `json:"coordinates"`
+	}
+	if err := json.Unmarshal(raw, &gj); err != nil {
+		t.Fatalf("unmarshal geojson: %v", err)
+	}
+	if gj.Type != "Point" {
+		t.Errorf("toGeoJSON type=%q, want Point", gj.Type)
+	}
+	if len(gj.Coordinates) != 2 {
+		t.Fatalf("toGeoJSON coordinates len=%d, want 2", len(gj.Coordinates))
+	}
+	if gj.Coordinates[0] != -73.9857 || gj.Coordinates[1] != 40.7484 {
+		t.Errorf("toGeoJSON coordinates=%v, want [-73.9857, 40.7484]", gj.Coordinates)
+	}
+}
+
+func TestGeoIntersects(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// polygon covering midtown manhattan: lon [-74.01, -73.95], lat [40.73, 40.77]
+	poly := reql.Polygon(
+		reql.Point(-74.01, 40.73),
+		reql.Point(-74.01, 40.77),
+		reql.Point(-73.95, 40.77),
+		reql.Point(-73.95, 40.73),
+	)
+	inside := reql.Point(-73.9857, 40.7484)  // times square -- inside polygon
+	outside := reql.Point(-73.9442, 40.6782) // brooklyn -- outside polygon
+
+	_, cur, err := exec.Run(ctx, poly.Intersects(inside), nil)
+	if err != nil {
+		t.Fatalf("intersects(inside): %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var ok bool
+	if err := json.Unmarshal(raw, &ok); err != nil {
+		t.Fatalf("unmarshal intersects result: %v", err)
+	}
+	if !ok {
+		t.Error("intersects(inside point) = false, want true")
+	}
+
+	_, cur2, err := exec.Run(ctx, poly.Intersects(outside), nil)
+	if err != nil {
+		t.Fatalf("intersects(outside): %v", err)
+	}
+	raw2, err := cur2.Next()
+	closeCursor(cur2)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var ok2 bool
+	if err := json.Unmarshal(raw2, &ok2); err != nil {
+		t.Fatalf("unmarshal intersects result: %v", err)
+	}
+	if ok2 {
+		t.Error("intersects(outside point) = true, want false")
+	}
+}
+
+func TestGeoIncludes(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// polygon covering midtown manhattan: lon [-74.01, -73.95], lat [40.73, 40.77]
+	poly := reql.Polygon(
+		reql.Point(-74.01, 40.73),
+		reql.Point(-74.01, 40.77),
+		reql.Point(-73.95, 40.77),
+		reql.Point(-73.95, 40.73),
+	)
+	inside := reql.Point(-73.9857, 40.7484)  // times square -- inside polygon
+	outside := reql.Point(-73.9442, 40.6782) // brooklyn -- outside polygon
+
+	_, cur, err := exec.Run(ctx, poly.Includes(inside), nil)
+	if err != nil {
+		t.Fatalf("includes(inside): %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var ok bool
+	if err := json.Unmarshal(raw, &ok); err != nil {
+		t.Fatalf("unmarshal includes result: %v", err)
+	}
+	if !ok {
+		t.Error("includes(inside point) = false, want true")
+	}
+
+	_, cur2, err := exec.Run(ctx, poly.Includes(outside), nil)
+	if err != nil {
+		t.Fatalf("includes(outside): %v", err)
+	}
+	raw2, err := cur2.Next()
+	closeCursor(cur2)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var ok2 bool
+	if err := json.Unmarshal(raw2, &ok2); err != nil {
+		t.Fatalf("unmarshal includes result: %v", err)
+	}
+	if ok2 {
+		t.Error("includes(outside point) = true, want false")
+	}
+}
+
+func TestGeoFill(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// closed line (first == last point) forms a rectangle; fill() converts to polygon
+	line := reql.Line(
+		reql.Point(-74.01, 40.73),
+		reql.Point(-74.01, 40.77),
+		reql.Point(-73.95, 40.77),
+		reql.Point(-73.95, 40.73),
+		reql.Point(-74.01, 40.73), // close the loop
+	)
+
+	_, cur, err := exec.Run(ctx, line.Fill().ToGeoJSON(), nil)
+	if err != nil {
+		t.Fatalf("fill: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var gj struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(raw, &gj); err != nil {
+		t.Fatalf("unmarshal fill result: %v", err)
+	}
+	if gj.Type != "Polygon" {
+		t.Errorf("fill().toGeoJSON() type=%q, want Polygon", gj.Type)
+	}
+}
+
+func TestGeoPolygonSub(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	// outer: large rectangle covering midtown manhattan
+	outer := reql.Polygon(
+		reql.Point(-74.01, 40.73),
+		reql.Point(-74.01, 40.77),
+		reql.Point(-73.95, 40.77),
+		reql.Point(-73.95, 40.73),
+	)
+	// inner: small rectangle inside outer (the hole)
+	inner := reql.Polygon(
+		reql.Point(-73.99, 40.74),
+		reql.Point(-73.99, 40.76),
+		reql.Point(-73.97, 40.76),
+		reql.Point(-73.97, 40.74),
+	)
+
+	withHole := outer.PolygonSub(inner)
+
+	// point inside the hole should NOT be included by the result polygon
+	holeCenter := reql.Point(-73.98, 40.75)
+	_, cur, err := exec.Run(ctx, withHole.Includes(holeCenter), nil)
+	if err != nil {
+		t.Fatalf("polygonSub includes(holeCenter): %v", err)
+	}
+	raw, err := cur.Next()
+	closeCursor(cur)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var inHole bool
+	if err := json.Unmarshal(raw, &inHole); err != nil {
+		t.Fatalf("unmarshal polygonSub includes: %v", err)
+	}
+	if inHole {
+		t.Error("polygonSub includes(holeCenter) = true, want false")
+	}
+
+	// point inside outer but outside hole should be included
+	outerOnly := reql.Point(-73.96, 40.745)
+	_, cur2, err := exec.Run(ctx, withHole.Includes(outerOnly), nil)
+	if err != nil {
+		t.Fatalf("polygonSub includes(outerOnly): %v", err)
+	}
+	raw2, err := cur2.Next()
+	closeCursor(cur2)
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var inOuter bool
+	if err := json.Unmarshal(raw2, &inOuter); err != nil {
+		t.Fatalf("unmarshal polygonSub includes: %v", err)
+	}
+	if !inOuter {
+		t.Error("polygonSub includes(outerOnly) = false, want true")
+	}
+}
