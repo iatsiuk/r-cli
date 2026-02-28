@@ -4,14 +4,15 @@ RethinkDB command-line client. Execute ReQL queries, manage databases, tables, i
 
 ## Installation
 
-```bash
-# from source
-go install r-cli/cmd/r-cli@latest
+### Homebrew
 
-# from releases (macOS Apple Silicon example)
-curl -L https://github.com/iatsiuk/r-cli/releases/latest/download/r-cli_VERSION_darwin_arm64.tar.gz | tar xz
-chmod +x r-cli && mv r-cli /usr/local/bin/
+```bash
+brew install iatsiuk/tap/r-cli
 ```
+
+### From releases
+
+Download the binary from the [GitHub Releases](https://github.com/iatsiuk/r-cli/releases) page.
 
 ## Quick Usage
 

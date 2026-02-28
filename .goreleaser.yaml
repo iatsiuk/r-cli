@@ -21,6 +21,15 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+homebrew_casks:
+  - name: r-cli
+    repository:
+      owner: iatsiuk
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/iatsiuk/r-cli"
+    description: "CLI tool for RethinkDB - query, manage, and interact with RethinkDB databases"
+
 changelog:
   sort: asc
   filters:
