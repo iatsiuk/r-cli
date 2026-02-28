@@ -1168,6 +1168,36 @@ func Random(args ...interface{}) Term {
 	return Term{termType: proto.TermRandom, args: argTerms, opts: opts}
 }
 
+// BitAnd creates a BIT_AND term ([191, [val, n]]).
+func (t Term) BitAnd(n interface{}) Term {
+	return t.binop(proto.TermBitAnd, n)
+}
+
+// BitOr creates a BIT_OR term ([192, [val, n]]).
+func (t Term) BitOr(n interface{}) Term {
+	return t.binop(proto.TermBitOr, n)
+}
+
+// BitXor creates a BIT_XOR term ([193, [val, n]]).
+func (t Term) BitXor(n interface{}) Term {
+	return t.binop(proto.TermBitXor, n)
+}
+
+// BitNot creates a BIT_NOT term ([194, [val]]).
+func (t Term) BitNot() Term {
+	return Term{termType: proto.TermBitNot, args: []Term{t}}
+}
+
+// BitSal creates a BIT_SAL term ([195, [val, n]]).
+func (t Term) BitSal(n interface{}) Term {
+	return t.binop(proto.TermBitSal, n)
+}
+
+// BitSar creates a BIT_SAR term ([196, [val, n]]).
+func (t Term) BitSar(n interface{}) Term {
+	return t.binop(proto.TermBitSar, n)
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}

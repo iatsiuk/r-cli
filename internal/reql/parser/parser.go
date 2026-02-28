@@ -1394,6 +1394,12 @@ func registerArithChain(m map[string]chainFn) {
 	m["floor"] = noArgChain(func(t reql.Term) reql.Term { return t.Floor() })
 	m["ceil"] = noArgChain(func(t reql.Term) reql.Term { return t.Ceil() })
 	m["round"] = noArgChain(func(t reql.Term) reql.Term { return t.Round() })
+	m["bitAnd"] = oneArgChain(func(t, n reql.Term) reql.Term { return t.BitAnd(n) })
+	m["bitOr"] = oneArgChain(func(t, n reql.Term) reql.Term { return t.BitOr(n) })
+	m["bitXor"] = oneArgChain(func(t, n reql.Term) reql.Term { return t.BitXor(n) })
+	m["bitNot"] = noArgChain(func(t reql.Term) reql.Term { return t.BitNot() })
+	m["bitSal"] = oneArgChain(func(t, n reql.Term) reql.Term { return t.BitSal(n) })
+	m["bitSar"] = oneArgChain(func(t, n reql.Term) reql.Term { return t.BitSar(n) })
 }
 
 func registerStringChain(m map[string]chainFn) {

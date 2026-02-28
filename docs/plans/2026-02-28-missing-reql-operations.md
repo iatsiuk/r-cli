@@ -161,15 +161,15 @@ Need 6 new reql methods + parser support + tests.
 `.bitNot()` -- no args, wire format `[194, [val]]`
 `.bitSal(n)`, `.bitSar(n)` -- single int arg, wire format `[195..196, [val, n]]`
 
-- [ ] write reql unit tests for all 6 bitwise methods -- JSON wire format (term_test.go)
-- [ ] implement `BitAnd(n)`, `BitOr(n)`, `BitXor(n)`, `BitNot()`, `BitSal(n)`, `BitSar(n)` on Term (term.go)
-- [ ] run reql unit tests -- must pass
-- [ ] write parser tests for `r.expr(5).bitAnd(3)`, `.bitOr()`, `.bitXor()`, `.bitNot()`, `.bitSal()`, `.bitSar()` (parser_test.go)
-- [ ] register all 6 in chain builders: `bitNot` as `noArgChain`, rest as `oneArgChain` (parser.go)
-- [ ] run parser unit tests -- must pass
-- [ ] write integration tests: `r.expr(5).bitAnd(3)` = 1, `r.expr(5).bitOr(3)` = 7, etc. (integration)
-- [ ] write integration test: `r.expr(7).bitNot()` returns -8, shift operations (integration)
-- [ ] run `make build` + `make test-integration` -- must pass
+- [x] write reql unit tests for all 6 bitwise methods -- JSON wire format (term_test.go)
+- [x] implement `BitAnd(n)`, `BitOr(n)`, `BitXor(n)`, `BitNot()`, `BitSal(n)`, `BitSar(n)` on Term (term.go)
+- [x] run reql unit tests -- must pass
+- [x] write parser tests for `r.expr(5).bitAnd(3)`, `.bitOr()`, `.bitXor()`, `.bitNot()`, `.bitSal()`, `.bitSar()` (parser_test.go)
+- [x] register all 6 in chain builders: `bitNot` as `noArgChain`, rest as `oneArgChain` (parser.go)
+- [x] run parser unit tests -- must pass
+- [x] write integration tests: `r.expr(5).bitAnd(3)` = 1, `r.expr(5).bitOr(3)` = 7, etc. (integration)
+- [x] write integration test: `r.expr(7).bitNot()` returns -8, shift operations (integration)
+- [x] run `make build` + `make test-integration` -- must pass
 
 ### Task 7: r.do / any.do() (most complex)
 

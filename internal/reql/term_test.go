@@ -1219,6 +1219,23 @@ func TestInfoOffsetsOf(t *testing.T) {
 	})
 }
 
+func TestBitwiseOperations(t *testing.T) {
+	t.Parallel()
+	base := Datum(5)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"bit_and", base.BitAnd(3), `[191,[5,3]]`},
+		{"bit_or", base.BitOr(3), `[192,[5,3]]`},
+		{"bit_xor", base.BitXor(3), `[193,[5,3]]`},
+		{"bit_not", base.BitNot(), `[194,[5]]`},
+		{"bit_sal", base.BitSal(2), `[195,[5,2]]`},
+		{"bit_sar", base.BitSar(1), `[196,[5,1]]`},
+	})
+}
+
 func TestFold(t *testing.T) {
 	t.Parallel()
 	fn := Func(Var(1).Add(Var(2)), 1, 2)

@@ -1398,6 +1398,44 @@ func TestParse_InfoOffsetsOf(t *testing.T) {
 	})
 }
 
+func TestParse_Bitwise(t *testing.T) {
+	t.Parallel()
+	base := `r.expr(5)`
+	baseTerm := reql.Datum(int64(5))
+	runParseTests(t, []parseTest{
+		{
+			"bitAnd",
+			base + `.bitAnd(3)`,
+			baseTerm.BitAnd(reql.Datum(int64(3))),
+		},
+		{
+			"bitOr",
+			base + `.bitOr(3)`,
+			baseTerm.BitOr(reql.Datum(int64(3))),
+		},
+		{
+			"bitXor",
+			base + `.bitXor(3)`,
+			baseTerm.BitXor(reql.Datum(int64(3))),
+		},
+		{
+			"bitNot",
+			base + `.bitNot()`,
+			baseTerm.BitNot(),
+		},
+		{
+			"bitSal",
+			base + `.bitSal(2)`,
+			baseTerm.BitSal(reql.Datum(int64(2))),
+		},
+		{
+			"bitSar",
+			base + `.bitSar(1)`,
+			baseTerm.BitSar(reql.Datum(int64(1))),
+		},
+	})
+}
+
 func TestParse_Fold(t *testing.T) {
 	t.Parallel()
 	runParseTests(t, []parseTest{
