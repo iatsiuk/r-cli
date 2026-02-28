@@ -97,9 +97,9 @@ File: `internal/integration/table_test.go` (append)
 - [x] run `make test-integration` -- must pass
 
 ### Task 7: Final verification
-- [ ] run full `make test-integration` -- all tests must pass
-- [ ] run `make build` -- linter must pass
-- [ ] update `docs/without-integration.md` -- remove covered methods or mark as done
+- [x] run full `make test-integration` -- all tests must pass
+- [x] run `make build` -- linter must pass
+- [x] update `docs/without-integration.md` -- remove covered methods or mark as done
 
 ## Technical Details
 
