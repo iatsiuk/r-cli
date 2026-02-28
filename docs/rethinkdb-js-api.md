@@ -770,7 +770,7 @@ r.expr([0,1,2,3,4,5]).slice(2,-2).run(conn, callback);
 r.expr([1,2,3]).nth(1).run(conn, callback)
 ```
 
-- [ ] ### offsetsOf
+- [x] ### offsetsOf
 
 **Syntax:** `sequence.offsetsOf(datum | predicate_function) → array`
 
@@ -858,7 +858,7 @@ r.table("posts").map(function(doc) {
 }).default(0).run(conn, callback);
 ```
 
-- [ ] ### fold
+- [x] ### fold
 
 **Syntax:**
 ```
@@ -1214,7 +1214,7 @@ r.table('users').get(1).update({
 }).run(conn, callback)
 ```
 
-- [ ] ### object
+- [x] ### object
 
 **Syntax:** `r.object([key, value,]...) → object`
 
@@ -1435,7 +1435,7 @@ r.table('users').filter(function(user) {
 }).run(conn, callback)
 ```
 
-- [ ] ### random
+- [x] ### random
 
 **Syntax:** `r.random() → number` / `r.random(number[, number], {float: true}) → number` / `r.random(integer[, integer]) → integer`
 
@@ -1479,7 +1479,7 @@ r.ceil(12.345).run(conn, callback);
 r.floor(12.345).run(conn, callback);
 ```
 
-- [ ] ### bitAnd
+- [x] ### bitAnd
 
 **Syntax:** `r.bitAnd(number) → number` / `r.bitAnd(number[, number, ...]) → number`
 
@@ -1490,7 +1490,7 @@ r.floor(12.345).run(conn, callback);
 r.expr(5).bitAnd(3).run(conn);
 ```
 
-- [ ] ### bitOr
+- [x] ### bitOr
 
 **Syntax:** `r.bitOr(number) → number` / `r.bitOr(number[, number, ...]) → number`
 
@@ -1501,7 +1501,7 @@ r.expr(5).bitAnd(3).run(conn);
 r.expr(5).bitOr(3).run(conn);
 ```
 
-- [ ] ### bitXor
+- [x] ### bitXor
 
 **Syntax:** `r.bitXor(number) → number` / `r.bitXor(number[, number, ...]) → number`
 
@@ -1512,7 +1512,7 @@ r.expr(5).bitOr(3).run(conn);
 r.expr(6).bitXor(4).run(conn);
 ```
 
-- [ ] ### bitNot
+- [x] ### bitNot
 
 **Syntax:** `r.bitNot() → number`
 
@@ -1523,7 +1523,7 @@ r.expr(6).bitXor(4).run(conn);
 r.expr(7).bitNot().run(conn);
 ```
 
-- [ ] ### bitSal
+- [x] ### bitSal
 
 **Syntax:** `r.bitSal(number) → number` / `r.bitSal(number[, number, ...]) → number`
 
@@ -1534,7 +1534,7 @@ r.expr(7).bitNot().run(conn);
 r.expr(5).bitSal(4).run(conn);
 ```
 
-- [ ] ### bitSar
+- [x] ### bitSar
 
 **Syntax:** `r.bitSar(number) → number` / `r.bitSar(number[, number, ...]) → number`
 
@@ -1563,7 +1563,7 @@ r.table("users").insert({
 }).run(conn, callback)
 ```
 
-- [ ] ### time
+- [x] ### time
 
 **Syntax:** `r.time(year, month, day[, hour, minute, second], timezone) → time`
 
@@ -1800,7 +1800,7 @@ r.now().toEpochTime().run(conn, callback)
 r.table('people').getAll(r.args(['Alice', 'Bob'])).run(conn, callback)
 ```
 
-- [ ] ### binary
+- [x] ### binary
 
 **Syntax:** `r.binary(data) → binary`
 
@@ -1817,7 +1817,7 @@ fs.readFile('./defaultAvatar.png', function (err, avatarImage) {
 });
 ```
 
-- [ ] ### do
+- [x] ### do
 
 **Syntax:** `any.do(function) → any` / `r.do([args]*, function) → any`
 
@@ -1858,7 +1858,7 @@ r.table('marvel').forEach(function(hero) {
 }).run(conn, callback)
 ```
 
-- [ ] ### range
+- [x] ### range
 
 **Syntax:** `r.range() → stream` / `r.range([startValue, ]endValue) → stream`
 
@@ -1948,7 +1948,7 @@ r.expr("foo").typeOf().run(conn, callback);
 // Result: "STRING"
 ```
 
-- [ ] ### info
+- [x] ### info
 
 **Syntax:** `any.info() → object` / `r.info(any) → object`
 
@@ -2008,7 +2008,7 @@ r.uuid().run(conn, callback)
 
 ## Geospatial Commands
 
-- [ ] ### circle
+- [x] ### circle
 
 **Syntax:** `r.circle([longitude, latitude], radius[, {numVertices: 32, geoSystem: 'WGS84', unit: 'm', fill: true}]) → geometry`
 
@@ -2135,7 +2135,7 @@ r.circle(point1, 2000).intersects(point2).run(conn, callback);
 // Result: true
 ```
 
-- [ ] ### line
+- [x] ### line
 
 **Syntax:** `r.line([lon1, lat1], [lon2, lat2], ...) → line`
 
@@ -2164,7 +2164,7 @@ r.table('geo').insert({
 }).run(conn, callback);
 ```
 
-- [ ] ### polygon
+- [x] ### polygon
 
 **Syntax:** `r.polygon([lon1, lat1], [lon2, lat2], [lon3, lat3], ...) → polygon`
 

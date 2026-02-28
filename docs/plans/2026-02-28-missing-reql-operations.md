@@ -194,11 +194,11 @@ Need 6 new reql methods + parser support + tests.
 
 ### Task 8: Verify and update documentation
 
-- [ ] verify all 13 operations work via `r-cli query` with sample expressions
-- [ ] run full test suite: `go test ./internal/reql/... ./internal/reql/parser/... -race -count=1`
-- [ ] run full integration suite: `make test-integration`
-- [ ] run linter: `make build`
-- [ ] update `docs/rethinkdb-js-api.md` -- set `[x]` for all 13 newly implemented operations
+- [x] verify all 13 operations work via `r-cli query` with sample expressions
+- [x] run full test suite: `go test ./internal/reql/... ./internal/reql/parser/... -race -count=1`
+- [x] run full integration suite: `make test-integration`
+- [x] run linter: `make build`
+- [x] update `docs/rethinkdb-js-api.md` -- set `[x]` for all 13 newly implemented operations
 
 ## Technical Details
 
