@@ -652,6 +652,78 @@ func parseRBinary(p *parser) (reql.Term, error) {
 	return reql.Binary(arg), nil
 }
 
+func parseRObject(p *parser) (reql.Term, error) {
+	args, err := p.parseArgList()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if len(args)%2 != 0 {
+		return reql.Term{}, fmt.Errorf("r.object requires an even number of arguments (key-value pairs), got %d", len(args))
+	}
+	pairs := make([]interface{}, len(args))
+	for i, a := range args {
+		pairs[i] = a
+	}
+	return reql.Object(pairs...), nil
+}
+
+func parseRRange(p *parser) (reql.Term, error) {
+	args, err := p.parseArgList()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if len(args) > 2 {
+		return reql.Term{}, fmt.Errorf("r.range accepts 0, 1, or 2 arguments, got %d", len(args))
+	}
+	pairs := make([]interface{}, len(args))
+	for i, a := range args {
+		pairs[i] = a
+	}
+	return reql.Range(pairs...), nil
+}
+
+func parseRRandom(p *parser) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenRParen {
+		p.advance()
+		return reql.Random(), nil
+	}
+	args, err := parseRandomBody(p)
+	if err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Random(args...), nil
+}
+
+// parseRandomBody parses the body of r.random(...): up to 2 numeric args plus optional opts.
+func parseRandomBody(p *parser) ([]interface{}, error) {
+	var args []interface{}
+	for len(args) < 2 && p.peek().Type != tokenLBrace && p.peek().Type != tokenRParen {
+		arg, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, arg)
+		if p.peek().Type != tokenComma {
+			break
+		}
+		p.advance()
+	}
+	if p.peek().Type == tokenLBrace {
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, opts)
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return nil, err
+	}
+	return args, nil
+}
+
 func parseRLine(p *parser) (reql.Term, error) {
 	args, err := p.parseArgList()
 	if err != nil {
@@ -1165,6 +1237,9 @@ func buildRBuilders() map[string]rBuilderFn {
 		"circle":    parseRCircle,
 		"time":      parseRTime,
 		"binary":    parseRBinary,
+		"object":    parseRObject,
+		"range":     parseRRange,
+		"random":    parseRRandom,
 	}
 }
 

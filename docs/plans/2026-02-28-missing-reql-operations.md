@@ -100,23 +100,23 @@ Need new reql functions + parser support + tests.
 **r.range()** / **r.range(end)** / **r.range(start, end):** generates integer sequence, wire format `[173, []]` / `[173, [end]]` / `[173, [start, end]]`
 **r.random()** / **r.random(n)** / **r.random(n, m)** with optional `{float: true}`: random number, wire format `[151, [...], opts?]`
 
-- [ ] write reql unit tests for `Object()`, `Range()`, `Random()` -- all arg variants + JSON wire format (term_test.go)
-- [ ] implement `func Object(pairs ...interface{}) Term` in term.go -- validate even arg count
-- [ ] implement `func Range(args ...interface{}) Term` in term.go -- 0, 1, or 2 int args
-- [ ] implement `func Random(args ...interface{}) Term` in term.go -- 0, 1, or 2 args + optional OptArgs
-- [ ] run reql unit tests -- must pass
-- [ ] write parser tests for `r.object("a", 1, "b", 2)` (parser_test.go)
-- [ ] write parser tests for `r.range()`, `r.range(10)`, `r.range(1, 10)` (parser_test.go)
-- [ ] write parser tests for `r.random()`, `r.random(100)`, `r.random(1, 10, {float: true})` (parser_test.go)
-- [ ] write parser error tests: r.object with odd arg count, r.range with >2 args
-- [ ] implement `parseRObject`, `parseRRange`, `parseRRandom` (parser.go)
-- [ ] register `"object"`, `"range"`, `"random"` in `buildRBuilders()` (parser.go)
-- [ ] run parser unit tests -- must pass
-- [ ] write integration test: `r.object("a", 1, "b", 2)` returns `{"a": 1, "b": 2}` (integration)
-- [ ] write integration test: `r.range(5)` returns `[0, 1, 2, 3, 4]` (integration)
-- [ ] write integration test: `r.range(2, 5)` returns `[2, 3, 4]` (integration)
-- [ ] write integration test: `r.random()` returns float in [0, 1), `r.random(10)` returns int in [0, 10) (integration)
-- [ ] run `make build` + `make test-integration` -- must pass
+- [x] write reql unit tests for `Object()`, `Range()`, `Random()` -- all arg variants + JSON wire format (term_test.go)
+- [x] implement `func Object(pairs ...interface{}) Term` in term.go -- validate even arg count
+- [x] implement `func Range(args ...interface{}) Term` in term.go -- 0, 1, or 2 int args
+- [x] implement `func Random(args ...interface{}) Term` in term.go -- 0, 1, or 2 args + optional OptArgs
+- [x] run reql unit tests -- must pass
+- [x] write parser tests for `r.object("a", 1, "b", 2)` (parser_test.go)
+- [x] write parser tests for `r.range()`, `r.range(10)`, `r.range(1, 10)` (parser_test.go)
+- [x] write parser tests for `r.random()`, `r.random(100)`, `r.random(1, 10, {float: true})` (parser_test.go)
+- [x] write parser error tests: r.object with odd arg count, r.range with >2 args
+- [x] implement `parseRObject`, `parseRRange`, `parseRRandom` (parser.go)
+- [x] register `"object"`, `"range"`, `"random"` in `buildRBuilders()` (parser.go)
+- [x] run parser unit tests -- must pass
+- [x] write integration test: `r.object("a", 1, "b", 2)` returns `{"a": 1, "b": 2}` (integration)
+- [x] write integration test: `r.range(5)` returns `[0, 1, 2, 3, 4]` (integration)
+- [x] write integration test: `r.range(2, 5)` returns `[2, 3, 4]` (integration)
+- [x] write integration test: `r.random()` returns float in [0, 1), `r.random(10)` returns int in [0, 10) (integration)
+- [x] run `make build` + `make test-integration` -- must pass
 
 ### Task 4: Chain methods -- .info() and .offsetsOf()
 

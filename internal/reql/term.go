@@ -1102,6 +1102,53 @@ func (t Term) PolygonSub(other Term) Term {
 	return Term{termType: proto.TermPolygonSub, args: []Term{t, other}}
 }
 
+// Object creates an OBJECT term ([143, [k, v, ...]]).
+// Requires an even number of arguments (key-value pairs).
+func Object(pairs ...interface{}) Term {
+	if len(pairs)%2 != 0 {
+		return errTerm(errors.New("reql: Object requires an even number of arguments (key-value pairs)"))
+	}
+	args := make([]Term, len(pairs))
+	for i, p := range pairs {
+		args[i] = toTerm(p)
+	}
+	return Term{termType: proto.TermObject, args: args}
+}
+
+// Range creates a RANGE term ([173, [start?, end?]]).
+// Accepts 0, 1, or 2 arguments.
+func Range(args ...interface{}) Term {
+	if len(args) > 2 {
+		return errTerm(errors.New("reql: Range accepts 0, 1, or 2 arguments"))
+	}
+	termArgs := make([]Term, len(args))
+	for i, a := range args {
+		termArgs[i] = toTerm(a)
+	}
+	return Term{termType: proto.TermRange, args: termArgs}
+}
+
+// Random creates a RANDOM term ([151, [...], opts?]).
+// Accepts 0, 1, or 2 numeric arguments plus optional OptArgs.
+func Random(args ...interface{}) Term {
+	var opts map[string]interface{}
+	termArgs := args
+	if len(args) > 0 {
+		if o, ok := args[len(args)-1].(OptArgs); ok {
+			opts = map[string]interface{}(o)
+			termArgs = args[:len(args)-1]
+		}
+	}
+	if len(termArgs) > 2 {
+		return errTerm(errors.New("reql: Random accepts 0, 1, or 2 numeric arguments"))
+	}
+	argTerms := make([]Term, len(termArgs))
+	for i, a := range termArgs {
+		argTerms[i] = toTerm(a)
+	}
+	return Term{termType: proto.TermRandom, args: argTerms, opts: opts}
+}
+
 // binop builds a binary term [type, [t, value]].
 func (t Term) binop(tt proto.TermType, value interface{}) Term {
 	return Term{termType: tt, args: []Term{t, toTerm(value)}}

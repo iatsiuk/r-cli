@@ -1123,6 +1123,9 @@ func TestValidationErrors(t *testing.T) {
 		{"polygon_two_points", Polygon(Point(0, 0), Point(1, 1))},
 		{"getall_no_keys", DB("test").Table("users").GetAll()},
 		{"getall_only_opts", DB("test").Table("users").GetAll(OptArgs{"index": "name"})},
+		{"object_odd_args", Object("a", 1, "b")},
+		{"range_too_many_args", Range(1, 2, 3)},
+		{"random_too_many_args", Random(1, 2, 3)},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1133,4 +1136,59 @@ func TestValidationErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestObjectRangeRandom(t *testing.T) {
+	t.Parallel()
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"object_two_pairs",
+			Object("a", 1, "b", 2),
+			`[143,["a",1,"b",2]]`,
+		},
+		{
+			"object_empty",
+			Object(),
+			`[143,[]]`,
+		},
+		{
+			"range_empty",
+			Range(),
+			`[173,[]]`,
+		},
+		{
+			"range_one_arg",
+			Range(10),
+			`[173,[10]]`,
+		},
+		{
+			"range_two_args",
+			Range(2, 10),
+			`[173,[2,10]]`,
+		},
+		{
+			"random_no_args",
+			Random(),
+			`[151,[]]`,
+		},
+		{
+			"random_one_arg",
+			Random(100),
+			`[151,[100]]`,
+		},
+		{
+			"random_two_args",
+			Random(1, 10),
+			`[151,[1,10]]`,
+		},
+		{
+			"random_with_float_opt",
+			Random(1, 10, OptArgs{"float": true}),
+			`[151,[1,10],{"float":true}]`,
+		},
+	})
 }

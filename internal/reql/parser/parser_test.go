@@ -1266,6 +1266,92 @@ func TestParse_Binary(t *testing.T) {
 	})
 }
 
+func TestParse_Object(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"two_pairs",
+			`r.object("a", 1, "b", 2)`,
+			reql.Object("a", int64(1), "b", int64(2)),
+		},
+		{
+			"empty",
+			`r.object()`,
+			reql.Object(),
+		},
+	})
+}
+
+func TestParse_Range(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"no_args",
+			`r.range()`,
+			reql.Range(),
+		},
+		{
+			"one_arg",
+			`r.range(10)`,
+			reql.Range(int64(10)),
+		},
+		{
+			"two_args",
+			`r.range(1, 10)`,
+			reql.Range(int64(1), int64(10)),
+		},
+	})
+}
+
+func TestParse_Random(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"no_args",
+			`r.random()`,
+			reql.Random(),
+		},
+		{
+			"one_arg",
+			`r.random(100)`,
+			reql.Random(int64(100)),
+		},
+		{
+			"two_args",
+			`r.random(1, 10)`,
+			reql.Random(int64(1), int64(10)),
+		},
+		{
+			"with_float_opt",
+			`r.random(1, 10, {float: true})`,
+			reql.Random(int64(1), int64(10), reql.OptArgs{"float": true}),
+		},
+	})
+}
+
+func TestParse_ObjectRange_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.object("a", 1, "b")`, "even number"},
+		{`r.range(1, 2, 3)`, "0, 1, or 2 arguments"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
 func TestParse_GeoConstructors_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
