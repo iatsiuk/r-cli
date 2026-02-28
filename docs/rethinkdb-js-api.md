@@ -685,7 +685,7 @@ r.expr([1, 2, 3, 4, 5]).map(function (val) {
 }).run(conn, callback);
 ```
 
-- [ ] ### withFields
+- [x] ### withFields
 
 **Syntax:** `sequence.withFields([selector1, selector2...]) → stream`
 
@@ -696,7 +696,7 @@ r.expr([1, 2, 3, 4, 5]).map(function (val) {
 r.table('users').withFields('id', 'user', 'posts').run(conn, callback)
 ```
 
-- [ ] ### concatMap
+- [x] ### concatMap
 
 **Syntax:** `stream.concatMap(function) → stream`
 
@@ -747,7 +747,7 @@ r.table('marvel').orderBy('successMetric').skip(10).run(conn, callback)
 r.table('marvel').orderBy('belovedness').limit(10).run(conn, callback)
 ```
 
-- [ ] ### slice
+- [x] ### slice
 
 **Syntax:** `selection.slice(startOffset[, endOffset, {leftBound:'closed', rightBound:'open'}]) → selection`
 
@@ -781,7 +781,7 @@ r.expr([1,2,3]).nth(1).run(conn, callback)
 r.expr(['a','b','c']).offsetsOf('c').run(conn, callback)
 ```
 
-- [ ] ### isEmpty
+- [x] ### isEmpty
 
 **Syntax:** `sequence.isEmpty() → bool`
 
@@ -792,7 +792,7 @@ r.expr(['a','b','c']).offsetsOf('c').run(conn, callback)
 r.table('marvel').isEmpty().run(conn, callback)
 ```
 
-- [ ] ### union
+- [x] ### union
 
 **Syntax:** `stream.union(sequence[, sequence, ...][, {interleave: true}]) → stream`
 
@@ -963,7 +963,7 @@ r.table('marvel').concatMap(function(hero) {
 }).distinct().run(conn, callback)
 ```
 
-- [ ] ### contains
+- [x] ### contains
 
 **Syntax:** `sequence.contains([value | predicate_function, ...]) → bool`
 
@@ -1025,7 +1025,7 @@ r.table('marvel').get('thor').merge(
 ).run(conn, callback)
 ```
 
-- [ ] ### append
+- [x] ### append
 
 **Syntax:** `array.append(value) → array`
 
@@ -1036,7 +1036,7 @@ r.table('marvel').get('thor').merge(
 r.table('marvel').get('IronMan')('equipment').append('newBoots').run(conn, callback)
 ```
 
-- [ ] ### prepend
+- [x] ### prepend
 
 **Syntax:** `array.prepend(value) → array`
 
@@ -1047,7 +1047,7 @@ r.table('marvel').get('IronMan')('equipment').append('newBoots').run(conn, callb
 r.table('marvel').get('IronMan')('equipment').prepend('newBoots').run(conn, callback)
 ```
 
-- [ ] ### difference
+- [x] ### difference
 
 **Syntax:** `array.difference(array) → array`
 
@@ -1058,7 +1058,7 @@ r.table('marvel').get('IronMan')('equipment').prepend('newBoots').run(conn, call
 r.table('marvel').get('IronMan')('equipment').difference(['Boots']).run(conn, callback)
 ```
 
-- [ ] ### setInsert
+- [x] ### setInsert
 
 **Syntax:** `array.setInsert(value) → array`
 
@@ -1069,7 +1069,7 @@ r.table('marvel').get('IronMan')('equipment').difference(['Boots']).run(conn, ca
 r.table('marvel').get('IronMan')('equipment').setInsert('newBoots').run(conn, callback)
 ```
 
-- [ ] ### setUnion
+- [x] ### setUnion
 
 **Syntax:** `array.setUnion(array) → array`
 
@@ -1080,7 +1080,7 @@ r.table('marvel').get('IronMan')('equipment').setInsert('newBoots').run(conn, ca
 r.table('marvel').get('IronMan')('equipment').setUnion(['newBoots', 'arc_reactor']).run(conn, callback)
 ```
 
-- [ ] ### setIntersection
+- [x] ### setIntersection
 
 **Syntax:** `array.setIntersection(array) → array`
 
@@ -1091,7 +1091,7 @@ r.table('marvel').get('IronMan')('equipment').setUnion(['newBoots', 'arc_reactor
 r.table('marvel').get('IronMan')('equipment').setIntersection(['newBoots', 'arc_reactor']).run(conn, callback)
 ```
 
-- [ ] ### setDifference
+- [x] ### setDifference
 
 **Syntax:** `array.setDifference(array) → array`
 
@@ -1135,7 +1135,7 @@ r.table('marvel').get('IronMan').getField('firstAppearance').run(conn, callback)
 r.table('players').hasFields('games_won').run(conn, callback)
 ```
 
-- [ ] ### insertAt
+- [x] ### insertAt
 
 **Syntax:** `array.insertAt(offset, value) → array`
 
@@ -1146,7 +1146,7 @@ r.table('players').hasFields('games_won').run(conn, callback)
 r.expr(["Iron Man", "Spider-Man"]).insertAt(1, "Hulk").run(conn, callback)
 ```
 
-- [ ] ### spliceAt
+- [x] ### spliceAt
 
 **Syntax:** `array.spliceAt(offset, array) → array`
 
@@ -1157,7 +1157,7 @@ r.expr(["Iron Man", "Spider-Man"]).insertAt(1, "Hulk").run(conn, callback)
 r.expr(["Iron Man", "Spider-Man"]).spliceAt(1, ["Hulk", "Thor"]).run(conn, callback)
 ```
 
-- [ ] ### deleteAt
+- [x] ### deleteAt
 
 **Syntax:** `array.deleteAt(offset [,endOffset]) → array`
 
@@ -1168,7 +1168,7 @@ r.expr(["Iron Man", "Spider-Man"]).spliceAt(1, ["Hulk", "Thor"]).run(conn, callb
 r(['a','b','c','d','e','f']).deleteAt(1).run(conn, callback)
 ```
 
-- [ ] ### changeAt
+- [x] ### changeAt
 
 **Syntax:** `array.changeAt(offset, value) → array`
 
@@ -1179,7 +1179,7 @@ r(['a','b','c','d','e','f']).deleteAt(1).run(conn, callback)
 r.expr(["Iron Man", "Bruce", "Spider-Man"]).changeAt(1, "Hulk").run(conn, callback)
 ```
 
-- [ ] ### keys
+- [x] ### keys
 
 **Syntax:** `singleSelection.keys() → array` / `object.keys() → array`
 
@@ -1190,7 +1190,7 @@ r.expr(["Iron Man", "Bruce", "Spider-Man"]).changeAt(1, "Hulk").run(conn, callba
 r.table('users').get(1).keys().run(conn, callback)
 ```
 
-- [ ] ### values
+- [x] ### values
 
 **Syntax:** `singleSelection.values() → array` / `object.values() → array`
 
@@ -1201,7 +1201,7 @@ r.table('users').get(1).keys().run(conn, callback)
 r.table('users').get(1).values().run(conn, callback)
 ```
 
-- [ ] ### literal
+- [x] ### literal
 
 **Syntax:** `r.literal(object) → special`
 
@@ -1288,7 +1288,7 @@ r.expr("Sentence about LaTeX.").downcase().run(conn, callback)
 r.expr(2).add(2).run(conn, callback)
 ```
 
-- [ ] ### sub
+- [x] ### sub
 
 **Syntax:** `number.sub(number[, number, ...]) → number`
 
@@ -1310,7 +1310,7 @@ r.expr(2).sub(2).run(conn, callback)
 r.expr(2).mul(2).run(conn, callback)
 ```
 
-- [ ] ### div
+- [x] ### div
 
 **Syntax:** `number.div(number[, number, ...]) → number`
 
@@ -1321,7 +1321,7 @@ r.expr(2).mul(2).run(conn, callback)
 r.expr(2).div(2).run(conn, callback)
 ```
 
-- [ ] ### mod
+- [x] ### mod
 
 **Syntax:** `number.mod(number) → number`
 
@@ -1446,7 +1446,7 @@ r.table('users').filter(function(user) {
 r.random(100).run(conn, callback)
 ```
 
-- [ ] ### round
+- [x] ### round
 
 **Syntax:** `r.round(number) → number` / `number.round() → number`
 
@@ -1457,7 +1457,7 @@ r.random(100).run(conn, callback)
 r.round(12.345).run(conn, callback);
 ```
 
-- [ ] ### ceil
+- [x] ### ceil
 
 **Syntax:** `r.ceil(number) → number` / `number.ceil() → number`
 
@@ -1468,7 +1468,7 @@ r.round(12.345).run(conn, callback);
 r.ceil(12.345).run(conn, callback);
 ```
 
-- [ ] ### floor
+- [x] ### floor
 
 **Syntax:** `r.floor(number) → number` / `number.floor() → number`
 
@@ -1620,7 +1620,7 @@ r.table("users").filter(function(user) {
 })
 ```
 
-- [ ] ### during
+- [x] ### during
 
 **Syntax:** `time.during(startTime, endTime[, {leftBound: "closed", rightBound: "open"}]) → bool`
 
@@ -1789,7 +1789,7 @@ r.now().toEpochTime().run(conn, callback)
 
 ## Control Structures
 
-- [ ] ### args
+- [x] ### args
 
 **Syntax:** `r.args(array) → special`
 
@@ -1870,7 +1870,7 @@ r.range(4).run(conn, callback)
 // Result: [0, 1, 2, 3]
 ```
 
-- [ ] ### error
+- [x] ### error
 
 **Syntax:** `r.error(message) → error`
 
@@ -1925,7 +1925,7 @@ r.table('marvel').filter(
 ).run(conn, callback)
 ```
 
-- [ ] ### coerceTo
+- [x] ### coerceTo
 
 **Syntax:** `sequence.coerceTo('array') → array` / `value.coerceTo('string') → string` / `string.coerceTo('number') → number` / `array.coerceTo('object') → object`
 
@@ -1936,7 +1936,7 @@ r.table('marvel').filter(
 r.expr([['name', 'Ironman'], ['victories', 2000]]).coerceTo('object').run(conn, callback)
 ```
 
-- [ ] ### typeOf
+- [x] ### typeOf
 
 **Syntax:** `any.typeOf() → string`
 
@@ -1970,7 +1970,7 @@ r.table('marvel').info().run(conn, callback)
 r.json("[1,2,3]").run(conn, callback)
 ```
 
-- [ ] ### toJsonString / toJSON
+- [x] ### toJsonString / toJSON
 
 **Syntax:** `value.toJsonString() → string` / `value.toJSON() → string`
 
@@ -2037,7 +2037,7 @@ r.distance(point1, point2, {unit: 'km'}).run(conn, callback);
 // Result: 734.125
 ```
 
-- [ ] ### fill
+- [x] ### fill
 
 **Syntax:** `line.fill() → polygon`
 
@@ -2050,7 +2050,7 @@ r.table('geo').get(201).update({
 }, {nonAtomic: true}).run(conn, callback);
 ```
 
-- [ ] ### geojson
+- [x] ### geojson
 
 **Syntax:** `r.geojson(geojson) → geometry`
 
@@ -2069,7 +2069,7 @@ r.table('geo').insert({
 }).run(conn, callback);
 ```
 
-- [ ] ### toGeojson
+- [x] ### toGeojson
 
 **Syntax:** `geometry.toGeojson() → object`
 
@@ -2107,7 +2107,7 @@ r.table('hideouts').getNearest(secretBase,
 ).run(conn, callback);
 ```
 
-- [ ] ### includes
+- [x] ### includes
 
 **Syntax:** `sequence.includes(geometry) → sequence` / `geometry.includes(geometry) → bool`
 
@@ -2121,7 +2121,7 @@ r.circle(point1, 2000).includes(point2).run(conn, callback);
 // Result: true
 ```
 
-- [ ] ### intersects
+- [x] ### intersects
 
 **Syntax:** `sequence.intersects(geometry) → sequence` / `geometry.intersects(geometry) → bool`
 
@@ -2183,7 +2183,7 @@ r.table('geo').insert({
 }).run(conn, callback);
 ```
 
-- [ ] ### polygonSub
+- [x] ### polygonSub
 
 **Syntax:** `polygon1.polygonSub(polygon2) → polygon`
 
