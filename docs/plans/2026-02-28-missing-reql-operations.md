@@ -178,19 +178,19 @@ Need 6 new reql methods + parser support + tests.
 **r.do(args..., fn):** top-level form, wire format `[64, [fn, args...]]` (fn first in wire)
 **any.do(fn):** chain form, equivalent to `r.do(any, fn)`, wire format `[64, [fn, any]]`
 
-- [ ] write reql unit test for chain method `Term.Do(fn)` (term_test.go)
-- [ ] implement `func (t Term) Do(fn Term) Term` chain method in term.go
-- [ ] run reql unit tests -- must pass
-- [ ] write parser tests for `r.do(r.table("t"), (t) => t.count())` -- top-level (parser_test.go)
-- [ ] write parser tests for `r.table("t").do((t) => t.count())` -- chain form (parser_test.go)
-- [ ] write parser tests for `r.do(r.expr(1), r.expr(2), (a, b) => a.add(b))` -- multi-arg (parser_test.go)
-- [ ] implement `parseRDo` for top-level `r.do()` (parser.go) -- last arg is function, rest are data args
-- [ ] implement `chainDo` for chain form `.do(fn)` (parser.go)
-- [ ] register `"do"` in `buildRBuilders()` and chain builders (parser.go)
-- [ ] run parser unit tests -- must pass
-- [ ] write integration test: `r.do(r.db("d").table("t"), (t) => t.count())` (integration)
-- [ ] write integration test: `r.db("d").table("t").do((t) => t.count())` chain form (integration)
-- [ ] run `make build` + `make test-integration` -- must pass
+- [x] write reql unit test for chain method `Term.Do(fn)` (term_test.go)
+- [x] implement `func (t Term) Do(fn Term) Term` chain method in term.go
+- [x] run reql unit tests -- must pass
+- [x] write parser tests for `r.do(r.table("t"), (t) => t.count())` -- top-level (parser_test.go)
+- [x] write parser tests for `r.table("t").do((t) => t.count())` -- chain form (parser_test.go)
+- [x] write parser tests for `r.do(r.expr(1), r.expr(2), (a, b) => a.add(b))` -- multi-arg (parser_test.go)
+- [x] implement `parseRDo` for top-level `r.do()` (parser.go) -- last arg is function, rest are data args
+- [x] implement `chainDo` for chain form `.do(fn)` (parser.go)
+- [x] register `"do"` in `buildRBuilders()` and chain builders (parser.go)
+- [x] run parser unit tests -- must pass
+- [x] write integration test: `r.do(r.db("d").table("t"), (t) => t.count())` (integration)
+- [x] write integration test: `r.db("d").table("t").do((t) => t.count())` chain form (integration)
+- [x] run `make build` + `make test-integration` -- must pass
 
 ### Task 8: Verify and update documentation
 

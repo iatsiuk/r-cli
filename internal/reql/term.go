@@ -567,6 +567,12 @@ func Grant(user string, perms interface{}) Term {
 	return Term{termType: proto.TermGrant, args: []Term{Datum(user), toTerm(perms)}}
 }
 
+// Do creates a FUNCALL term ([64, [fn, t]]) -- chain form.
+// Equivalent to reql.Do(t, fn): applies fn to the current term.
+func (t Term) Do(fn Term) Term {
+	return Term{termType: proto.TermFuncCall, args: []Term{fn, t}}
+}
+
 // Do creates a FUNCALL term ([64, [fn, args...]]).
 // API order: Do(arg1, arg2, ..., fn) - function is the last argument.
 // Wire order: [64, [fn, arg1, arg2, ...]] - function goes first on the wire.

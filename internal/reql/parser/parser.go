@@ -782,6 +782,24 @@ func parseRCircle(p *parser) (reql.Term, error) {
 	return reql.Circle(center, radius), nil
 }
 
+// parseRDo parses r.do(arg1, ..., argN, fn).
+// The last argument is the function; preceding arguments are data args.
+// Wire format: [64, [fn, arg1, ..., argN]].
+func parseRDo(p *parser) (reql.Term, error) {
+	args, err := p.parseArgList()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if len(args) == 0 {
+		return reql.Term{}, fmt.Errorf("r.do requires at least a function argument")
+	}
+	iargs := make([]interface{}, len(args))
+	for i, a := range args {
+		iargs[i] = a
+	}
+	return reql.Do(iargs...), nil
+}
+
 // ---- Chain builder: specific implementations ----
 
 func chainTable(p *parser, t reql.Term) (reql.Term, error) {
@@ -1180,6 +1198,16 @@ func chainFold(p *parser, t reql.Term) (reql.Term, error) {
 	return t.Fold(base, fn), nil
 }
 
+// chainDo parses .do(fn) -- chain form of r.do.
+// Equivalent to r.do(t, fn): applies fn to the current term.
+func chainDo(p *parser, t reql.Term) (reql.Term, error) {
+	fn, err := p.parseOneArg()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	return t.Do(fn), nil
+}
+
 // parseFoldOpts parses {key: expr, ...} where values are full expressions (for lambdas in emit/finalEmit).
 func (p *parser) parseFoldOpts() (reql.OptArgs, error) {
 	if _, err := p.expect(tokenLBrace); err != nil {
@@ -1304,6 +1332,7 @@ func buildRBuilders() map[string]rBuilderFn {
 		"object":    parseRObject,
 		"range":     parseRRange,
 		"random":    parseRRandom,
+		"do":        parseRDo,
 	}
 }
 
@@ -1347,6 +1376,7 @@ func registerCoreChain(m map[string]chainFn) {
 	m["info"] = noArgChain(func(t reql.Term) reql.Term { return t.Info() })
 	m["offsetsOf"] = oneArgChain(func(t, pred reql.Term) reql.Term { return t.OffsetsOf(pred) })
 	m["fold"] = chainFold
+	m["do"] = chainDo
 }
 
 func registerFieldChain(m map[string]chainFn) {

@@ -1449,3 +1449,46 @@ func TestParse_Fold(t *testing.T) {
 		},
 	})
 }
+
+func TestParse_Do(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"toplevel_single_arg",
+			`r.do(r.table("t"), t => t.count())`,
+			reql.Do(reql.Table("t"), reql.Func(reql.Var(1).Count(), 1)),
+		},
+		{
+			"chain_form",
+			`r.table("t").do(t => t.count())`,
+			reql.Table("t").Do(reql.Func(reql.Var(1).Count(), 1)),
+		},
+		{
+			"toplevel_multi_arg",
+			`r.do(r.expr(1), r.expr(2), (a, b) => a.add(b))`,
+			reql.Do(reql.Datum(int64(1)), reql.Datum(int64(2)), reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2)),
+		},
+	})
+}
+
+func TestParse_Do_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.do()`, "r.do requires at least a function argument"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}

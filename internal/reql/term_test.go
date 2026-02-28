@@ -476,6 +476,23 @@ func TestDoError(t *testing.T) {
 	}
 }
 
+func TestChainDo(t *testing.T) {
+	t.Parallel()
+	// chain form: t.Do(fn) -> [64, [fn, t]]
+	fn := Func(Var(1).Count(), 1)
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"chain_do_table",
+			Table("t").Do(fn),
+			`[64,[[69,[[2,[1]],[43,[[10,[1]]]]]],[15,["t"]]]]`,
+		},
+	})
+}
+
 func TestAdminTerms(t *testing.T) {
 	t.Parallel()
 	db := DB("test")
