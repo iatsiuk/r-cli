@@ -70,8 +70,8 @@ File: `internal/integration/string_time_join_test.go` (append)
 ### Task 4: OuterJoin test
 File: `internal/integration/string_time_join_test.go` (append)
 
-- [ ] `TestOuterJoin` -- two tables (users, orders); outerJoin with lambda predicate matching user_id; verify all left rows present even without matching right rows (null right side for unmatched)
-- [ ] run `make test-integration` -- must pass
+- [x] `TestOuterJoin` -- two tables (users, orders); outerJoin with lambda predicate matching user_id; verify all left rows present even without matching right rows (null right side for unmatched)
+- [x] run `make test-integration` -- must pass
 
 ### Task 5: Time operation tests (11 methods)
 File: `internal/integration/time_ops_test.go` (append)

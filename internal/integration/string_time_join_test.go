@@ -514,6 +514,65 @@ func TestDowncaseOnTableField(t *testing.T) {
 	}
 }
 
+func TestOuterJoin(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "users")
+	createTestTable(t, exec, dbName, "orders")
+
+	seedTable(t, exec, dbName, "users", []map[string]interface{}{
+		{"id": "u1", "name": "alice"},
+		{"id": "u2", "name": "bob"},
+		{"id": "u3", "name": "carol"}, // no matching order
+	})
+	seedTable(t, exec, dbName, "orders", []map[string]interface{}{
+		{"id": "o1", "user_id": "u1", "amount": 100},
+		{"id": "o2", "user_id": "u2", "amount": 200},
+	})
+
+	// predicate: left.id == right.user_id
+	pred := reql.Func(reql.Var(1).GetField("id").Eq(reql.Var(2).GetField("user_id")), 1, 2)
+	_, cur, err := exec.Run(ctx,
+		reql.DB(dbName).Table("users").OuterJoin(reql.DB(dbName).Table("orders"), pred), nil)
+	if err != nil {
+		t.Fatalf("outerJoin: %v", err)
+	}
+	defer closeCursor(cur)
+
+	rows, err := cur.All()
+	if err != nil {
+		t.Fatalf("cursor all: %v", err)
+	}
+	// u1 matches o1, u2 matches o2, u3 has no match -> 3 pairs total
+	if len(rows) != 3 {
+		t.Fatalf("outerJoin got %d rows, want 3", len(rows))
+	}
+
+	unmatched := 0
+	for _, raw := range rows {
+		var pair struct {
+			Left  map[string]interface{} `json:"left"`
+			Right *map[string]interface{} `json:"right"`
+		}
+		if err := json.Unmarshal(raw, &pair); err != nil {
+			t.Fatalf("unmarshal pair: %v", err)
+		}
+		if pair.Left == nil {
+			t.Errorf("outerJoin left side must not be nil")
+		}
+		if pair.Right == nil {
+			unmatched++
+		}
+	}
+	if unmatched != 1 {
+		t.Errorf("outerJoin unmatched rows=%d, want 1 (carol)", unmatched)
+	}
+}
+
 func TestEqJoinZip(t *testing.T) {
 	t.Parallel()
 	exec := newExecutor(t)
