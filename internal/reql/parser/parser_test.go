@@ -1209,6 +1209,63 @@ func TestParse_GeoConstructors(t *testing.T) {
 	})
 }
 
+func TestParse_Time(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"4arg_form",
+			`r.time(2024, 1, 15, "+00:00")`,
+			reql.Time(2024, 1, 15, "+00:00"),
+		},
+		{
+			"7arg_form",
+			`r.time(2024, 1, 15, 10, 30, 0, "+00:00")`,
+			reql.TimeAt(2024, 1, 15, 10, 30, 0, "+00:00"),
+		},
+		{
+			"7arg_negative_seconds",
+			`r.time(2024, 6, 1, 23, 59, 45, "+05:30")`,
+			reql.TimeAt(2024, 6, 1, 23, 59, 45, "+05:30"),
+		},
+	})
+}
+
+func TestParse_Time_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		// too few args: missing timezone
+		{`r.time(2024, 1, 15)`, "expected ','"},
+		// 7-arg form missing second and timezone
+		{`r.time(2024, 1, 15, 10, 30)`, "expected ','"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParse_Binary(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"string_arg",
+			`r.binary("hello")`,
+			reql.Binary(reql.Datum("hello")),
+		},
+	})
+}
+
 func TestParse_GeoConstructors_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

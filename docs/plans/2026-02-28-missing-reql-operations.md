@@ -79,18 +79,18 @@ reql functions `Time()` and `Binary()` already exist. Need parser support + test
 
 `r.binary` takes a single base64-encoded string argument in the parser context (CLI can't pass raw binary, so base64 string is the practical input).
 
-- [ ] write parser tests for `r.time(2024, 1, 15, "+00:00")` -- 4-arg form (parser_test.go)
-- [ ] write parser tests for `r.time(2024, 1, 15, 10, 30, 0, "+00:00")` -- 7-arg form (parser_test.go)
-- [ ] write parser error test: r.time with wrong arg count (not 4 or 7)
-- [ ] write parser test for `r.binary(data)` (parser_test.go)
-- [ ] implement `parseRTime` -- parse 4 or 7 args, extend `reql.Time()` if needed for 7-arg form (parser.go, term.go)
-- [ ] implement `parseRBinary` -- parse single arg, call `reql.Binary()` (parser.go)
-- [ ] register `"time"`, `"binary"` in `buildRBuilders()` (parser.go)
-- [ ] run unit tests -- must pass
-- [ ] write integration test: `r.time(2024, 1, 15, "+00:00")` returns valid time object (integration)
-- [ ] write integration test: `r.time(2024, 1, 15, 10, 30, 0, "+00:00")` includes hours/minutes (integration)
-- [ ] write integration test: `r.binary()` round-trip with base64 data (integration)
-- [ ] run `make build` + `make test-integration` -- must pass
+- [x] write parser tests for `r.time(2024, 1, 15, "+00:00")` -- 4-arg form (parser_test.go)
+- [x] write parser tests for `r.time(2024, 1, 15, 10, 30, 0, "+00:00")` -- 7-arg form (parser_test.go)
+- [x] write parser error test: r.time with wrong arg count (not 4 or 7)
+- [x] write parser test for `r.binary(data)` (parser_test.go)
+- [x] implement `parseRTime` -- parse 4 or 7 args, extend `reql.Time()` if needed for 7-arg form (parser.go, term.go)
+- [x] implement `parseRBinary` -- parse single arg, call `reql.Binary()` (parser.go)
+- [x] register `"time"`, `"binary"` in `buildRBuilders()` (parser.go)
+- [x] run unit tests -- must pass
+- [x] write integration test: `r.time(2024, 1, 15, "+00:00")` returns valid time object (integration)
+- [x] write integration test: `r.time(2024, 1, 15, 10, 30, 0, "+00:00")` includes hours/minutes (integration)
+- [x] write integration test: `r.binary()` round-trip with base64 data (integration)
+- [x] run `make build` + `make test-integration` -- must pass
 
 ### Task 3: New top-level builders -- r.object, r.range, r.random
 

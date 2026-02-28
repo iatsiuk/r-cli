@@ -659,6 +659,18 @@ func Time(year, month, day int, timezone string) Term {
 	}
 }
 
+// TimeAt creates a TIME term with time-of-day ([136, [year, month, day, hour, minute, second, timezone]]).
+func TimeAt(year, month, day, hour, minute, second int, timezone string) Term {
+	return Term{
+		termType: proto.TermTime,
+		args: []Term{
+			Datum(year), Datum(month), Datum(day),
+			Datum(hour), Datum(minute), Datum(second),
+			Datum(timezone),
+		},
+	}
+}
+
 // ToISO8601 creates a TO_ISO8601 term ([100, [<time_term>]]).
 func (t Term) ToISO8601() Term {
 	return Term{termType: proto.TermToISO8601, args: []Term{t}}

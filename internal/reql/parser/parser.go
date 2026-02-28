@@ -566,6 +566,92 @@ func parseRGeoJSON(p *parser) (reql.Term, error) {
 	return reql.GeoJSON(arg), nil
 }
 
+func parseRTime(p *parser) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	year, month, day, err := parseRTimeYMD(p)
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenNumber {
+		return parseRTime7tail(p, year, month, day)
+	}
+	// 4-arg form: timezone string
+	tzTok, err := p.expect(tokenString)
+	if err != nil {
+		return reql.Term{}, fmt.Errorf("r.time timezone: %w", err)
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Time(year, month, day, tzTok.Value), nil
+}
+
+// parseRTimeYMD parses year, month, day and trailing comma for r.time.
+func parseRTimeYMD(p *parser) (year, month, day int, err error) {
+	if year, err = p.expectIntArg(); err != nil {
+		return 0, 0, 0, fmt.Errorf("r.time year: %w", err)
+	}
+	if _, err = p.expect(tokenComma); err != nil {
+		return 0, 0, 0, err
+	}
+	if month, err = p.expectIntArg(); err != nil {
+		return 0, 0, 0, fmt.Errorf("r.time month: %w", err)
+	}
+	if _, err = p.expect(tokenComma); err != nil {
+		return 0, 0, 0, err
+	}
+	if day, err = p.expectIntArg(); err != nil {
+		return 0, 0, 0, fmt.Errorf("r.time day: %w", err)
+	}
+	if _, err = p.expect(tokenComma); err != nil {
+		return 0, 0, 0, err
+	}
+	return year, month, day, nil
+}
+
+// parseRTime7tail parses hour, minute, second, timezone for the 7-arg r.time form.
+func parseRTime7tail(p *parser, year, month, day int) (reql.Term, error) {
+	hour, err := p.expectIntArg()
+	if err != nil {
+		return reql.Term{}, fmt.Errorf("r.time hour: %w", err)
+	}
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, err
+	}
+	minute, err := p.expectIntArg()
+	if err != nil {
+		return reql.Term{}, fmt.Errorf("r.time minute: %w", err)
+	}
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, err
+	}
+	second, err := p.expectIntArg()
+	if err != nil {
+		return reql.Term{}, fmt.Errorf("r.time second: %w", err)
+	}
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, err
+	}
+	tzTok, err := p.expect(tokenString)
+	if err != nil {
+		return reql.Term{}, fmt.Errorf("r.time timezone: %w", err)
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return reql.TimeAt(year, month, day, hour, minute, second, tzTok.Value), nil
+}
+
+func parseRBinary(p *parser) (reql.Term, error) {
+	arg, err := p.parseOneArg()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Binary(arg), nil
+}
+
 func parseRLine(p *parser) (reql.Term, error) {
 	args, err := p.parseArgList()
 	if err != nil {
@@ -1077,6 +1163,8 @@ func buildRBuilders() map[string]rBuilderFn {
 		"line":      parseRLine,
 		"polygon":   parseRPolygon,
 		"circle":    parseRCircle,
+		"time":      parseRTime,
+		"binary":    parseRBinary,
 	}
 }
 
@@ -1306,6 +1394,20 @@ func (p *parser) parseOneIntArg() (int, error) {
 		return 0, err
 	}
 	if _, err := p.expect(tokenRParen); err != nil {
+		return 0, err
+	}
+	n, err := strconv.Atoi(tok.Value)
+	if err != nil {
+		return 0, fmt.Errorf("expected integer, got %q", tok.Value)
+	}
+	return n, nil
+}
+
+// expectIntArg parses a single tokenNumber token and converts it to int.
+// Used internally when parsing structured arg lists (not wrapped in parens).
+func (p *parser) expectIntArg() (int, error) {
+	tok, err := p.expect(tokenNumber)
+	if err != nil {
 		return 0, err
 	}
 	n, err := strconv.Atoi(tok.Value)
