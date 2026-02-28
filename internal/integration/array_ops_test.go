@@ -97,14 +97,15 @@ func TestSliceTwoArgs(t *testing.T) {
 	}
 }
 
-func TestSliceOneArg(t *testing.T) {
+func TestSliceTwoArgsToEnd(t *testing.T) {
 	t.Parallel()
 	exec := newExecutor(t)
 	ctx := context.Background()
 
+	// slice(2, 5) on a 5-element array returns elements from index 2 to end
 	_, cur, err := exec.Run(ctx, reql.Array(0, 1, 2, 3, 4).Slice(2, 5), nil)
 	if err != nil {
-		t.Fatalf("slice(2): %v", err)
+		t.Fatalf("slice(2, 5): %v", err)
 	}
 	raw, err := cur.Next()
 	closeCursor(cur)
@@ -117,7 +118,7 @@ func TestSliceOneArg(t *testing.T) {
 	}
 	want := []float64{2, 3, 4}
 	if len(got) != len(want) {
-		t.Fatalf("slice(2) got %v, want %v", got, want)
+		t.Fatalf("slice(2, 5) got %v, want %v", got, want)
 	}
 	for i, v := range want {
 		if got[i] != v {
@@ -314,6 +315,9 @@ func TestArrayOpsOnTableFields(t *testing.T) {
 	}
 	if len(tags) != 3 {
 		t.Errorf("after append tags has %d elements, want 3: %v", len(tags), tags)
+	}
+	if tags[2] != "z" {
+		t.Errorf("after append last element=%v, want z", tags[2])
 	}
 
 	// prepend "w" to tags field

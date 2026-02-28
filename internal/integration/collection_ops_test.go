@@ -275,9 +275,21 @@ func TestConcatMapTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cursor all: %v", err)
 	}
-	// 2 tags from doc a + 1 from doc b = 3 total
+	// 2 tags from doc a + 1 from doc b = 3 total: "x", "y", "z"
 	if len(rows) != 3 {
 		t.Fatalf("concatMap table got %d elements, want 3", len(rows))
+	}
+	got := make([]string, 3)
+	for i, r := range rows {
+		if err := json.Unmarshal(r, &got[i]); err != nil {
+			t.Fatalf("unmarshal element %d: %v", i, err)
+		}
+	}
+	sort.Strings(got)
+	for i, want := range []string{"x", "y", "z"} {
+		if got[i] != want {
+			t.Errorf("concatMap element %d=%q, want %q", i, got[i], want)
+		}
 	}
 }
 

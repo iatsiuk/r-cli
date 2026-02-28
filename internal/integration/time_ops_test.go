@@ -90,6 +90,19 @@ func TestDuringBoundaryBehavior(t *testing.T) {
 	}
 	// [start, end) includes e1 and e2 but not e3
 	if len(rows) != 2 {
-		t.Errorf("during [start, end) got %d rows, want 2", len(rows))
+		t.Fatalf("during [start, end) got %d rows, want 2", len(rows))
+	}
+	ids := make(map[string]bool)
+	for _, r := range rows {
+		var doc struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(r, &doc); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		ids[doc.ID] = true
+	}
+	if !ids["e1"] || !ids["e2"] || ids["e3"] {
+		t.Errorf("during [start, end) returned ids=%v, want e1 and e2 only", ids)
 	}
 }

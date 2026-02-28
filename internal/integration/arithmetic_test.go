@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sort"
 	"testing"
 
 	"r-cli/internal/reql"
@@ -254,6 +255,7 @@ func TestArithmeticOnTableFields(t *testing.T) {
 	})
 
 	// map: floor(val - 1)
+	// a=10.7: floor(9.7)=9, b=-3.2: floor(-4.2)=-5, c=9.0: floor(8.0)=8 => sorted: [-5,8,9]
 	mapFn := reql.Func(reql.Var(1).GetField("val").Sub(1).Floor(), 1)
 	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("nums").Map(mapFn), nil)
 	if err != nil {
@@ -267,8 +269,21 @@ func TestArithmeticOnTableFields(t *testing.T) {
 	if len(rows) != 3 {
 		t.Fatalf("got %d rows, want 3", len(rows))
 	}
+	floorVals := make([]float64, 3)
+	for i, r := range rows {
+		if err := json.Unmarshal(r, &floorVals[i]); err != nil {
+			t.Fatalf("unmarshal floor row %d: %v", i, err)
+		}
+	}
+	sort.Float64s(floorVals)
+	for i, want := range []float64{-5, 8, 9} {
+		if floorVals[i] != want {
+			t.Errorf("floor[%d]=%v, want %v", i, floorVals[i], want)
+		}
+	}
 
 	// map: ceil(val / 2)
+	// a=10.7: ceil(5.35)=6, b=-3.2: ceil(-1.6)=-1, c=9.0: ceil(4.5)=5 => sorted: [-1,5,6]
 	mapFn2 := reql.Func(reql.Var(1).GetField("val").Div(2).Ceil(), 1)
 	_, cur2, err := exec.Run(ctx, reql.DB(dbName).Table("nums").Map(mapFn2), nil)
 	if err != nil {
@@ -282,8 +297,21 @@ func TestArithmeticOnTableFields(t *testing.T) {
 	if len(rows2) != 3 {
 		t.Fatalf("got %d rows, want 3", len(rows2))
 	}
+	ceilVals := make([]float64, 3)
+	for i, r := range rows2 {
+		if err := json.Unmarshal(r, &ceilVals[i]); err != nil {
+			t.Fatalf("unmarshal ceil row %d: %v", i, err)
+		}
+	}
+	sort.Float64s(ceilVals)
+	for i, want := range []float64{-1, 5, 6} {
+		if ceilVals[i] != want {
+			t.Errorf("ceil[%d]=%v, want %v", i, ceilVals[i], want)
+		}
+	}
 
 	// map: round(val)
+	// a=10.7: round=11, b=-3.2: round=-3, c=9.0: round=9 => sorted: [-3,9,11]
 	mapFn3 := reql.Func(reql.Var(1).GetField("val").Round(), 1)
 	_, cur3, err := exec.Run(ctx, reql.DB(dbName).Table("nums").Map(mapFn3), nil)
 	if err != nil {
@@ -296,6 +324,18 @@ func TestArithmeticOnTableFields(t *testing.T) {
 	}
 	if len(rows3) != 3 {
 		t.Fatalf("got %d rows, want 3", len(rows3))
+	}
+	roundVals := make([]float64, 3)
+	for i, r := range rows3 {
+		if err := json.Unmarshal(r, &roundVals[i]); err != nil {
+			t.Fatalf("unmarshal round row %d: %v", i, err)
+		}
+	}
+	sort.Float64s(roundVals)
+	for i, want := range []float64{-3, 9, 11} {
+		if roundVals[i] != want {
+			t.Errorf("round[%d]=%v, want %v", i, roundVals[i], want)
+		}
 	}
 
 	// map: val mod 3 (only positive integer values make sense for integer mod)
