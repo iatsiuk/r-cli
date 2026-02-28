@@ -106,13 +106,13 @@ File: `internal/integration/constructors_test.go` (new)
 File for during: `internal/integration/time_ops_test.go` (new)
 File for geo: `internal/integration/geo_test.go` (append to existing)
 
-- [ ] test `During` -- seed docs with time fields, filter with `during(start, end)` returns docs in range; test open/closed bounds with optargs
-- [ ] test `ToGeoJSON` -- insert point, call `toGeoJSON()`, verify returns GeoJSON object `{"type":"Point","coordinates":[...]}`
-- [ ] test `Intersects` -- create two geometries (polygon and point), `polygon.intersects(point)` returns true/false
-- [ ] test `Includes` -- `polygon.includes(point)` returns true for point inside, false for outside
-- [ ] test `Fill` -- create a line that forms a closed loop, `line.fill()` returns a polygon
-- [ ] test `PolygonSub` -- create outer polygon and inner polygon (hole), `outer.polygonSub(inner)` returns polygon with hole; verify with includes on point inside hole returns false
-- [ ] run `make test-integration` -- must pass
+- [x] test `During` -- seed docs with time fields, filter with `during(start, end)` returns docs in range; test open/closed bounds with optargs
+- [x] test `ToGeoJSON` -- insert point, call `toGeoJSON()`, verify returns GeoJSON object `{"type":"Point","coordinates":[...]}`
+- [x] test `Intersects` -- create two geometries (polygon and point), `polygon.intersects(point)` returns true/false
+- [x] test `Includes` -- `polygon.includes(point)` returns true for point inside, false for outside
+- [x] test `Fill` -- create a line that forms a closed loop, `line.fill()` returns a polygon
+- [x] test `PolygonSub` -- create outer polygon and inner polygon (hole), `outer.polygonSub(inner)` returns polygon with hole; verify with includes on point inside hole returns false
+- [x] run `make test-integration` -- must pass
 
 ### Task 9: Verify all operations covered
 
