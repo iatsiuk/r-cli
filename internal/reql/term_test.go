@@ -1218,3 +1218,25 @@ func TestInfoOffsetsOf(t *testing.T) {
 		},
 	})
 }
+
+func TestFold(t *testing.T) {
+	t.Parallel()
+	fn := Func(Var(1).Add(Var(2)), 1, 2)
+	arr := Array(Datum(1), Datum(2), Datum(3))
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"fold_basic",
+			arr.Fold(Datum(0), fn),
+			`[187,[[2,[1,2,3]],0,[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]]]`,
+		},
+		{
+			"fold_with_opts",
+			arr.Fold(Datum(0), fn, OptArgs{"emit": Func(Array(Var(3)), 1, 2, 3)}),
+			`[187,[[2,[1,2,3]],0,[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]],{"emit":[69,[[2,[1,2,3]],[2,[[10,[3]]]]]]}]`,
+		},
+	})
+}

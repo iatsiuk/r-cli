@@ -1148,6 +1148,70 @@ func chainOuterJoin(p *parser, t reql.Term) (reql.Term, error) {
 	return t.OuterJoin(other, fn), nil
 }
 
+func chainFold(p *parser, t reql.Term) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	base, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, err
+	}
+	fn, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenComma {
+		p.advance()
+		opts, err := p.parseFoldOpts()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.Fold(base, fn, opts), nil
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return t.Fold(base, fn), nil
+}
+
+// parseFoldOpts parses {key: expr, ...} where values are full expressions (for lambdas in emit/finalEmit).
+func (p *parser) parseFoldOpts() (reql.OptArgs, error) {
+	if _, err := p.expect(tokenLBrace); err != nil {
+		return nil, err
+	}
+	opts := reql.OptArgs{}
+	for p.peek().Type != tokenRBrace && p.peek().Type != tokenEOF {
+		key, err := p.parseObjectKey()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := p.expect(tokenColon); err != nil {
+			return nil, err
+		}
+		val, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		opts[key] = val
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type == tokenRBrace {
+				return nil, fmt.Errorf("trailing comma in fold opts at position %d", p.peek().Pos)
+			}
+		}
+	}
+	if _, err := p.expect(tokenRBrace); err != nil {
+		return nil, err
+	}
+	return opts, nil
+}
+
 func chainGrant(p *parser, t reql.Term) (reql.Term, error) {
 	user, perms, err := p.parseStringThenArg()
 	if err != nil {
@@ -1282,6 +1346,7 @@ func registerCoreChain(m map[string]chainFn) {
 	m["zip"] = noArgChain(func(t reql.Term) reql.Term { return t.Zip() })
 	m["info"] = noArgChain(func(t reql.Term) reql.Term { return t.Info() })
 	m["offsetsOf"] = oneArgChain(func(t, pred reql.Term) reql.Term { return t.OffsetsOf(pred) })
+	m["fold"] = chainFold
 }
 
 func registerFieldChain(m map[string]chainFn) {

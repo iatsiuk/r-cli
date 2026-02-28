@@ -873,6 +873,15 @@ func (t Term) OffsetsOf(predicate interface{}) Term {
 	return Term{termType: proto.TermOffsetsOf, args: []Term{t, toTerm(predicate)}}
 }
 
+// Fold creates a FOLD term ([187, [seq, base, fn], opts?]).
+func (t Term) Fold(base, fn Term, opts ...OptArgs) Term {
+	term := Term{termType: proto.TermFold, args: []Term{t, base, fn}}
+	if len(opts) > 0 {
+		term.opts = opts[0]
+	}
+	return term
+}
+
 // Branch creates a BRANCH term ([65, [cond, true_val, false_val, ...]]).
 // Accepts 3+ arguments: cond1, val1, ..., else_val (supports multi-condition form).
 func Branch(args ...interface{}) Term {

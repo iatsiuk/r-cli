@@ -1397,3 +1397,17 @@ func TestParse_InfoOffsetsOf(t *testing.T) {
 		},
 	})
 }
+
+func TestParse_Fold(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"fold_basic",
+			`r.expr([1,2,3]).fold(0, (acc, x) => acc.add(x))`,
+			reql.Array(reql.Datum(int64(1)), reql.Datum(int64(2)), reql.Datum(int64(3))).Fold(
+				reql.Datum(int64(0)),
+				reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2),
+			),
+		},
+	})
+}

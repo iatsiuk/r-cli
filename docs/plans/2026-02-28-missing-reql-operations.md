@@ -142,16 +142,16 @@ Need new reql method + parser support + tests.
 
 **.fold(base, fn)** / **.fold(base, fn, {emit: fn, finalEmit: fn}):** accumulator over sequence, wire format `[187, [seq, base, fn], opts?]`
 
-- [ ] write reql unit tests for `Fold()` -- basic and with opts (term_test.go)
-- [ ] implement `func (t Term) Fold(base, fn Term, opts ...OptArgs) Term` in term.go
-- [ ] run reql unit tests -- must pass
-- [ ] write parser tests for `.fold(0, (acc, x) => acc.add(x))` (parser_test.go)
-- [ ] implement parser: custom `chainFold` function handling base + lambda + optional opts (parser.go)
-- [ ] register `"fold"` in chain builders (parser.go)
-- [ ] run parser unit tests -- must pass
-- [ ] write integration test: `r.expr([1,2,3]).fold(0, (acc, x) => acc.add(x))` returns 6 (integration)
-- [ ] write integration test: fold on table field for running sum (integration)
-- [ ] run `make build` + `make test-integration` -- must pass
+- [x] write reql unit tests for `Fold()` -- basic and with opts (term_test.go)
+- [x] implement `func (t Term) Fold(base, fn Term, opts ...OptArgs) Term` in term.go
+- [x] run reql unit tests -- must pass
+- [x] write parser tests for `.fold(0, (acc, x) => acc.add(x))` (parser_test.go)
+- [x] implement parser: custom `chainFold` function handling base + lambda + optional opts (parser.go)
+- [x] register `"fold"` in chain builders (parser.go)
+- [x] run parser unit tests -- must pass
+- [x] write integration test: `r.expr([1,2,3]).fold(0, (acc, x) => acc.add(x))` returns 6 (integration)
+- [x] write integration test: fold on table field for running sum (integration)
+- [x] run `make build` + `make test-integration` -- must pass
 
 ### Task 6: Bitwise operations (6 methods)
 
