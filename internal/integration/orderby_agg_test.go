@@ -266,3 +266,139 @@ func TestDistinct(t *testing.T) {
 		t.Errorf("distinct colors=%d, want 3 (red, blue, green)", len(rows))
 	}
 }
+
+func TestSum(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "score": 10},
+		{"id": "2", "score": 20},
+		{"id": "3", "score": 30},
+	})
+
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").Sum("score"), nil)
+	if err != nil {
+		t.Fatalf("sum: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var total float64
+	if err := json.Unmarshal(raw, &total); err != nil {
+		t.Fatalf("unmarshal sum: %v", err)
+	}
+	if total != 60 {
+		t.Errorf("sum=%v, want 60", total)
+	}
+}
+
+func TestAvg(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "score": 10},
+		{"id": "2", "score": 20},
+		{"id": "3", "score": 30},
+	})
+
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").Avg("score"), nil)
+	if err != nil {
+		t.Fatalf("avg: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var avg float64
+	if err := json.Unmarshal(raw, &avg); err != nil {
+		t.Fatalf("unmarshal avg: %v", err)
+	}
+	if avg != 20 {
+		t.Errorf("avg=%v, want 20", avg)
+	}
+}
+
+func TestMin(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "score": 10},
+		{"id": "2", "score": 20},
+		{"id": "3", "score": 30},
+	})
+
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").Min("score"), nil)
+	if err != nil {
+		t.Fatalf("min: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var doc struct {
+		Score int `json:"score"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("unmarshal min doc: %v", err)
+	}
+	if doc.Score != 10 {
+		t.Errorf("min score=%d, want 10", doc.Score)
+	}
+}
+
+func TestMax(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "score": 10},
+		{"id": "2", "score": 20},
+		{"id": "3", "score": 30},
+	})
+
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").Max("score"), nil)
+	if err != nil {
+		t.Fatalf("max: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var doc struct {
+		Score int `json:"score"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("unmarshal max doc: %v", err)
+	}
+	if doc.Score != 30 {
+		t.Errorf("max score=%d, want 30", doc.Score)
+	}
+}

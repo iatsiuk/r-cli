@@ -38,11 +38,11 @@ Add integration tests for 26 methods listed in `docs/without-integration.md`. Al
 ### Task 1: Aggregation tests (sum, avg, min, max)
 File: `internal/integration/orderby_agg_test.go` (append)
 
-- [ ] `TestSum` -- `reql.DB(db).Table(t).Sum("score")` on seeded numeric docs, verify correct total
-- [ ] `TestAvg` -- `reql.DB(db).Table(t).Avg("score")` on seeded docs, verify average
-- [ ] `TestMin` -- `reql.DB(db).Table(t).Min("score")` returns doc with minimum score
-- [ ] `TestMax` -- `reql.DB(db).Table(t).Max("score")` returns doc with maximum score
-- [ ] run `make test-integration` -- must pass
+- [x] `TestSum` -- `reql.DB(db).Table(t).Sum("score")` on seeded numeric docs, verify correct total
+- [x] `TestAvg` -- `reql.DB(db).Table(t).Avg("score")` on seeded docs, verify average
+- [x] `TestMin` -- `reql.DB(db).Table(t).Min("score")` returns doc with minimum score
+- [x] `TestMax` -- `reql.DB(db).Table(t).Max("score")` returns doc with maximum score
+- [x] run `make test-integration` -- must pass
 
 ### Task 2: Logic operation tests (or, ne, lt, le, ge, not)
 File: `internal/integration/logic_ops_test.go` (new)
