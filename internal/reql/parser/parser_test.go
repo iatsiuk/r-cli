@@ -1374,3 +1374,26 @@ func TestParse_GeoConstructors_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestParse_InfoOffsetsOf(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"info_on_table",
+			`r.db("test").table("users").info()`,
+			reql.DB("test").Table("users").Info(),
+		},
+		{
+			"offsetsOf_value",
+			`r.expr(["a","b","a"]).offsetsOf("a")`,
+			reql.Array(reql.Datum("a"), reql.Datum("b"), reql.Datum("a")).OffsetsOf(reql.Datum("a")),
+		},
+		{
+			"offsetsOf_lambda",
+			`r.expr([1,2,3]).offsetsOf(x => x.gt(1))`,
+			reql.Array(reql.Datum(int64(1)), reql.Datum(int64(2)), reql.Datum(int64(3))).OffsetsOf(
+				reql.Func(reql.Var(1).Gt(reql.Datum(int64(1))), 1),
+			),
+		},
+	})
+}

@@ -863,6 +863,16 @@ func (t Term) SetDifference(other Term) Term {
 	return Term{termType: proto.TermSetDifference, args: []Term{t, other}}
 }
 
+// Info creates an INFO term ([79, [term]]).
+func (t Term) Info() Term {
+	return Term{termType: proto.TermInfo, args: []Term{t}}
+}
+
+// OffsetsOf creates an OFFSETS_OF term ([87, [seq, pred]]).
+func (t Term) OffsetsOf(predicate interface{}) Term {
+	return Term{termType: proto.TermOffsetsOf, args: []Term{t, toTerm(predicate)}}
+}
+
 // Branch creates a BRANCH term ([65, [cond, true_val, false_val, ...]]).
 // Accepts 3+ arguments: cond1, val1, ..., else_val (supports multi-condition form).
 func Branch(args ...interface{}) Term {

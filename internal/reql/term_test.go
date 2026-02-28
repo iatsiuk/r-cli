@@ -1192,3 +1192,29 @@ func TestObjectRangeRandom(t *testing.T) {
 		},
 	})
 }
+
+func TestInfoOffsetsOf(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"info",
+			table.Info(),
+			`[79,[[15,[[14,["test"]],"users"]]]]`,
+		},
+		{
+			"offsets_of_datum",
+			Array(Datum("a"), Datum("b"), Datum("a")).OffsetsOf(Datum("a")),
+			`[87,[[2,["a","b","a"]],"a"]]`,
+		},
+		{
+			"offsets_of_func",
+			Array(Datum(1), Datum(2), Datum(3)).OffsetsOf(Func(Var(1).Gt(Datum(1)), 1)),
+			`[87,[[2,[1,2,3]],[69,[[2,[1]],[21,[[10,[1]],1]]]]]]`,
+		},
+	})
+}

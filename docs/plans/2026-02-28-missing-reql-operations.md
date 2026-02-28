@@ -125,16 +125,16 @@ Need new reql methods + parser support + tests.
 **.info():** returns metadata about a value, wire format `[79, [term]]`
 **.offsetsOf(datum)** / **.offsetsOf(pred_fn):** find indexes of matching elements, wire format `[87, [seq, datum_or_fn]]`
 
-- [ ] write reql unit tests for `Info()` and `OffsetsOf()` -- JSON wire format (term_test.go)
-- [ ] implement `func (t Term) Info() Term` in term.go
-- [ ] implement `func (t Term) OffsetsOf(predicate interface{}) Term` in term.go
-- [ ] run reql unit tests -- must pass
-- [ ] write parser tests for `.info()`, `.offsetsOf("value")`, `.offsetsOf(lambda)` (parser_test.go)
-- [ ] implement parser: register `"info"` as `noArgChain`, `"offsetsOf"` as `oneArgChain` (parser.go)
-- [ ] run parser unit tests -- must pass
-- [ ] write integration test: `r.db("test").table("t").info()` returns table metadata (integration)
-- [ ] write integration test: `r.expr(["a","b","c","b"]).offsetsOf("b")` returns `[1, 3]` (integration)
-- [ ] run `make build` + `make test-integration` -- must pass
+- [x] write reql unit tests for `Info()` and `OffsetsOf()` -- JSON wire format (term_test.go)
+- [x] implement `func (t Term) Info() Term` in term.go
+- [x] implement `func (t Term) OffsetsOf(predicate interface{}) Term` in term.go
+- [x] run reql unit tests -- must pass
+- [x] write parser tests for `.info()`, `.offsetsOf("value")`, `.offsetsOf(lambda)` (parser_test.go)
+- [x] implement parser: register `"info"` as `noArgChain`, `"offsetsOf"` as `oneArgChain` (parser.go)
+- [x] run parser unit tests -- must pass
+- [x] write integration test: `r.db("test").table("t").info()` returns table metadata (integration)
+- [x] write integration test: `r.expr(["a","b","c","b"]).offsetsOf("b")` returns `[1, 3]` (integration)
+- [x] run `make build` + `make test-integration` -- must pass
 
 ### Task 5: Chain method -- .fold()
 

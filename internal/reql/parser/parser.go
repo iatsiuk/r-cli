@@ -1280,6 +1280,8 @@ func registerCoreChain(m map[string]chainFn) {
 	m["innerJoin"] = chainInnerJoin
 	m["outerJoin"] = chainOuterJoin
 	m["zip"] = noArgChain(func(t reql.Term) reql.Term { return t.Zip() })
+	m["info"] = noArgChain(func(t reql.Term) reql.Term { return t.Info() })
+	m["offsetsOf"] = oneArgChain(func(t, pred reql.Term) reql.Term { return t.OffsetsOf(pred) })
 }
 
 func registerFieldChain(m map[string]chainFn) {
