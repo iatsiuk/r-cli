@@ -47,16 +47,16 @@ File: `internal/integration/orderby_agg_test.go` (append)
 ### Task 2: Logic operation tests (or, ne, lt, le, ge, not)
 File: `internal/integration/logic_ops_test.go` (new)
 
-- [ ] `TestNe` -- scalar: `reql.Datum(1).Ne(2)` -> true, `reql.Datum(1).Ne(1)` -> false
-- [ ] `TestLt` -- scalar: `reql.Datum(1).Lt(2)` -> true, `reql.Datum(2).Lt(1)` -> false
-- [ ] `TestLe` -- scalar: `reql.Datum(1).Le(1)` -> true, `reql.Datum(2).Le(1)` -> false
-- [ ] `TestGe` -- scalar: `reql.Datum(2).Ge(2)` -> true, `reql.Datum(1).Ge(2)` -> false
-- [ ] `TestOr` -- scalar: `reql.Datum(false).Or(true)` -> true, `reql.Datum(false).Or(false)` -> false
-- [ ] `TestNot` -- scalar: `reql.Datum(true).Not()` -> false, `reql.Datum(false).Not()` -> true
-- [ ] `TestFilterNe` -- filter table docs where field != value using `.Ne()` in predicate
-- [ ] `TestFilterLtLe` -- filter table docs using `.Lt()` and `.Le()` boundary conditions
-- [ ] `TestFilterGeOr` -- filter table docs using `.Ge()` combined with `.Or()`
-- [ ] run `make test-integration` -- must pass
+- [x] `TestNe` -- scalar: `reql.Datum(1).Ne(2)` -> true, `reql.Datum(1).Ne(1)` -> false
+- [x] `TestLt` -- scalar: `reql.Datum(1).Lt(2)` -> true, `reql.Datum(2).Lt(1)` -> false
+- [x] `TestLe` -- scalar: `reql.Datum(1).Le(1)` -> true, `reql.Datum(2).Le(1)` -> false
+- [x] `TestGe` -- scalar: `reql.Datum(2).Ge(2)` -> true, `reql.Datum(1).Ge(2)` -> false
+- [x] `TestOr` -- scalar: `reql.Datum(false).Or(true)` -> true, `reql.Datum(false).Or(false)` -> false
+- [x] `TestNot` -- scalar: `reql.Datum(true).Not()` -> false, `reql.Datum(false).Not()` -> true
+- [x] `TestFilterNe` -- filter table docs where field != value using `.Ne()` in predicate
+- [x] `TestFilterLtLe` -- filter table docs using `.Lt()` and `.Le()` boundary conditions
+- [x] `TestFilterGeOr` -- filter table docs using `.Ge()` combined with `.Or()`
+- [x] run `make test-integration` -- must pass
 
 ### Task 3: String operation tests (split, downcase)
 File: `internal/integration/string_time_join_test.go` (append)
