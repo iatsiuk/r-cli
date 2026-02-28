@@ -295,8 +295,8 @@ func TestTableReconfigure(t *testing.T) {
 	if err := json.Unmarshal(raw, &result); err != nil {
 		t.Fatalf("unmarshal reconfigure result: %v", err)
 	}
-	if result.Reconfigured < 0 {
-		t.Errorf("reconfigured=%d, want >= 0", result.Reconfigured)
+	if result.Reconfigured < 0 || result.Reconfigured > 1 {
+		t.Errorf("reconfigured=%d, want 0 or 1", result.Reconfigured)
 	}
 }
 
@@ -327,7 +327,7 @@ func TestTableRebalance(t *testing.T) {
 	if err := json.Unmarshal(raw, &result); err != nil {
 		t.Fatalf("unmarshal rebalance result: %v", err)
 	}
-	if result.Rebalanced < 0 {
-		t.Errorf("rebalanced=%d, want >= 0", result.Rebalanced)
+	if result.Rebalanced < 0 || result.Rebalanced > 1 {
+		t.Errorf("rebalanced=%d, want 0 or 1", result.Rebalanced)
 	}
 }
