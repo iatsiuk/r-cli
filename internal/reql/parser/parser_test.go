@@ -1136,7 +1136,7 @@ func TestParse_InsertUpdateDeleteOptArgs_Errors(t *testing.T) {
 		{`r.table("t").insert({a: 1}, "bad")`, "insert: second argument must be an optargs object"},
 		{`r.table("t").update({x: 1}, "bad")`, "update: second argument must be an optargs object"},
 		{`r.table("t").delete("bad")`, "delete: argument must be an optargs object"},
-		{`r.table("t").insert({a: 1}, {return_changes: true,})`, "trailing comma in optargs"},
+		{`r.table("t").insert({a: 1}, {return_changes: true,})`, "trailing comma in opts"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
@@ -1238,6 +1238,10 @@ func TestParse_Time_Errors(t *testing.T) {
 	}{
 		// too few args: missing timezone
 		{`r.time(2024, 1, 15)`, "expected ','"},
+		// 5-arg form: disambiguated as 7-arg (hour=10 is a number), then fails at minute
+		{`r.time(2024, 1, 15, 10, "+00:00")`, "r.time minute"},
+		// 6-arg form: disambiguated as 7-arg, then fails at second
+		{`r.time(2024, 1, 15, 10, 30, "+00:00")`, "r.time second"},
 		// 7-arg form missing second and timezone
 		{`r.time(2024, 1, 15, 10, 30)`, "expected ','"},
 	}
@@ -1445,6 +1449,15 @@ func TestParse_Fold(t *testing.T) {
 			reql.Array(reql.Datum(int64(1)), reql.Datum(int64(2)), reql.Datum(int64(3))).Fold(
 				reql.Datum(int64(0)),
 				reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2),
+			),
+		},
+		{
+			"fold_with_emit_opt",
+			`r.expr([1,2,3]).fold(0, (acc, x) => acc.add(x), {emit: new_acc => [new_acc]})`,
+			reql.Array(reql.Datum(int64(1)), reql.Datum(int64(2)), reql.Datum(int64(3))).Fold(
+				reql.Datum(int64(0)),
+				reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2),
+				reql.OptArgs{"emit": reql.Func(reql.Array(reql.Var(1)), 1)},
 			),
 		},
 	})

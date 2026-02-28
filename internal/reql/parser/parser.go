@@ -652,6 +652,15 @@ func parseRBinary(p *parser) (reql.Term, error) {
 	return reql.Binary(arg), nil
 }
 
+// termsToIface converts a []reql.Term slice to []interface{} for variadic calls.
+func termsToIface(args []reql.Term) []interface{} {
+	out := make([]interface{}, len(args))
+	for i, a := range args {
+		out[i] = a
+	}
+	return out
+}
+
 func parseRObject(p *parser) (reql.Term, error) {
 	args, err := p.parseArgList()
 	if err != nil {
@@ -660,11 +669,7 @@ func parseRObject(p *parser) (reql.Term, error) {
 	if len(args)%2 != 0 {
 		return reql.Term{}, fmt.Errorf("r.object requires an even number of arguments (key-value pairs), got %d", len(args))
 	}
-	pairs := make([]interface{}, len(args))
-	for i, a := range args {
-		pairs[i] = a
-	}
-	return reql.Object(pairs...), nil
+	return reql.Object(termsToIface(args)...), nil
 }
 
 func parseRRange(p *parser) (reql.Term, error) {
@@ -675,35 +680,18 @@ func parseRRange(p *parser) (reql.Term, error) {
 	if len(args) > 2 {
 		return reql.Term{}, fmt.Errorf("r.range accepts 0, 1, or 2 arguments, got %d", len(args))
 	}
-	pairs := make([]interface{}, len(args))
-	for i, a := range args {
-		pairs[i] = a
-	}
-	return reql.Range(pairs...), nil
+	return reql.Range(termsToIface(args)...), nil
 }
 
 func parseRRandom(p *parser) (reql.Term, error) {
 	if _, err := p.expect(tokenLParen); err != nil {
 		return reql.Term{}, err
 	}
-	if p.peek().Type == tokenRParen {
-		p.advance()
-		return reql.Random(), nil
-	}
-	args, err := parseRandomBody(p)
-	if err != nil {
-		return reql.Term{}, err
-	}
-	return reql.Random(args...), nil
-}
-
-// parseRandomBody parses the body of r.random(...): up to 2 numeric args plus optional opts.
-func parseRandomBody(p *parser) ([]interface{}, error) {
 	var args []interface{}
 	for len(args) < 2 && p.peek().Type != tokenLBrace && p.peek().Type != tokenRParen {
 		arg, err := p.parseExpr()
 		if err != nil {
-			return nil, err
+			return reql.Term{}, err
 		}
 		args = append(args, arg)
 		if p.peek().Type != tokenComma {
@@ -714,14 +702,14 @@ func parseRandomBody(p *parser) ([]interface{}, error) {
 	if p.peek().Type == tokenLBrace {
 		opts, err := p.parseOptArgs()
 		if err != nil {
-			return nil, err
+			return reql.Term{}, err
 		}
 		args = append(args, opts)
 	}
 	if _, err := p.expect(tokenRParen); err != nil {
-		return nil, err
+		return reql.Term{}, err
 	}
-	return args, nil
+	return reql.Random(args...), nil
 }
 
 func parseRLine(p *parser) (reql.Term, error) {
@@ -793,11 +781,7 @@ func parseRDo(p *parser) (reql.Term, error) {
 	if len(args) == 0 {
 		return reql.Term{}, fmt.Errorf("r.do requires at least a function argument")
 	}
-	iargs := make([]interface{}, len(args))
-	for i, a := range args {
-		iargs[i] = a
-	}
-	return reql.Do(iargs...), nil
+	return reql.Do(termsToIface(args)...), nil
 }
 
 // ---- Chain builder: specific implementations ----
@@ -1210,34 +1194,10 @@ func chainDo(p *parser, t reql.Term) (reql.Term, error) {
 
 // parseFoldOpts parses {key: expr, ...} where values are full expressions (for lambdas in emit/finalEmit).
 func (p *parser) parseFoldOpts() (reql.OptArgs, error) {
-	if _, err := p.expect(tokenLBrace); err != nil {
-		return nil, err
-	}
-	opts := reql.OptArgs{}
-	for p.peek().Type != tokenRBrace && p.peek().Type != tokenEOF {
-		key, err := p.parseObjectKey()
-		if err != nil {
-			return nil, err
-		}
-		if _, err := p.expect(tokenColon); err != nil {
-			return nil, err
-		}
-		val, err := p.parseExpr()
-		if err != nil {
-			return nil, err
-		}
-		opts[key] = val
-		if p.peek().Type == tokenComma {
-			p.advance()
-			if p.peek().Type == tokenRBrace {
-				return nil, fmt.Errorf("trailing comma in fold opts at position %d", p.peek().Pos)
-			}
-		}
-	}
-	if _, err := p.expect(tokenRBrace); err != nil {
-		return nil, err
-	}
-	return opts, nil
+	return p.parseObjectBody(func() (interface{}, error) {
+		v, err := p.parseExpr()
+		return v, err
+	})
 }
 
 func chainGrant(p *parser, t reql.Term) (reql.Term, error) {
@@ -1636,9 +1596,8 @@ func (p *parser) parseNoArgs() error {
 	return nil
 }
 
-// parseOptArgs parses {key: val, ...} into a reql.OptArgs.
-// Values are restricted to datum literals: string, number, bool, null.
-func (p *parser) parseOptArgs() (reql.OptArgs, error) {
+// parseObjectBody parses {key: val, ...} using valueParser for each value.
+func (p *parser) parseObjectBody(valueParser func() (interface{}, error)) (reql.OptArgs, error) {
 	if _, err := p.expect(tokenLBrace); err != nil {
 		return nil, err
 	}
@@ -1651,7 +1610,7 @@ func (p *parser) parseOptArgs() (reql.OptArgs, error) {
 		if _, err := p.expect(tokenColon); err != nil {
 			return nil, err
 		}
-		val, err := p.parseOptArgValue()
+		val, err := valueParser()
 		if err != nil {
 			return nil, err
 		}
@@ -1659,7 +1618,7 @@ func (p *parser) parseOptArgs() (reql.OptArgs, error) {
 		if p.peek().Type == tokenComma {
 			p.advance()
 			if p.peek().Type == tokenRBrace {
-				return nil, fmt.Errorf("trailing comma in optargs at position %d", p.peek().Pos)
+				return nil, fmt.Errorf("trailing comma in opts at position %d", p.peek().Pos)
 			}
 		}
 	}
@@ -1667,6 +1626,12 @@ func (p *parser) parseOptArgs() (reql.OptArgs, error) {
 		return nil, err
 	}
 	return opts, nil
+}
+
+// parseOptArgs parses {key: val, ...} into a reql.OptArgs.
+// Values are restricted to datum literals: string, number, bool, null.
+func (p *parser) parseOptArgs() (reql.OptArgs, error) {
+	return p.parseObjectBody(p.parseOptArgValue)
 }
 
 func (p *parser) parseOptArgValue() (interface{}, error) {
