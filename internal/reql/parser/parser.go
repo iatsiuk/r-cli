@@ -687,11 +687,26 @@ func parseRRandom(p *parser) (reql.Term, error) {
 	if _, err := p.expect(tokenLParen); err != nil {
 		return reql.Term{}, err
 	}
+	args, err := p.parseRandomArgs()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Random(args...), nil
+}
+
+func (p *parser) parseRandomArgs() ([]interface{}, error) {
 	var args []interface{}
-	for len(args) < 2 && p.peek().Type != tokenLBrace && p.peek().Type != tokenRParen {
+	for len(args) < 2 {
+		next := p.peek().Type
+		if next == tokenLBrace || next == tokenRParen {
+			break
+		}
 		arg, err := p.parseExpr()
 		if err != nil {
-			return reql.Term{}, err
+			return nil, err
 		}
 		args = append(args, arg)
 		if p.peek().Type != tokenComma {
@@ -699,17 +714,19 @@ func parseRRandom(p *parser) (reql.Term, error) {
 		}
 		p.advance()
 	}
-	if p.peek().Type == tokenLBrace {
+	switch p.peek().Type {
+	case tokenLBrace:
 		opts, err := p.parseOptArgs()
 		if err != nil {
-			return reql.Term{}, err
+			return nil, err
 		}
 		args = append(args, opts)
+	case tokenRParen:
+		// no opts
+	default:
+		return nil, fmt.Errorf("r.random accepts 0, 1, or 2 arguments at position %d", p.peek().Pos)
 	}
-	if _, err := p.expect(tokenRParen); err != nil {
-		return reql.Term{}, err
-	}
-	return reql.Random(args...), nil
+	return args, nil
 }
 
 func parseRLine(p *parser) (reql.Term, error) {

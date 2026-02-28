@@ -1341,6 +1341,7 @@ func TestParse_ObjectRange_Errors(t *testing.T) {
 	}{
 		{`r.object("a", 1, "b")`, "even number"},
 		{`r.range(1, 2, 3)`, "0, 1, or 2 arguments"},
+		{`r.random(1, 2, 3)`, "r.random accepts 0, 1, or 2"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
