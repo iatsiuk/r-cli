@@ -48,8 +48,8 @@ File: `internal/integration/type_ops_test.go` (new)
 
 File: `internal/integration/string_time_join_test.go` (append to existing)
 
-- [ ] test `ToJSONString` -- `r.expr({"a":1}).toJSONString()` returns `"{\"a\":1}"`, `r.expr([1,2]).toJSONString()` returns `"[1,2]"`, `r.expr("hello").toJSONString()` returns `"\"hello\""`, number returns `"42"`
-- [ ] run `make test-integration` -- must pass
+- [x] test `ToJSONString` -- `r.expr({"a":1}).toJSONString()` returns `"{\"a\":1}"`, `r.expr([1,2]).toJSONString()` returns `"[1,2]"`, `r.expr("hello").toJSONString()` returns `"\"hello\""`, number returns `"42"`
+- [x] run `make test-integration` -- must pass
 
 ### Task 4: Sequence/collection operations (concatMap, isEmpty, contains, union, withFields, keys, values)
 
