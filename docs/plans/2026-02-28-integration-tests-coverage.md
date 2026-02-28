@@ -83,12 +83,12 @@ File: `internal/integration/array_ops_test.go` (new)
 
 File: `internal/integration/set_ops_test.go` (new)
 
-- [ ] test `SetInsert` -- `r.expr([1,2,3]).setInsert(2)` returns `[1,2,3]` (no dup), `setInsert(4)` returns `[1,2,3,4]`
-- [ ] test `SetIntersection` -- `r.expr([1,2,3]).setIntersection([2,3,4])` returns `[2,3]`
-- [ ] test `SetUnion` -- `r.expr([1,2]).setUnion([2,3])` returns `[1,2,3]`
-- [ ] test `SetDifference` -- `r.expr([1,2,3]).setDifference([2])` returns `[1,3]`
-- [ ] test set ops on table fields -- seed docs with array fields, update using set operations, verify uniqueness invariants
-- [ ] run `make test-integration` -- must pass
+- [x] test `SetInsert` -- `r.expr([1,2,3]).setInsert(2)` returns `[1,2,3]` (no dup), `setInsert(4)` returns `[1,2,3,4]`
+- [x] test `SetIntersection` -- `r.expr([1,2,3]).setIntersection([2,3,4])` returns `[2,3]`
+- [x] test `SetUnion` -- `r.expr([1,2]).setUnion([2,3])` returns `[1,2,3]`
+- [x] test `SetDifference` -- `r.expr([1,2,3]).setDifference([2])` returns `[1,3]`
+- [x] test set ops on table fields -- seed docs with array fields, update using set operations, verify uniqueness invariants
+- [x] run `make test-integration` -- must pass
 
 ### Task 7: Top-level constructors (r.minval, r.maxval, r.error, r.args, r.literal, r.geoJSON)
 
