@@ -91,10 +91,10 @@ File: `internal/integration/time_ops_test.go` (append)
 ### Task 6: Administration tests (sync, rebalance, reconfigure)
 File: `internal/integration/table_test.go` (append)
 
-- [ ] `TestTableSync` -- create table, insert docs, call `.Sync()`, verify returns sync result (no error)
-- [ ] `TestTableReconfigure` -- create table, call `.Reconfigure(reql.OptArgs{"shards": 1, "replicas": 1})`, verify returns reconfigure result with `reconfigured` field
-- [ ] `TestTableRebalance` -- create table, call `.Rebalance()`, verify returns rebalance result (no error)
-- [ ] run `make test-integration` -- must pass
+- [x] `TestTableSync` -- create table, insert docs, call `.Sync()`, verify returns sync result (no error)
+- [x] `TestTableReconfigure` -- create table, call `.Reconfigure(reql.OptArgs{"shards": 1, "replicas": 1})`, verify returns reconfigure result with `reconfigured` field
+- [x] `TestTableRebalance` -- create table, call `.Rebalance()`, verify returns rebalance result (no error)
+- [x] run `make test-integration` -- must pass
 
 ### Task 7: Final verification
 - [ ] run full `make test-integration` -- all tests must pass

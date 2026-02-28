@@ -235,3 +235,99 @@ func TestTableStatus(t *testing.T) {
 		t.Error("status.all_replicas_ready is false")
 	}
 }
+
+func TestTableSync(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	tableName := "tbl"
+	createTestTable(t, exec, dbName, tableName)
+
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table(tableName).Sync(), nil)
+	if err != nil {
+		t.Fatalf("table sync: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+
+	var result struct {
+		Synced int `json:"synced"`
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatalf("unmarshal sync result: %v", err)
+	}
+	if result.Synced != 1 {
+		t.Errorf("synced=%d, want 1", result.Synced)
+	}
+}
+
+func TestTableReconfigure(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	tableName := "tbl"
+	createTestTable(t, exec, dbName, tableName)
+
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table(tableName).Reconfigure(reql.OptArgs{"shards": 1, "replicas": 1}), nil)
+	if err != nil {
+		t.Fatalf("table reconfigure: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+
+	var result struct {
+		Reconfigured int `json:"reconfigured"`
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatalf("unmarshal reconfigure result: %v", err)
+	}
+	if result.Reconfigured < 0 {
+		t.Errorf("reconfigured=%d, want >= 0", result.Reconfigured)
+	}
+}
+
+func TestTableRebalance(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	tableName := "tbl"
+	createTestTable(t, exec, dbName, tableName)
+
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table(tableName).Rebalance(), nil)
+	if err != nil {
+		t.Fatalf("table rebalance: %v", err)
+	}
+	defer closeCursor(cur)
+
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+
+	var result struct {
+		Rebalanced int `json:"rebalanced"`
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatalf("unmarshal rebalance result: %v", err)
+	}
+	if result.Rebalanced < 0 {
+		t.Errorf("rebalanced=%d, want >= 0", result.Rebalanced)
+	}
+}
