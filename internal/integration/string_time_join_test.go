@@ -338,6 +338,182 @@ func TestToJSONString(t *testing.T) {
 	}
 }
 
+func TestSplit(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	cases := []struct {
+		name  string
+		term  reql.Term
+		want  []string
+	}{
+		{
+			name: "delimiter",
+			term: reql.Datum("a,b,c").Split(","),
+			want: []string{"a", "b", "c"},
+		},
+		{
+			name: "whitespace",
+			term: reql.Datum("hello world foo").Split(),
+			want: []string{"hello", "world", "foo"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, cur, err := exec.Run(ctx, tc.term, nil)
+			if err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			defer closeCursor(cur)
+
+			raw, err := cur.Next()
+			if err != nil {
+				t.Fatalf("cursor next: %v", err)
+			}
+			var got []string
+			if err := json.Unmarshal(raw, &got); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("split got %v, want %v", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("split[%d]=%q, want %q", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestDowncase(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"HELLO", "hello"},
+		{"MixedCase", "mixedcase"},
+		{"already", "already"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, cur, err := exec.Run(ctx, reql.Datum(tc.input).Downcase(), nil)
+			if err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			defer closeCursor(cur)
+
+			raw, err := cur.Next()
+			if err != nil {
+				t.Fatalf("cursor next: %v", err)
+			}
+			var got string
+			if err := json.Unmarshal(raw, &got); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("downcase(%q)=%q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSplitOnTableField(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "tags": "go,rethinkdb,test"},
+		{"id": "2", "tags": "foo,bar"},
+	})
+
+	fn := reql.Func(reql.Var(1).GetField("tags").Split(","), 1)
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").Map(fn), nil)
+	if err != nil {
+		t.Fatalf("map split: %v", err)
+	}
+	defer closeCursor(cur)
+
+	rows, err := cur.All()
+	if err != nil {
+		t.Fatalf("cursor all: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("got %d rows, want 2", len(rows))
+	}
+
+	// collect expected split lengths (order not guaranteed)
+	gotLens := make(map[int]int)
+	for _, raw := range rows {
+		var parts []string
+		if err := json.Unmarshal(raw, &parts); err != nil {
+			t.Fatalf("unmarshal split result: %v", err)
+		}
+		gotLens[len(parts)]++
+	}
+	// "go,rethinkdb,test" -> 3 parts, "foo,bar" -> 2 parts
+	if gotLens[3] != 1 || gotLens[2] != 1 {
+		t.Errorf("unexpected split lengths: %v", gotLens)
+	}
+}
+
+func TestDowncaseOnTableField(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "label": "ALPHA"},
+		{"id": "2", "label": "BETA"},
+	})
+
+	fn := reql.Func(reql.Var(1).GetField("label").Downcase(), 1)
+	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").Map(fn), nil)
+	if err != nil {
+		t.Fatalf("map downcase: %v", err)
+	}
+	defer closeCursor(cur)
+
+	rows, err := cur.All()
+	if err != nil {
+		t.Fatalf("cursor all: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("got %d rows, want 2", len(rows))
+	}
+
+	// collect lowercased values (order not guaranteed)
+	gotSet := make(map[string]bool)
+	for _, raw := range rows {
+		var got string
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Fatalf("unmarshal downcase result: %v", err)
+		}
+		gotSet[got] = true
+	}
+	for _, want := range []string{"alpha", "beta"} {
+		if !gotSet[want] {
+			t.Errorf("downcase result missing %q, got %v", want, gotSet)
+		}
+	}
+}
+
 func TestEqJoinZip(t *testing.T) {
 	t.Parallel()
 	exec := newExecutor(t)

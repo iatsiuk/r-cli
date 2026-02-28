@@ -61,11 +61,11 @@ File: `internal/integration/logic_ops_test.go` (new)
 ### Task 3: String operation tests (split, downcase)
 File: `internal/integration/string_time_join_test.go` (append)
 
-- [ ] `TestSplit` -- scalar: `reql.Datum("a,b,c").Split(",")` -> `["a","b","c"]`; no-arg split on whitespace
-- [ ] `TestDowncase` -- scalar: `reql.Datum("HELLO").Downcase()` -> `"hello"`
-- [ ] `TestSplitOnTableField` -- map over table docs, split a string field, verify array results
-- [ ] `TestDowncaseOnTableField` -- map over table docs, downcase a string field, verify lowercased results
-- [ ] run `make test-integration` -- must pass
+- [x] `TestSplit` -- scalar: `reql.Datum("a,b,c").Split(",")` -> `["a","b","c"]`; no-arg split on whitespace
+- [x] `TestDowncase` -- scalar: `reql.Datum("HELLO").Downcase()` -> `"hello"`
+- [x] `TestSplitOnTableField` -- map over table docs, split a string field, verify array results
+- [x] `TestDowncaseOnTableField` -- map over table docs, downcase a string field, verify lowercased results
+- [x] run `make test-integration` -- must pass
 
 ### Task 4: OuterJoin test
 File: `internal/integration/string_time_join_test.go` (append)
