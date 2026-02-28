@@ -94,12 +94,12 @@ File: `internal/integration/set_ops_test.go` (new)
 
 File: `internal/integration/constructors_test.go` (new)
 
-- [ ] test `MinVal`/`MaxVal` -- `between(r.minval, r.maxval)` returns all docs; `between(r.minval, "m")` returns docs with id < "m"; `between("m", r.maxval)` returns docs with id >= "m"
-- [ ] test `Error` -- `r.error("boom")` returns ReqlRuntimeError with message "boom"; `r.branch(cond, val, r.error("bad"))` returns error on false branch
-- [ ] test `Args` -- `r.args(["a","b"])` used as argument spread: `getAll(r.args(["id1","id2"]))` returns matching docs
-- [ ] test `Literal` -- update with `r.literal({"new":"obj"})` replaces nested object entirely instead of merging; update with `r.literal()` (no args) removes the field
-- [ ] test `GeoJSON` -- `r.geoJSON({"type":"Point","coordinates":[-73.9,40.7]})` creates a geometry; insert into geo-indexed table and query with getIntersecting
-- [ ] run `make test-integration` -- must pass
+- [x] test `MinVal`/`MaxVal` -- `between(r.minval, r.maxval)` returns all docs; `between(r.minval, "m")` returns docs with id < "m"; `between("m", r.maxval)` returns docs with id >= "m"
+- [x] test `Error` -- `r.error("boom")` returns ReqlRuntimeError with message "boom"; `r.branch(cond, val, r.error("bad"))` returns error on false branch
+- [x] test `Args` -- `r.args(["a","b"])` used as argument spread: `getAll(r.args(["id1","id2"]))` returns matching docs
+- [x] test `Literal` -- update with `r.literal({"new":"obj"})` replaces nested object entirely instead of merging; update with `r.literal()` (no args) removes the field
+- [x] test `GeoJSON` -- `r.geoJSON({"type":"Point","coordinates":[-73.9,40.7]})` creates a geometry; insert into geo-indexed table and query with getIntersecting
+- [x] run `make test-integration` -- must pass
 
 ### Task 8: Time operation (during) and geo operations (toGeoJSON, intersects, includes, fill, polygonSub)
 
