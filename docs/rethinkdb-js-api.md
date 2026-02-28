@@ -534,7 +534,7 @@ singleSelection.delete([{durability: "hard", returnChanges: false, ignoreWriteHo
 r.table("comments").get("7eab9e63-73f1-4f33-8ce4-95cbea626f59").delete().run(conn, callback)
 ```
 
-- [ ] ### sync
+- [x] ### sync
 
 **Syntax:** `table.sync() → object`
 
@@ -632,7 +632,7 @@ r.table('marvel').innerJoin(r.table('dc'), function(marvelRow, dcRow) {
 }).zip().run(conn, callback)
 ```
 
-- [ ] ### outerJoin
+- [x] ### outerJoin
 
 **Syntax:** `sequence.outerJoin(otherSequence, predicate_function) → stream`
 
@@ -894,7 +894,7 @@ r.count(sequence | binary | string | object[, predicate_function]) → number
 r.table('users').count().run(conn, callback);
 ```
 
-- [ ] ### sum
+- [x] ### sum
 
 **Syntax:** `sequence.sum([field | function]) → number`
 
@@ -905,7 +905,7 @@ r.table('users').count().run(conn, callback);
 r.expr([3, 5, 7]).sum().run(conn, callback)
 ```
 
-- [ ] ### avg
+- [x] ### avg
 
 **Syntax:** `sequence.avg([field | function]) → number`
 
@@ -916,7 +916,7 @@ r.expr([3, 5, 7]).sum().run(conn, callback)
 r.table('games').avg('points').run(conn, callback)
 ```
 
-- [ ] ### min
+- [x] ### min
 
 **Syntax:**
 ```
@@ -933,7 +933,7 @@ r.min(sequence, {index: <indexname>}) → element
 r.table('users').min('points').run(conn, callback);
 ```
 
-- [ ] ### max
+- [x] ### max
 
 **Syntax:**
 ```
@@ -1240,7 +1240,7 @@ r.object('id', 5, 'data', ['foo', 'bar']).run(conn, callback)
 r.expr("name@domain.com").match(".*@(.*)").run(conn, callback)
 ```
 
-- [ ] ### split
+- [x] ### split
 
 **Syntax:** `string.split([separator, [max_splits]]) → array`
 
@@ -1262,7 +1262,7 @@ r.expr("12,37,,22,").split(",").run(conn, callback)
 r.expr("Sentence about LaTeX.").upcase().run(conn, callback)
 ```
 
-- [ ] ### downcase
+- [x] ### downcase
 
 **Syntax:** `string.downcase() → string`
 
@@ -1344,7 +1344,7 @@ var x = true, y = true, z = true;
 r.and(x, y, z).run(conn, callback);
 ```
 
-- [ ] ### or
+- [x] ### or
 
 **Syntax:** `bool.or([bool, bool, ...]) → bool` / `r.or([bool, bool, ...]) → bool`
 
@@ -1367,7 +1367,7 @@ r.expr(a).or(b).run(conn, callback);
 r.table('users').get(1)('role').eq('administrator').run(conn, callback);
 ```
 
-- [ ] ### ne
+- [x] ### ne
 
 **Syntax:** `value.ne(value[, value, ...]) → bool`
 
@@ -1389,7 +1389,7 @@ r.table('users').get(1)('role').ne('administrator').run(conn, callback);
 r.table('players').get(1)('score').gt(10).run(conn, callback);
 ```
 
-- [ ] ### ge
+- [x] ### ge
 
 **Syntax:** `value.ge(value[, value, ...]) → bool`
 
@@ -1400,7 +1400,7 @@ r.table('players').get(1)('score').gt(10).run(conn, callback);
 r.table('players').get(1)('score').ge(10).run(conn, callback);
 ```
 
-- [ ] ### lt
+- [x] ### lt
 
 **Syntax:** `value.lt(value[, value, ...]) → bool`
 
@@ -1411,7 +1411,7 @@ r.table('players').get(1)('score').ge(10).run(conn, callback);
 r.table('players').get(1)('score').lt(10).run(conn, callback);
 ```
 
-- [ ] ### le
+- [x] ### le
 
 **Syntax:** `value.le(value[, value, ...]) → bool`
 
@@ -1422,7 +1422,7 @@ r.table('players').get(1)('score').lt(10).run(conn, callback);
 r.table('players').get(1)('score').le(10).run(conn, callback);
 ```
 
-- [ ] ### not
+- [x] ### not
 
 **Syntax:** `bool.not() → bool` / `not(bool) → bool`
 
@@ -1596,7 +1596,7 @@ r.table("user").get("John").update({birthdate: r.epochTime(531360000)}).run(conn
 r.table("user").get("John").update({birth: r.ISO8601('1986-11-03T08:30:00-07:00')}).run(conn, callback)
 ```
 
-- [ ] ### inTimezone
+- [x] ### inTimezone
 
 **Syntax:** `time.inTimezone(timezone) → time`
 
@@ -1607,7 +1607,7 @@ r.table("user").get("John").update({birth: r.ISO8601('1986-11-03T08:30:00-07:00'
 r.now().inTimezone('-08:00').hours().run(conn, callback)
 ```
 
-- [ ] ### timezone
+- [x] ### timezone
 
 **Syntax:** `time.timezone() → string`
 
@@ -1633,7 +1633,7 @@ r.table("posts").filter(
 ).run(conn, callback)
 ```
 
-- [ ] ### date
+- [x] ### date
 
 **Syntax:** `time.date() → time`
 
@@ -1646,7 +1646,7 @@ r.table("users").filter(function(user) {
 }).run(conn, callback)
 ```
 
-- [ ] ### timeOfDay
+- [x] ### timeOfDay
 
 **Syntax:** `time.timeOfDay() → number`
 
@@ -1672,7 +1672,7 @@ r.table("users").filter(function(user) {
 }).run(conn, callback)
 ```
 
-- [ ] ### month
+- [x] ### month
 
 **Syntax:** `time.month() → number`
 
@@ -1685,7 +1685,7 @@ r.table("users").filter(
 )
 ```
 
-- [ ] ### day
+- [x] ### day
 
 **Syntax:** `time.day() → number`
 
@@ -1698,7 +1698,7 @@ r.table("users").filter(
 ).run(conn, callback)
 ```
 
-- [ ] ### dayOfWeek
+- [x] ### dayOfWeek
 
 **Syntax:** `time.dayOfWeek() → number`
 
@@ -1711,7 +1711,7 @@ r.table("users").filter(
 )
 ```
 
-- [ ] ### dayOfYear
+- [x] ### dayOfYear
 
 **Syntax:** `time.dayOfYear() → number`
 
@@ -1724,7 +1724,7 @@ r.table("users").filter(
 )
 ```
 
-- [ ] ### hours
+- [x] ### hours
 
 **Syntax:** `time.hours() → number`
 
@@ -1737,7 +1737,7 @@ r.table("posts").filter(function(post) {
 })
 ```
 
-- [ ] ### minutes
+- [x] ### minutes
 
 **Syntax:** `time.minutes() → number`
 
@@ -1750,7 +1750,7 @@ r.table("posts").filter(function(post) {
 })
 ```
 
-- [ ] ### seconds
+- [x] ### seconds
 
 **Syntax:** `time.seconds() → number`
 
@@ -1763,7 +1763,7 @@ r.table("posts").filter(function(post) {
 })
 ```
 
-- [ ] ### toISO8601
+- [x] ### toISO8601
 
 **Syntax:** `time.toISO8601() → string`
 
@@ -2232,7 +2232,7 @@ r.grant("bob", {read: true, write: false, config: false}).run(conn, callback)
 r.table('users').config().run(conn, callback)
 ```
 
-- [ ] ### rebalance
+- [x] ### rebalance
 
 **Syntax:** `table.rebalance() → object` / `database.rebalance() → object`
 
@@ -2243,7 +2243,7 @@ r.table('users').config().run(conn, callback)
 r.table('superheroes').rebalance().run(conn, callback)
 ```
 
-- [ ] ### reconfigure
+- [x] ### reconfigure
 
 **Syntax:** `table.reconfigure({shards: <s>, replicas: <r>[, primaryReplicaTag: <tag>, dryRun: false]}) → object`
 
