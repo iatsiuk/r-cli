@@ -692,6 +692,31 @@ func TestBuildTLSConfigCACertInvalidPEM(t *testing.T) {
 	}
 }
 
+// cmdHelpOutput returns the help output for root or a named subcommand.
+func cmdHelpOutput(t *testing.T, name string) string {
+	t.Helper()
+	root := newRootCmd()
+	buf := &bytes.Buffer{}
+	if name == "" {
+		root.SetOut(buf)
+		if err := root.Help(); err != nil {
+			t.Fatal(err)
+		}
+		return buf.String()
+	}
+	for _, c := range root.Commands() {
+		if c.Name() == name {
+			c.SetOut(buf)
+			if err := c.Help(); err != nil {
+				t.Fatal(err)
+			}
+			return buf.String()
+		}
+	}
+	t.Fatalf("subcommand %q not found", name)
+	return ""
+}
+
 func TestHelpEnvVarsSection(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -714,29 +739,7 @@ func TestHelpEnvVarsSection(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			root := newRootCmd()
-			buf := &bytes.Buffer{}
-
-			if tc.subCmd == "" {
-				root.SetOut(buf)
-				_ = root.Help()
-			} else {
-				found := false
-				for _, c := range root.Commands() {
-					if c.Name() == tc.subCmd {
-						c.SetOut(buf)
-						_ = c.Help()
-						found = true
-						break
-					}
-				}
-				if !found {
-					t.Fatalf("subcommand %q not found", tc.subCmd)
-				}
-			}
-
-			out := buf.String()
-
+			out := cmdHelpOutput(t, tc.subCmd)
 			if tc.wantSection {
 				if !strings.Contains(out, "Environment Variables:") {
 					t.Errorf("help output missing 'Environment Variables:' header\noutput:\n%s", out)
