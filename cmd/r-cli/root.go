@@ -142,9 +142,11 @@ Environment Variables:
 // before the trailing "Use ... --help" line, visible only on the root command.
 func withEnvVarsTemplate(cmd *cobra.Command) string {
 	const marker = "{{if .HasAvailableSubCommands}}\n\nUse \"{{.CommandPath}} [command] --help\" for more information about a command.{{end}}\n"
-	result := strings.Replace(cmd.UsageTemplate(), marker, envVarsSection+marker, 1)
+	tmpl := cmd.UsageTemplate()
+	result := strings.Replace(tmpl, marker, envVarsSection+marker, 1)
 	if !strings.Contains(result, "RETHINKDB_HOST") {
-		panic("withEnvVarsTemplate: marker not found in cobra usage template; cobra version may have changed")
+		fmt.Fprintln(os.Stderr, "warning: could not inject env vars section into usage template; cobra template may have changed")
+		return tmpl
 	}
 	return result
 }
