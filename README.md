@@ -190,6 +190,7 @@ Format is auto-detected: `json` (pretty-printed) on TTY, `jsonl` (one JSON per l
 | `RETHINKDB_USER` | `--user` |
 | `RETHINKDB_PASSWORD` | `--password` |
 | `RETHINKDB_DATABASE` | `--db` |
+
 CLI flags always take precedence over environment variables.
 
 ## Exit Codes
