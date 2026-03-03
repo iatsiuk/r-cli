@@ -746,10 +746,8 @@ func TestHelpEnvVarsSection(t *testing.T) {
 						t.Errorf("help output missing env var %q\noutput:\n%s", v, out)
 					}
 				}
-			} else {
-				if strings.Contains(out, "Environment Variables:") {
-					t.Errorf("help output should not contain 'Environment Variables:' header\noutput:\n%s", out)
-				}
+			} else if strings.Contains(out, "Environment Variables:") {
+				t.Errorf("help output should not contain 'Environment Variables:' header\noutput:\n%s", out)
 			}
 		})
 	}

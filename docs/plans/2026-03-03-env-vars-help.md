@@ -34,16 +34,16 @@
 - [x] run tests -- expected to FAIL (tests written before implementation)
 
 ### Task 2: Implement env vars section in help output
-- [ ] remove `(or RETHINKDB_PASSWORD env)` from `--password` flag description in `root.go`
-- [ ] add helper function (e.g. `envVarsUsageTemplate`) that gets default usage template via `cmd.UsageTemplate()` and injects env vars section wrapped in `{{if not .HasParent}}...{{end}}` before the trailing "Use ... --help" line via `strings.Replace`
-- [ ] call helper from `buildRootCmd()` and apply result via `cmd.SetUsageTemplate()`
-- [ ] env vars section content:
+- [x] remove `(or RETHINKDB_PASSWORD env)` from `--password` flag description in `root.go`
+- [x] add helper function (e.g. `envVarsUsageTemplate`) that gets default usage template via `cmd.UsageTemplate()` and injects env vars section wrapped in `{{if not .HasParent}}...{{end}}` before the trailing "Use ... --help" line via `strings.Replace`
+- [x] call helper from `buildRootCmd()` and apply result via `cmd.SetUsageTemplate()`
+- [x] env vars section content:
   - `RETHINKDB_HOST` -- override default host
   - `RETHINKDB_PORT` -- override default port
   - `RETHINKDB_USER` -- override default user
   - `RETHINKDB_PASSWORD` -- set password
   - `RETHINKDB_DATABASE` -- set default database
-- [ ] run tests -- must pass
+- [x] run tests -- must pass
 
 ### Task 3: Remove dead NoColor code
 - [ ] remove `NoColor()` function from `internal/output/detect.go`

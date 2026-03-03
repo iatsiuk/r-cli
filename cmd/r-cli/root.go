@@ -109,7 +109,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	f.IntVarP(&cfg.port, "port", "P", 28015, "RethinkDB port")
 	f.StringVarP(&cfg.database, "db", "d", "", "default database")
 	f.StringVarP(&cfg.user, "user", "u", "admin", "RethinkDB user")
-	f.StringVarP(&cfg.password, "password", "p", "", "RethinkDB password (or RETHINKDB_PASSWORD env)")
+	f.StringVarP(&cfg.password, "password", "p", "", "RethinkDB password")
 	f.StringVar(&cfg.passwordFile, "password-file", "", "read password from file")
 	f.DurationVarP(&cfg.timeout, "timeout", "t", 30*time.Second, "connection timeout")
 	f.StringVarP(&cfg.format, "format", "f", "", "output format: json, jsonl, raw, table (default: json on TTY, jsonl when piped)")
@@ -123,7 +123,26 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	f.StringVar(&cfg.tlsKey, "tls-key", "", "path to client private key PEM file")
 	f.BoolVar(&cfg.insecureSkipVerify, "insecure-skip-verify", false, "skip TLS certificate verification (insecure)")
 
+	cmd.SetUsageTemplate(withEnvVarsTemplate(cmd))
 	return cmd
+}
+
+// envVarsSection is the template block injected into the root command's usage template.
+const envVarsSection = `{{if not .HasParent}}
+
+Environment Variables:
+  RETHINKDB_HOST      override default host
+  RETHINKDB_PORT      override default port
+  RETHINKDB_USER      override default user
+  RETHINKDB_PASSWORD  set password
+  RETHINKDB_DATABASE  set default database
+{{- end}}`
+
+// withEnvVarsTemplate returns a usage template with an env vars section injected
+// before the trailing "Use ... --help" line, visible only on the root command.
+func withEnvVarsTemplate(cmd *cobra.Command) string {
+	const marker = "{{if .HasAvailableSubCommands}}\n\nUse \"{{.CommandPath}} [command] --help\" for more information about a command.{{end}}\n"
+	return strings.Replace(cmd.UsageTemplate(), marker, envVarsSection+marker, 1)
 }
 
 // exitCode maps an error to the appropriate process exit code.
