@@ -20,13 +20,6 @@ func DetectFormat(stdout *os.File, flagFormat string) string {
 	return "jsonl"
 }
 
-// NoColor reports whether ANSI color output should be suppressed.
-// Returns true when the NO_COLOR environment variable is set (any value).
-func NoColor() bool {
-	_, ok := os.LookupEnv("NO_COLOR")
-	return ok
-}
-
 // isTerminal reports whether f is connected to a terminal character device.
 func isTerminal(f *os.File) bool {
 	if f == nil {

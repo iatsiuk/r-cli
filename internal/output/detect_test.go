@@ -46,24 +46,3 @@ func TestDetectFormatFlagOverride(t *testing.T) {
 	}
 }
 
-func TestNoColor(t *testing.T) {
-	t.Setenv("NO_COLOR", "1")
-	if !NoColor() {
-		t.Error("expected NoColor() true when NO_COLOR env var is set")
-	}
-}
-
-func TestNoColorUnset(t *testing.T) {
-	prev, exists := os.LookupEnv("NO_COLOR")
-	if err := os.Unsetenv("NO_COLOR"); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if exists {
-			os.Setenv("NO_COLOR", prev) //nolint:errcheck
-		}
-	})
-	if NoColor() {
-		t.Error("expected NoColor() false when NO_COLOR env var is not set")
-	}
-}

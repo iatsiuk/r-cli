@@ -46,9 +46,9 @@
 - [x] run tests -- must pass
 
 ### Task 3: Remove dead NoColor code
-- [ ] remove `NoColor()` function from `internal/output/detect.go`
-- [ ] remove `TestNoColor` and `TestNoColorUnset` from `internal/output/detect_test.go`
-- [ ] run tests (`go test ./internal/output/... -race -count=1`) -- must pass
+- [x] remove `NoColor()` function from `internal/output/detect.go`
+- [x] remove `TestNoColor` and `TestNoColorUnset` from `internal/output/detect_test.go`
+- [x] run tests (`go test ./internal/output/... -race -count=1`) -- must pass
 
 ### Task 4: Verify acceptance criteria
 - [ ] run full test suite (`go test ./cmd/r-cli/... -race -count=1`)
