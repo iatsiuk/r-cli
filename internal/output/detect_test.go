@@ -45,4 +45,3 @@ func TestDetectFormatFlagOverride(t *testing.T) {
 		}
 	}
 }
-

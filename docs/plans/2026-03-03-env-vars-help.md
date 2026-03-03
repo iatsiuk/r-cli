@@ -51,11 +51,11 @@
 - [x] run tests (`go test ./internal/output/... -race -count=1`) -- must pass
 
 ### Task 4: Verify acceptance criteria
-- [ ] run full test suite (`go test ./cmd/r-cli/... -race -count=1`)
-- [ ] run linter (`golangci-lint run`)
-- [ ] build (`make build`)
-- [ ] manually verify `go run ./cmd/r-cli --help` shows env vars section and clean `--password` description
-- [ ] manually verify `go run ./cmd/r-cli db --help` does NOT show env vars section
+- [x] run full test suite (`go test ./cmd/r-cli/... -race -count=1`)
+- [x] run linter (`golangci-lint run`)
+- [x] build (`make build`)
+- [x] manually verify `go run ./cmd/r-cli --help` shows env vars section and clean `--password` description
+- [x] manually verify `go run ./cmd/r-cli db --help` does NOT show env vars section
 
 ## Technical Details
 - Get default template via `cmd.UsageTemplate()`, inject env section via `strings.Replace` -- avoids hardcoding full cobra template
