@@ -27,11 +27,11 @@
 ## Implementation Steps
 
 ### Task 1: Write tests for env vars section in help output
-- [ ] add table-driven `TestHelpEnvVarsSection` test in `root_test.go` with cases:
+- [x] add table-driven `TestHelpEnvVarsSection` test in `root_test.go` with cases:
   - root `--help` -- output MUST contain "Environment Variables:" header and all 5 env var names
   - subcommand `db --help` -- output MUST NOT contain "Environment Variables:"
-- [ ] add `TestPasswordFlagUsageNoEnvMention` test asserting `--password` flag's `Usage` field does not contain `RETHINKDB_PASSWORD`
-- [ ] run tests -- expected to FAIL (tests written before implementation)
+- [x] add `TestPasswordFlagUsageNoEnvMention` test asserting `--password` flag's `Usage` field does not contain `RETHINKDB_PASSWORD`
+- [x] run tests -- expected to FAIL (tests written before implementation)
 
 ### Task 2: Implement env vars section in help output
 - [ ] remove `(or RETHINKDB_PASSWORD env)` from `--password` flag description in `root.go`

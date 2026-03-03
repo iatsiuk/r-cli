@@ -691,3 +691,78 @@ func TestBuildTLSConfigCACertInvalidPEM(t *testing.T) {
 		t.Errorf("unexpected error message: %v", err)
 	}
 }
+
+func TestHelpEnvVarsSection(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		subCmd      string
+		wantSection bool
+	}{
+		{"root --help contains env vars section", "", true},
+		{"db --help does not contain env vars section", "db", false},
+	}
+
+	envVars := []string{
+		"RETHINKDB_HOST",
+		"RETHINKDB_PORT",
+		"RETHINKDB_USER",
+		"RETHINKDB_PASSWORD",
+		"RETHINKDB_DATABASE",
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			root := newRootCmd()
+			buf := &bytes.Buffer{}
+
+			if tc.subCmd == "" {
+				root.SetOut(buf)
+				_ = root.Help()
+			} else {
+				found := false
+				for _, c := range root.Commands() {
+					if c.Name() == tc.subCmd {
+						c.SetOut(buf)
+						_ = c.Help()
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatalf("subcommand %q not found", tc.subCmd)
+				}
+			}
+
+			out := buf.String()
+
+			if tc.wantSection {
+				if !strings.Contains(out, "Environment Variables:") {
+					t.Errorf("help output missing 'Environment Variables:' header\noutput:\n%s", out)
+				}
+				for _, v := range envVars {
+					if !strings.Contains(out, v) {
+						t.Errorf("help output missing env var %q\noutput:\n%s", v, out)
+					}
+				}
+			} else {
+				if strings.Contains(out, "Environment Variables:") {
+					t.Errorf("help output should not contain 'Environment Variables:' header\noutput:\n%s", out)
+				}
+			}
+		})
+	}
+}
+
+func TestPasswordFlagUsageNoEnvMention(t *testing.T) {
+	t.Parallel()
+	cmd := newRootCmd()
+	f := cmd.PersistentFlags().Lookup("password")
+	if f == nil {
+		t.Fatal("--password flag not found")
+	}
+	if strings.Contains(f.Usage, "RETHINKDB_PASSWORD") {
+		t.Errorf("--password flag usage should not mention RETHINKDB_PASSWORD, got: %q", f.Usage)
+	}
+}
