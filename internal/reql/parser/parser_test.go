@@ -1600,3 +1600,32 @@ func TestParse_OptArgs_Reconfigure(t *testing.T) {
 	want := reql.DB("d").Table("t").Reconfigure(reql.OptArgs{"shards": int64(2), "replicas": int64(1)})
 	assertTermEqual(t, got, want)
 }
+
+func TestCamelToSnake(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"leftBound", "left_bound"},
+		{"rightBound", "right_bound"},
+		{"returnChanges", "return_changes"},
+		{"dryRun", "dry_run"},
+		{"includeInitial", "include_initial"},
+		{"maxResults", "max_results"},
+		{"primaryKey", "primary_key"},
+		{"nonVotingReplicaTags", "non_voting_replica_tags"},
+		{"left_bound", "left_bound"},
+		{"index", "index"},
+		{"shards", "shards"},
+		{"", ""},
+		{"X", "x"},
+		{"maxBPS", "max_b_p_s"},
+	}
+	for _, tc := range cases {
+		got := camelToSnake(tc.input)
+		if got != tc.want {
+			t.Errorf("camelToSnake(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}

@@ -34,7 +34,7 @@
 ## Implementation Steps
 
 ### Task 1: Write unit tests for camelToSnake helper
-- [ ] add `TestCamelToSnake` table-driven test in `internal/reql/parser/parser_test.go` covering:
+- [x] add `TestCamelToSnake` table-driven test in `internal/reql/parser/parser_test.go` covering:
   - `leftBound` -> `left_bound`
   - `rightBound` -> `right_bound`
   - `returnChanges` -> `return_changes`
@@ -49,7 +49,7 @@
   - empty string: `""` -> `""`
   - single uppercase: `X` -> `x`
   - consecutive uppercase (naive): `maxBPS` -> `max_b_p_s` (no real RethinkDB opts have acronyms)
-- [ ] run tests -- `TestCamelToSnake` must fail (function not yet implemented)
+- [x] run tests -- `TestCamelToSnake` must fail (function not yet implemented)
 
 ### Task 2: Implement camelToSnake helper
 - [ ] add `camelToSnake(s string) string` unexported function in `internal/reql/parser/parser.go`
