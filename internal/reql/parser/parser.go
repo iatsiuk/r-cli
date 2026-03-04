@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"strconv"
+	"unicode"
 
 	"r-cli/internal/reql"
 )
@@ -1881,7 +1882,7 @@ func (p *parser) parseObjectBody(valueParser func() (interface{}, error)) (reql.
 		if err != nil {
 			return nil, err
 		}
-		opts[key] = val
+		opts[camelToSnake(key)] = val
 		if p.peek().Type == tokenComma {
 			p.advance()
 			if p.peek().Type == tokenRBrace {
@@ -2181,6 +2182,25 @@ func (p *parser) parseDatumTerm() (reql.Term, error) {
 	default:
 		return reql.Term{}, fmt.Errorf("unexpected token %q at position %d", tok.Value, tok.Pos)
 	}
+}
+
+// camelToSnake converts camelCase to snake_case (e.g. leftBound -> left_bound).
+func camelToSnake(s string) string {
+	if s == "" {
+		return s
+	}
+	out := make([]rune, 0, len(s)+4)
+	for i, r := range s {
+		if r >= 'A' && r <= 'Z' {
+			if i > 0 && out[len(out)-1] != '_' {
+				out = append(out, '_')
+			}
+			out = append(out, unicode.ToLower(r))
+		} else {
+			out = append(out, r)
+		}
+	}
+	return string(out)
 }
 
 // parseNumberValue converts a number string to int or float64.
