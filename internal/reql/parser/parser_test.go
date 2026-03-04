@@ -1508,3 +1508,80 @@ func TestParse_Do_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestParse_OptArgs_GetAll(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").table("t").getAll("a", "b", {index: "idx"})`)
+	want := reql.DB("d").Table("t").GetAll("a", "b", reql.OptArgs{"index": "idx"})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_OrderBy(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").table("t").orderBy("name", {index: "idx"})`)
+	want := reql.DB("d").Table("t").OrderBy("name", reql.OptArgs{"index": "idx"})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_Between(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").table("t").between(1, 10, {index: "score", left_bound: "closed"})`)
+	want := reql.DB("d").Table("t").Between(reql.Datum(int64(1)), reql.Datum(int64(10)), reql.OptArgs{"index": "score", "left_bound": "closed"})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_EqJoin(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.table("t").eqJoin("field", r.table("t2"), {index: "idx"})`)
+	want := reql.Table("t").EqJoin("field", reql.Table("t2"), reql.OptArgs{"index": "idx"})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_Distance(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.point(0, 0).distance(r.point(1, 1), {unit: "km"})`)
+	want := reql.Point(0, 0).Distance(reql.Point(1, 1), reql.OptArgs{"unit": "km"})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_GetIntersecting(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.table("t").getIntersecting(r.point(0, 0), {index: "geo"})`)
+	want := reql.Table("t").GetIntersecting(reql.Point(0, 0), reql.OptArgs{"index": "geo"})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_GetNearest(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.table("t").getNearest(r.point(0, 0), {index: "geo", max_dist: 1000})`)
+	want := reql.Table("t").GetNearest(reql.Point(0, 0), reql.OptArgs{"index": "geo", "max_dist": int64(1000)})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_TableCreate(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").tableCreate("t", {primary_key: "uid"})`)
+	want := reql.DB("d").TableCreate("t", reql.OptArgs{"primary_key": "uid"})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_IndexCreate(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").table("t").indexCreate("idx", {multi: true})`)
+	want := reql.DB("d").Table("t").IndexCreate("idx", reql.OptArgs{"multi": true})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_Changes(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").table("t").changes({include_initial: true})`)
+	want := reql.DB("d").Table("t").Changes(reql.OptArgs{"include_initial": true})
+	assertTermEqual(t, got, want)
+}
+
+func TestParse_OptArgs_Reconfigure(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").table("t").reconfigure({shards: 2, replicas: 1})`)
+	want := reql.DB("d").Table("t").Reconfigure(reql.OptArgs{"shards": int64(2), "replicas": int64(1)})
+	assertTermEqual(t, got, want)
+}

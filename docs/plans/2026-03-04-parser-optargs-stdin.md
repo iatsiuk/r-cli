@@ -69,18 +69,18 @@ Root cause for issues 1+2: the parser has no unified mechanism for "parse your r
 
 Add test cases that currently fail, covering all broken chains:
 
-- [ ] add test: `getAll` with OptArgs -- `r.db("d").table("t").getAll("a", "b", {index: "idx"})`
-- [ ] add test: `orderBy` with OptArgs -- `r.db("d").table("t").orderBy("name", {index: "idx"})`
-- [ ] add test: `between` with OptArgs -- `r.db("d").table("t").between(1, 10, {index: "score", left_bound: "closed"})`
-- [ ] add test: `eqJoin` with OptArgs -- `r.table("t").eqJoin("field", r.table("t2"), {index: "idx"})`
-- [ ] add test: `distance` with OptArgs -- `term.distance(other, {unit: "km"})`
-- [ ] add test: `getIntersecting` with OptArgs -- `r.table("t").getIntersecting(point, {index: "geo"})`
-- [ ] add test: `getNearest` with OptArgs -- `r.table("t").getNearest(point, {index: "geo", max_dist: 1000})`
-- [ ] add test: `tableCreate` with OptArgs -- `r.db("d").tableCreate("t", {primary_key: "uid"})`
-- [ ] add test: `indexCreate` with OptArgs -- `r.db("d").table("t").indexCreate("idx", {multi: true})`
-- [ ] add test: `changes` with OptArgs -- `r.db("d").table("t").changes({include_initial: true})`
-- [ ] add test: `reconfigure` with OptArgs -- `r.db("d").table("t").reconfigure({shards: 2, replicas: 1})`
-- [ ] verify tests fail (red phase) -- run `go test ./internal/reql/parser/ -run <new_tests>`
+- [x] add test: `getAll` with OptArgs -- `r.db("d").table("t").getAll("a", "b", {index: "idx"})`
+- [x] add test: `orderBy` with OptArgs -- `r.db("d").table("t").orderBy("name", {index: "idx"})`
+- [x] add test: `between` with OptArgs -- `r.db("d").table("t").between(1, 10, {index: "score", left_bound: "closed"})`
+- [x] add test: `eqJoin` with OptArgs -- `r.table("t").eqJoin("field", r.table("t2"), {index: "idx"})`
+- [x] add test: `distance` with OptArgs -- `term.distance(other, {unit: "km"})`
+- [x] add test: `getIntersecting` with OptArgs -- `r.table("t").getIntersecting(point, {index: "geo"})`
+- [x] add test: `getNearest` with OptArgs -- `r.table("t").getNearest(point, {index: "geo", max_dist: 1000})`
+- [x] add test: `tableCreate` with OptArgs -- `r.db("d").tableCreate("t", {primary_key: "uid"})`
+- [x] add test: `indexCreate` with OptArgs -- `r.db("d").table("t").indexCreate("idx", {multi: true})`
+- [x] add test: `changes` with OptArgs -- `r.db("d").table("t").changes({include_initial: true})`
+- [x] add test: `reconfigure` with OptArgs -- `r.db("d").table("t").reconfigure({shards: 2, replicas: 1})`
+- [x] verify tests fail (red phase) -- run `go test ./internal/reql/parser/ -run <new_tests>`
 
 ### Task 2: Add parser unit test for `-F -` stdin (TDD red phase)
 
