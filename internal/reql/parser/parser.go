@@ -1081,7 +1081,7 @@ func chainIndexStatus(p *parser, t reql.Term) (reql.Term, error) {
 }
 
 func chainGetAll(p *parser, t reql.Term) (reql.Term, error) {
-	args, opts, err := p.parseArgListWithOpts()
+	args, opts, err := p.parseArgListNoOptsOnly()
 	if err != nil {
 		return reql.Term{}, err
 	}
@@ -1801,19 +1801,9 @@ func (p *parser) parseArgAndSep() (reql.Term, reql.OptArgs, bool, error) {
 	return arg, nil, false, nil
 }
 
-// parseArgListWithOpts parses (arg1, ..., {opts}?) returning terms and optional trailing OptArgs.
-// After consuming a comma, if '{' follows, attempts parseOptArgs; if succeeded and ')' follows,
-// treats it as trailing OptArgs. Otherwise backtracks (safe: parseOptArgs only accepts datums).
-// Also handles opts-only case: ({opts}) with no positional args.
-func (p *parser) parseArgListWithOpts() ([]reql.Term, reql.OptArgs, error) {
-	if _, err := p.expect(tokenLParen); err != nil {
-		return nil, nil, err
-	}
-	// opts-only: ({key: val}) with no positional args; tryTrailingOptArgs verified ')' follows
-	if opts, ok := p.tryTrailingOptArgs(); ok {
-		p.advance()
-		return nil, opts, nil
-	}
+// parseArgListBody parses arg expressions up to and including ')'.
+// Called after '(' has already been consumed.
+func (p *parser) parseArgListBody() ([]reql.Term, reql.OptArgs, error) {
 	var args []reql.Term
 	for p.peek().Type != tokenRParen && p.peek().Type != tokenEOF {
 		arg, opts, done, err := p.parseArgAndSep()
@@ -1835,6 +1825,31 @@ func (p *parser) parseArgListWithOpts() ([]reql.Term, reql.OptArgs, error) {
 		return nil, nil, err
 	}
 	return args, nil, nil
+}
+
+// parseArgListWithOpts parses (arg1, ..., {opts}?) returning terms and optional trailing OptArgs.
+// After consuming a comma, if '{' follows, attempts parseOptArgs; if succeeded and ')' follows,
+// treats it as trailing OptArgs. Otherwise backtracks (safe: parseOptArgs only accepts datums).
+// Also handles opts-only case: ({opts}) with no positional args.
+func (p *parser) parseArgListWithOpts() ([]reql.Term, reql.OptArgs, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return nil, nil, err
+	}
+	// opts-only: ({key: val}) with no positional args; tryTrailingOptArgs verified ')' follows
+	if opts, ok := p.tryTrailingOptArgs(); ok {
+		p.advance()
+		return nil, opts, nil
+	}
+	return p.parseArgListBody()
+}
+
+// parseArgListNoOptsOnly parses (arg1, ..., {opts}?) like parseArgListWithOpts but skips
+// the opts-only path. Use when at least one positional argument is required (e.g. getAll).
+func (p *parser) parseArgListNoOptsOnly() ([]reql.Term, reql.OptArgs, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return nil, nil, err
+	}
+	return p.parseArgListBody()
 }
 
 // parseNoArgs expects () with no arguments.

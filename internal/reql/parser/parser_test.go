@@ -1516,6 +1516,14 @@ func TestParse_OptArgs_GetAll(t *testing.T) {
 	assertTermEqual(t, got, want)
 }
 
+func TestParse_GetAll_ObjectKey(t *testing.T) {
+	t.Parallel()
+	// object literal as positional key must not be misclassified as OptArgs
+	got := mustParse(t, `r.db("d").table("t").getAll({id: "x"})`)
+	want := reql.DB("d").Table("t").GetAll(reql.Datum(map[string]interface{}{"id": "x"}))
+	assertTermEqual(t, got, want)
+}
+
 func TestParse_OptArgs_OrderBy(t *testing.T) {
 	t.Parallel()
 	got := mustParse(t, `r.db("d").table("t").orderBy("name", {index: "idx"})`)
