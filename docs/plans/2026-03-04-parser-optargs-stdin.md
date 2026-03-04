@@ -91,10 +91,10 @@ Add test cases that currently fail, covering all broken chains:
 
 Integration tests parse string expressions via `parser.Parse` and execute against a live RethinkDB. They will fail because the parser cannot parse OptArgs yet.
 
-- [ ] add integration test: `getAll` with secondary index + OptArgs (parse from string expression)
-- [ ] add integration test: `between` with index + OptArgs (parse from string expression)
-- [ ] add integration test: `eqJoin` with index + OptArgs (parse from string expression)
-- [ ] verify tests fail -- run `make test-integration`
+- [x] add integration test: `getAll` with secondary index + OptArgs (parse from string expression)
+- [x] add integration test: `between` with index + OptArgs (parse from string expression)
+- [x] add integration test: `eqJoin` with index + OptArgs (parse from string expression)
+- [x] verify tests fail -- run `make test-integration`
 
 ### Task 4: Implement OptArgs-aware helper builders in parser (green phase)
 
