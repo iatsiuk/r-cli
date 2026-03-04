@@ -2191,7 +2191,7 @@ func camelToSnake(s string) string {
 	out := make([]rune, 0, len(s)+4)
 	for i, r := range s {
 		if r >= 'A' && r <= 'Z' {
-			if i > 0 {
+			if i > 0 && (len(out) == 0 || out[len(out)-1] != '_') {
 				out = append(out, '_')
 			}
 			out = append(out, r+32)

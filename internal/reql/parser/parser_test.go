@@ -1667,6 +1667,8 @@ func TestCamelToSnake(t *testing.T) {
 		{"", ""},
 		{"X", "x"},
 		{"maxBPS", "max_b_p_s"},
+		{"already_snake", "already_snake"},
+		{"mixed_Case", "mixed_case"},
 	}
 	for _, tc := range cases {
 		got := camelToSnake(tc.input)

@@ -94,16 +94,19 @@ func TestParserOptArgsCamelCaseConversion(t *testing.T) {
 	createTestTable(t, exec, dbName, "docs")
 	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
 		{"id": "a", "score": 5},
-		{"id": "b", "score": 15},
-		{"id": "c", "score": 50},
-		{"id": "d", "score": 80},
+		{"id": "b", "score": 10},
+		{"id": "c", "score": 15},
+		{"id": "d", "score": 50},
+		{"id": "e", "score": 80},
 	})
 	waitForIndex(t, exec, dbName, "docs", "score")
 
 	t.Run("between_camelCase_bounds", func(t *testing.T) {
-		// leftBound and rightBound are camelCase; should be auto-converted to snake_case
+		// leftBound: "open" excludes the lower boundary value (score=10).
+		// If camelCase conversion fails, the key is unknown and RethinkDB uses the
+		// default left_bound: "closed", which would include score=10 (3 rows).
 		expr := fmt.Sprintf(
-			`r.db("%s").table("docs").between(10, 60, {index: "score", leftBound: "closed", rightBound: "closed"})`,
+			`r.db("%s").table("docs").between(10, 60, {index: "score", leftBound: "open"})`,
 			dbName,
 		)
 		term, err := parser.Parse(expr)
@@ -119,9 +122,9 @@ func TestParserOptArgsCamelCaseConversion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("cursor all: %v", err)
 		}
-		// score=15 and score=50 are within [10,60] closed on both sides
+		// leftBound:"open" excludes score=10; score=15 and score=50 remain in (10,60)
 		if len(rows) != 2 {
-			t.Errorf("between with camelCase bounds: got %d rows, want 2", len(rows))
+			t.Errorf("between with camelCase leftBound=open: got %d rows, want 2", len(rows))
 		}
 	})
 
