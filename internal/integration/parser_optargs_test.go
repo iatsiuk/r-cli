@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"testing"
 
-	"r-cli/internal/reql"
 	"r-cli/internal/reql/parser"
 )
 
@@ -24,11 +23,6 @@ func TestParserGetAllWithSecondaryIndexOptArgs(t *testing.T) {
 		{"id": "3", "dept": "hr"},
 	})
 
-	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").IndexCreate("dept"), nil)
-	closeCursor(cur)
-	if err != nil {
-		t.Fatalf("index create: %v", err)
-	}
 	waitForIndex(t, exec, dbName, "docs", "dept")
 
 	expr := fmt.Sprintf(`r.db("%s").table("docs").getAll("eng", {index: "dept"})`, dbName)
@@ -37,7 +31,7 @@ func TestParserGetAllWithSecondaryIndexOptArgs(t *testing.T) {
 		t.Fatalf("parse: %v", err)
 	}
 
-	_, cur, err = exec.Run(ctx, term, nil)
+	_, cur, err := exec.Run(ctx, term, nil)
 	if err != nil {
 		t.Fatalf("run: %v", err)
 	}
@@ -66,11 +60,6 @@ func TestParserBetweenWithIndexOptArgs(t *testing.T) {
 		{"id": "4", "score": 15},
 	})
 
-	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").IndexCreate("score"), nil)
-	closeCursor(cur)
-	if err != nil {
-		t.Fatalf("index create: %v", err)
-	}
 	waitForIndex(t, exec, dbName, "docs", "score")
 
 	// between 10 and 60 on secondary index "score" should match score=50 and score=15
@@ -80,7 +69,7 @@ func TestParserBetweenWithIndexOptArgs(t *testing.T) {
 		t.Fatalf("parse: %v", err)
 	}
 
-	_, cur, err = exec.Run(ctx, term, nil)
+	_, cur, err := exec.Run(ctx, term, nil)
 	if err != nil {
 		t.Fatalf("run: %v", err)
 	}
@@ -114,11 +103,6 @@ func TestParserEqJoinWithIndexOptArgs(t *testing.T) {
 		{"id": "o3", "user_id": "u1", "amount": 150},
 	})
 
-	_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("orders").IndexCreate("user_id"), nil)
-	closeCursor(cur)
-	if err != nil {
-		t.Fatalf("index create: %v", err)
-	}
 	waitForIndex(t, exec, dbName, "orders", "user_id")
 
 	// eqJoin users.id -> orders via secondary index user_id
@@ -131,7 +115,7 @@ func TestParserEqJoinWithIndexOptArgs(t *testing.T) {
 		t.Fatalf("parse: %v", err)
 	}
 
-	_, cur, err = exec.Run(ctx, term, nil)
+	_, cur, err := exec.Run(ctx, term, nil)
 	if err != nil {
 		t.Fatalf("run: %v", err)
 	}

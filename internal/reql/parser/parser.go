@@ -916,13 +916,16 @@ func chainDelete(p *parser, t reql.Term) (reql.Term, error) {
 }
 
 func chainOrderBy(p *parser, t reql.Term) (reql.Term, error) {
-	args, err := p.parseArgList()
+	args, opts, err := p.parseArgListWithOpts()
 	if err != nil {
 		return reql.Term{}, err
 	}
 	iargs := make([]interface{}, len(args))
 	for i, a := range args {
 		iargs[i] = a
+	}
+	if opts != nil {
+		iargs = append(iargs, opts)
 	}
 	return t.OrderBy(iargs...), nil
 }
@@ -936,16 +939,70 @@ func chainLimit(p *parser, t reql.Term) (reql.Term, error) {
 }
 
 func chainEqJoin(p *parser, t reql.Term) (reql.Term, error) {
-	field, table, err := p.parseStringThenArg()
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	tok, err := p.expect(tokenString)
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.EqJoin(field, table), nil
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, err
+	}
+	table, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenComma {
+		p.advance()
+		if p.peek().Type != tokenLBrace {
+			return reql.Term{}, fmt.Errorf("eqJoin: third argument must be an optargs object at position %d", p.peek().Pos)
+		}
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.EqJoin(tok.Value, table, opts), nil
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return t.EqJoin(tok.Value, table), nil
 }
 
 func chainBetween(p *parser, t reql.Term) (reql.Term, error) {
-	lower, upper, err := p.parseTwoArgs()
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	lower, err := p.parseExpr()
 	if err != nil {
+		return reql.Term{}, err
+	}
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, err
+	}
+	upper, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenComma {
+		p.advance()
+		if p.peek().Type != tokenLBrace {
+			return reql.Term{}, fmt.Errorf("between: third argument must be an optargs object at position %d", p.peek().Pos)
+		}
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.Between(lower, upper, opts), nil
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
 		return reql.Term{}, err
 	}
 	return t.Between(lower, upper), nil
@@ -1024,7 +1081,7 @@ func chainIndexStatus(p *parser, t reql.Term) (reql.Term, error) {
 }
 
 func chainGetAll(p *parser, t reql.Term) (reql.Term, error) {
-	args, err := p.parseArgList()
+	args, opts, err := p.parseArgListWithOpts()
 	if err != nil {
 		return reql.Term{}, err
 	}
@@ -1034,6 +1091,9 @@ func chainGetAll(p *parser, t reql.Term) (reql.Term, error) {
 	iargs := make([]interface{}, len(args))
 	for i, a := range args {
 		iargs[i] = a
+	}
+	if opts != nil {
+		iargs = append(iargs, opts)
 	}
 	return t.GetAll(iargs...), nil
 }
@@ -1281,6 +1341,92 @@ func intArgChain(fn func(reql.Term, int) reql.Term) chainFn {
 	}
 }
 
+// noArgChainWithOpts creates a chain builder for zero-argument methods that accept optional OptArgs.
+func noArgChainWithOpts(fn func(reql.Term, ...reql.OptArgs) reql.Term) chainFn {
+	return func(p *parser, t reql.Term) (reql.Term, error) {
+		if _, err := p.expect(tokenLParen); err != nil {
+			return reql.Term{}, err
+		}
+		if p.peek().Type == tokenRParen {
+			p.advance()
+			return fn(t), nil
+		}
+		if p.peek().Type != tokenLBrace {
+			return reql.Term{}, fmt.Errorf("expected optargs object at position %d", p.peek().Pos)
+		}
+		opts, err := p.parseOptArgs()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return fn(t, opts), nil
+	}
+}
+
+// oneArgChainWithOpts creates a chain builder for single-Term methods that accept optional OptArgs.
+func oneArgChainWithOpts(fn func(reql.Term, reql.Term, ...reql.OptArgs) reql.Term) chainFn {
+	return func(p *parser, t reql.Term) (reql.Term, error) {
+		if _, err := p.expect(tokenLParen); err != nil {
+			return reql.Term{}, err
+		}
+		arg, err := p.parseExpr()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type != tokenLBrace {
+				return reql.Term{}, fmt.Errorf("expected optargs object at position %d", p.peek().Pos)
+			}
+			opts, err := p.parseOptArgs()
+			if err != nil {
+				return reql.Term{}, err
+			}
+			if _, err := p.expect(tokenRParen); err != nil {
+				return reql.Term{}, err
+			}
+			return fn(t, arg, opts), nil
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return fn(t, arg), nil
+	}
+}
+
+// strArgChainWithOpts creates a chain builder for single-string methods that accept optional OptArgs.
+func strArgChainWithOpts(fn func(reql.Term, string, ...reql.OptArgs) reql.Term) chainFn {
+	return func(p *parser, t reql.Term) (reql.Term, error) {
+		if _, err := p.expect(tokenLParen); err != nil {
+			return reql.Term{}, err
+		}
+		tok, err := p.expect(tokenString)
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type != tokenLBrace {
+				return reql.Term{}, fmt.Errorf("expected optargs object at position %d", p.peek().Pos)
+			}
+			opts, err := p.parseOptArgs()
+			if err != nil {
+				return reql.Term{}, err
+			}
+			if _, err := p.expect(tokenRParen); err != nil {
+				return reql.Term{}, err
+			}
+			return fn(t, tok.Value, opts), nil
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return fn(t, tok.Value), nil
+	}
+}
+
 // ---- Registration ----
 
 func init() {
@@ -1462,29 +1608,29 @@ func registerArrayChain(m map[string]chainFn) {
 }
 
 func registerAdminChain(m map[string]chainFn) {
-	m["tableCreate"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.TableCreate(s) })
+	m["tableCreate"] = strArgChainWithOpts(func(t reql.Term, s string, opts ...reql.OptArgs) reql.Term { return t.TableCreate(s, opts...) })
 	m["tableDrop"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.TableDrop(s) })
 	m["tableList"] = noArgChain(func(t reql.Term) reql.Term { return t.TableList() })
-	m["indexCreate"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.IndexCreate(s) })
+	m["indexCreate"] = strArgChainWithOpts(func(t reql.Term, s string, opts ...reql.OptArgs) reql.Term { return t.IndexCreate(s, opts...) })
 	m["indexDrop"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.IndexDrop(s) })
 	m["indexList"] = noArgChain(func(t reql.Term) reql.Term { return t.IndexList() })
 	m["indexWait"] = chainIndexWait
 	m["indexStatus"] = chainIndexStatus
 	m["indexRename"] = chainIndexRename
-	m["changes"] = noArgChain(func(t reql.Term) reql.Term { return t.Changes() })
+	m["changes"] = noArgChainWithOpts(func(t reql.Term, opts ...reql.OptArgs) reql.Term { return t.Changes(opts...) })
 	m["config"] = noArgChain(func(t reql.Term) reql.Term { return t.Config() })
 	m["status"] = noArgChain(func(t reql.Term) reql.Term { return t.Status() })
 	m["sync"] = noArgChain(func(t reql.Term) reql.Term { return t.Sync() })
-	m["reconfigure"] = noArgChain(func(t reql.Term) reql.Term { return t.Reconfigure() })
+	m["reconfigure"] = noArgChainWithOpts(func(t reql.Term, opts ...reql.OptArgs) reql.Term { return t.Reconfigure(opts...) })
 	m["rebalance"] = noArgChain(func(t reql.Term) reql.Term { return t.Rebalance() })
 	m["wait"] = noArgChain(func(t reql.Term) reql.Term { return t.Wait() })
 	m["grant"] = chainGrant
 	m["toGeoJSON"] = noArgChain(func(t reql.Term) reql.Term { return t.ToGeoJSON() })
-	m["distance"] = oneArgChain(func(t, o reql.Term) reql.Term { return t.Distance(o) })
+	m["distance"] = oneArgChainWithOpts(func(t, o reql.Term, opts ...reql.OptArgs) reql.Term { return t.Distance(o, opts...) })
 	m["intersects"] = oneArgChain(func(t, o reql.Term) reql.Term { return t.Intersects(o) })
 	m["includes"] = oneArgChain(func(t, pt reql.Term) reql.Term { return t.Includes(pt) })
-	m["getIntersecting"] = oneArgChain(func(t, geo reql.Term) reql.Term { return t.GetIntersecting(geo) })
-	m["getNearest"] = oneArgChain(func(t, pt reql.Term) reql.Term { return t.GetNearest(pt) })
+	m["getIntersecting"] = oneArgChainWithOpts(func(t, geo reql.Term, opts ...reql.OptArgs) reql.Term { return t.GetIntersecting(geo, opts...) })
+	m["getNearest"] = oneArgChainWithOpts(func(t, pt reql.Term, opts ...reql.OptArgs) reql.Term { return t.GetNearest(pt, opts...) })
 	m["fill"] = noArgChain(func(t reql.Term) reql.Term { return t.Fill() })
 	m["polygonSub"] = oneArgChain(func(t, o reql.Term) reql.Term { return t.PolygonSub(o) })
 }
@@ -1611,6 +1757,78 @@ func (p *parser) parseArgList() ([]reql.Term, error) {
 		return nil, err
 	}
 	return args, nil
+}
+
+// tryTrailingOptArgs attempts to parse '{...}' as trailing OptArgs when followed by ')'.
+// Returns (opts, true) on success, or (nil, false) with pos restored on failure.
+// Safe to backtrack: parseOptArgs only accepts datum literals, never mutates paramsStack.
+func (p *parser) tryTrailingOptArgs() (reql.OptArgs, bool) {
+	if p.peek().Type != tokenLBrace {
+		return nil, false
+	}
+	save := p.pos
+	o, err := p.parseOptArgs()
+	if err == nil && p.peek().Type == tokenRParen {
+		return o, true
+	}
+	p.pos = save
+	return nil, false
+}
+
+// parseArgAndSep parses one expression then the following separator.
+// Returns (arg, opts, done, err):
+//   - done=true with opts!=nil: trailing OptArgs was found, caller should consume RPAREN
+//   - done=true with opts==nil: hit RPAREN/EOF, loop should end
+//   - done=false: comma consumed, more args expected
+func (p *parser) parseArgAndSep() (reql.Term, reql.OptArgs, bool, error) {
+	arg, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, nil, false, err
+	}
+	next := p.peek().Type
+	if next == tokenEOF || next == tokenRParen {
+		return arg, nil, true, nil
+	}
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, nil, false, err
+	}
+	if p.peek().Type == tokenRParen {
+		return reql.Term{}, nil, false, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
+	}
+	if opts, ok := p.tryTrailingOptArgs(); ok {
+		return arg, opts, true, nil
+	}
+	return arg, nil, false, nil
+}
+
+// parseArgListWithOpts parses (arg1, ..., {opts}?) returning terms and optional trailing OptArgs.
+// After consuming a comma, if '{' follows, attempts parseOptArgs; if succeeded and ')' follows,
+// treats it as trailing OptArgs. Otherwise backtracks (safe: parseOptArgs only accepts datums).
+func (p *parser) parseArgListWithOpts() ([]reql.Term, reql.OptArgs, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return nil, nil, err
+	}
+	var args []reql.Term
+	for p.peek().Type != tokenRParen && p.peek().Type != tokenEOF {
+		arg, opts, done, err := p.parseArgAndSep()
+		if err != nil {
+			return nil, nil, err
+		}
+		args = append(args, arg)
+		if done {
+			if opts != nil {
+				if _, err := p.expect(tokenRParen); err != nil {
+					return nil, nil, err
+				}
+				return args, opts, nil
+			}
+			break
+		}
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return nil, nil, err
+	}
+	return args, nil, nil
 }
 
 // parseNoArgs expects () with no arguments.

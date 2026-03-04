@@ -100,24 +100,24 @@ Integration tests parse string expressions via `parser.Parse` and execute agains
 
 Replace ad-hoc chain helpers with OptArgs-aware versions. The fix should be systematic -- modify or create new helper builder functions that all chains can use:
 
-- [ ] create `oneArgChainWithOpts` helper: parses one arg + optional trailing OptArgs
-- [ ] create `strArgChainWithOpts` helper: parses string arg + optional trailing OptArgs
-- [ ] create `noArgChainWithOpts` helper: parses optional OptArgs only
-- [ ] create `parseArgListWithOpts` helper for variadic chains (`getAll`, `orderBy`): parses `(expr, ..., {opts})` at token level -- when a comma is followed by `{` and the parsed OptArgs is followed by `)`, treat it as trailing OptArgs; otherwise parse as a normal expression. Note: backtracking via `p.pos = save` is safe here because `parseOptArgs` only parses datum literals (no lambdas that mutate `paramsStack`/`nextVarID`)
-- [ ] fix `chainGetAll`: use `parseArgListWithOpts`
-- [ ] fix `chainOrderBy`: use `parseArgListWithOpts`
-- [ ] fix `chainBetween`: parse two args + optional OptArgs
-- [ ] fix `chainEqJoin`: parse string + arg + optional OptArgs
-- [ ] re-register `distance` with `oneArgChainWithOpts`
-- [ ] re-register `getIntersecting` with `oneArgChainWithOpts`
-- [ ] re-register `getNearest` with `oneArgChainWithOpts`
-- [ ] re-register `tableCreate` with `strArgChainWithOpts`
-- [ ] re-register `indexCreate` with `strArgChainWithOpts`
-- [ ] re-register `changes` with `noArgChainWithOpts`
-- [ ] re-register `reconfigure` with `noArgChainWithOpts`
-- [ ] run `make build` -- must pass (linter + compile)
-- [ ] run `go test ./internal/reql/parser/ -race` -- all new tests from task 1 must pass
-- [ ] run `make test-integration` -- all new tests from task 3 must pass
+- [x] create `oneArgChainWithOpts` helper: parses one arg + optional trailing OptArgs
+- [x] create `strArgChainWithOpts` helper: parses string arg + optional trailing OptArgs
+- [x] create `noArgChainWithOpts` helper: parses optional OptArgs only
+- [x] create `parseArgListWithOpts` helper for variadic chains (`getAll`, `orderBy`): parses `(expr, ..., {opts})` at token level -- when a comma is followed by `{` and the parsed OptArgs is followed by `)`, treat it as trailing OptArgs; otherwise parse as a normal expression. Note: backtracking via `p.pos = save` is safe here because `parseOptArgs` only parses datum literals (no lambdas that mutate `paramsStack`/`nextVarID`)
+- [x] fix `chainGetAll`: use `parseArgListWithOpts`
+- [x] fix `chainOrderBy`: use `parseArgListWithOpts`
+- [x] fix `chainBetween`: parse two args + optional OptArgs
+- [x] fix `chainEqJoin`: parse string + arg + optional OptArgs
+- [x] re-register `distance` with `oneArgChainWithOpts`
+- [x] re-register `getIntersecting` with `oneArgChainWithOpts`
+- [x] re-register `getNearest` with `oneArgChainWithOpts`
+- [x] re-register `tableCreate` with `strArgChainWithOpts`
+- [x] re-register `indexCreate` with `strArgChainWithOpts`
+- [x] re-register `changes` with `noArgChainWithOpts`
+- [x] re-register `reconfigure` with `noArgChainWithOpts`
+- [x] run `make build` -- must pass (linter + compile)
+- [x] run `go test ./internal/reql/parser/ -race` -- all new tests from task 1 must pass
+- [x] run `make test-integration` -- all new tests from task 3 must pass
 
 ### Task 5: Implement `-F -` stdin support (green phase)
 
