@@ -50,9 +50,9 @@ The log file is created lazily on first error. Directory `~/.r-cli/` is created 
 - [x] run tests - must pass before next task
 
 ### Task 3: Verify and finalize
-- [ ] run full test suite (`go test ./...`)
-- [ ] run linter (`make build`)
-- [ ] verify log file format manually with a broken expression
+- [x] run full test suite (`go test ./...`)
+- [x] run linter (`make build`)
+- [x] verify log file format manually with a broken expression
 
 ## Technical Details
 
