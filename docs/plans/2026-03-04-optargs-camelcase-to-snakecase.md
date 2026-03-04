@@ -76,11 +76,11 @@
 - [x] run `make build` (includes linter) -- must pass
 
 ### Task 5: Write integration tests
-- [ ] add `TestParserOptArgsCamelCaseConversion` in `internal/integration/parser_optargs_test.go`:
+- [x] add `TestParserOptArgsCamelCaseConversion` in `internal/integration/parser_optargs_test.go`:
   - `r.table("t").between(lowVal, highVal, {leftBound: "closed", rightBound: "closed"})` -- must succeed
   - `r.table("t").insert({doc}, {returnChanges: true})` -- must return changes
   - `r.table("t").getAll(val, {index: "idx"})` with camelCase -- must use index correctly
-- [ ] run integration tests -- must pass
+- [x] run integration tests -- must pass
 
 ### Task 6: Verify acceptance criteria
 - [ ] verify camelCase OptArgs keys are converted: `leftBound` -> `left_bound`
