@@ -1804,9 +1804,15 @@ func (p *parser) parseArgAndSep() (reql.Term, reql.OptArgs, bool, error) {
 // parseArgListWithOpts parses (arg1, ..., {opts}?) returning terms and optional trailing OptArgs.
 // After consuming a comma, if '{' follows, attempts parseOptArgs; if succeeded and ')' follows,
 // treats it as trailing OptArgs. Otherwise backtracks (safe: parseOptArgs only accepts datums).
+// Also handles opts-only case: ({opts}) with no positional args.
 func (p *parser) parseArgListWithOpts() ([]reql.Term, reql.OptArgs, error) {
 	if _, err := p.expect(tokenLParen); err != nil {
 		return nil, nil, err
+	}
+	// opts-only: ({key: val}) with no positional args; tryTrailingOptArgs verified ')' follows
+	if opts, ok := p.tryTrailingOptArgs(); ok {
+		p.advance()
+		return nil, opts, nil
 	}
 	var args []reql.Term
 	for p.peek().Type != tokenRParen && p.peek().Type != tokenEOF {

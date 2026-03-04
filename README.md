@@ -77,6 +77,9 @@ r-cli query 'r.db("test").table("users").filter(r.row("age").gt(21))'
 # from file (multiple queries separated by ---)
 r-cli query -F queries.reql
 r-cli query -F queries.reql --stop-on-error
+
+# from stdin (use - as filename)
+echo 'r.dbList()' | r-cli query -F -
 ```
 
 ### insert

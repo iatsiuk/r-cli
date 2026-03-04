@@ -1523,6 +1523,13 @@ func TestParse_OptArgs_OrderBy(t *testing.T) {
 	assertTermEqual(t, got, want)
 }
 
+func TestParse_OptArgs_OrderByOnlyIndex(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").table("t").orderBy({index: "idx"})`)
+	want := reql.DB("d").Table("t").OrderBy(reql.OptArgs{"index": "idx"})
+	assertTermEqual(t, got, want)
+}
+
 func TestParse_OptArgs_Between(t *testing.T) {
 	t.Parallel()
 	got := mustParse(t, `r.db("d").table("t").between(1, 10, {index: "score", left_bound: "closed"})`)
