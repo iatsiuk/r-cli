@@ -83,12 +83,12 @@
 - [x] run integration tests -- must pass
 
 ### Task 6: Verify acceptance criteria
-- [ ] verify camelCase OptArgs keys are converted: `leftBound` -> `left_bound`
-- [ ] verify snake_case keys still work: `left_bound` -> `left_bound`
-- [ ] verify data object keys are NOT converted: `filter({firstName: "Alice"})` keeps `firstName`
-- [ ] run full test suite (unit tests)
-- [ ] run integration tests
-- [ ] run linter -- all issues must be fixed
+- [x] verify camelCase OptArgs keys are converted: `leftBound` -> `left_bound`
+- [x] verify snake_case keys still work: `left_bound` -> `left_bound`
+- [x] verify data object keys are NOT converted: `filter({firstName: "Alice"})` keeps `firstName`
+- [x] run full test suite (unit tests)
+- [x] run integration tests
+- [x] run linter -- all issues must be fixed
 
 ## Technical Details
 
