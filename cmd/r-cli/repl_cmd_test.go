@@ -162,7 +162,7 @@ func TestMakeReplExecParseError(t *testing.T) {
 func TestMakeReplExecLogsParseError(t *testing.T) {
 	dir := t.TempDir()
 	parselog.SetDir(dir)
-	t.Cleanup(func() { parselog.SetDir("") })
+	t.Cleanup(func() { parselog.SetDir(testLogDir) })
 
 	execFn := makeReplExec(nil, &rootConfig{})
 	_ = execFn(context.Background(), "!!!invalid!!!", io.Discard)

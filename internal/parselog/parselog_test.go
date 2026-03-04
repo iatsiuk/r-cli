@@ -54,6 +54,9 @@ func readEntries(t *testing.T, logFile string) []logEntry {
 		}
 		entries = append(entries, e)
 	}
+	if err := sc.Err(); err != nil {
+		t.Fatalf("scan log: %v", err)
+	}
 	return entries
 }
 

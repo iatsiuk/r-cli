@@ -126,7 +126,7 @@ func TestRunQueryExprParseError(t *testing.T) {
 func TestRunQueryExprLogsParseError(t *testing.T) {
 	dir := t.TempDir()
 	parselog.SetDir(dir)
-	t.Cleanup(func() { parselog.SetDir("") })
+	t.Cleanup(func() { parselog.SetDir(testLogDir) })
 	parselog.SetVersion("test-ver")
 	t.Cleanup(func() { parselog.SetVersion("") })
 
