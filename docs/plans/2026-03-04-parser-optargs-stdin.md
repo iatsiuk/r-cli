@@ -126,9 +126,9 @@ Replace ad-hoc chain helpers with OptArgs-aware versions. The fix should be syst
 - [x] run `go test ./cmd/r-cli/ -race` -- test from task 2 must pass
 
 ### Task 6: Verify acceptance criteria
-- [ ] verify all 3 original error scenarios from transcripts work correctly
-- [ ] run full test suite: `make test-all`
-- [ ] run linter: `golangci-lint run`
+- [x] verify all 3 original error scenarios from transcripts work correctly
+- [x] run full test suite: `make test-all`
+- [x] run linter: `golangci-lint run`
 
 ## Technical Details
 
