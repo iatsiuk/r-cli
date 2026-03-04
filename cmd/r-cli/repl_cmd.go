@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"r-cli/internal/output"
+	"r-cli/internal/parselog"
 	"r-cli/internal/query"
 	"r-cli/internal/repl"
 	"r-cli/internal/reql"
@@ -143,6 +144,7 @@ func makeReplExec(exec *query.Executor, cfg *rootConfig) repl.ExecFunc {
 	return func(ctx context.Context, expr string, w io.Writer) error {
 		term, err := parser.Parse(expr)
 		if err != nil {
+			parselog.Log(expr, err)
 			return err
 		}
 		start := time.Now()

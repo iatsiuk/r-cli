@@ -42,12 +42,12 @@ The log file is created lazily on first error. Directory `~/.r-cli/` is created 
 - [x] run tests - must pass before next task
 
 ### Task 2: Integrate logging into CLI call sites
-- [ ] call `parselog.SetVersion(version)` in `cmd/r-cli/main.go` before command execution
-- [ ] call `parselog.Log(expr, err)` in `cmd/r-cli/query.go` after `parser.Parse` fails
-- [ ] call `parselog.Log(expr, err)` in `cmd/r-cli/repl_cmd.go` after `parser.Parse` fails
-- [ ] write test: `runQueryExpr` with invalid expression logs to file with version
-- [ ] write test: REPL exec with invalid expression logs to file
-- [ ] run tests - must pass before next task
+- [x] call `parselog.SetVersion(version)` in `cmd/r-cli/main.go` before command execution
+- [x] call `parselog.Log(expr, err)` in `cmd/r-cli/query.go` after `parser.Parse` fails
+- [x] call `parselog.Log(expr, err)` in `cmd/r-cli/repl_cmd.go` after `parser.Parse` fails
+- [x] write test: `runQueryExpr` with invalid expression logs to file with version
+- [x] write test: REPL exec with invalid expression logs to file
+- [x] run tests - must pass before next task
 
 ### Task 3: Verify and finalize
 - [ ] run full test suite (`go test ./...`)

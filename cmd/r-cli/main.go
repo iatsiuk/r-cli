@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"r-cli/internal/parselog"
 )
 
 var version = "dev"
@@ -14,6 +16,7 @@ var version = "dev"
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
+	parselog.SetVersion(version)
 	cmd := newRootCmd()
 	err := cmd.ExecuteContext(ctx)
 
