@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -55,7 +56,7 @@ func Log(expr string, err error) {
 	}
 
 	if len(expr) > maxExprLen {
-		expr = expr[:maxExprLen]
+		expr = strings.ToValidUTF8(expr[:maxExprLen], "")
 	}
 
 	entry := struct {
