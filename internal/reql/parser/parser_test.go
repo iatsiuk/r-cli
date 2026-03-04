@@ -1601,6 +1601,52 @@ func TestParse_OptArgs_Reconfigure(t *testing.T) {
 	assertTermEqual(t, got, want)
 }
 
+func TestParse_OptArgs_CamelCaseConversion(t *testing.T) {
+	t.Parallel()
+	t.Run("between_leftBound", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.db("d").table("t").between(1, 10, {index: "x", leftBound: "closed"})`)
+		want := reql.DB("d").Table("t").Between(reql.Datum(int64(1)), reql.Datum(int64(10)), reql.OptArgs{"index": "x", "left_bound": "closed"})
+		assertTermEqual(t, got, want)
+	})
+	t.Run("insert_returnChanges", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.db("d").table("t").insert({a: 1}, {returnChanges: true})`)
+		want := reql.DB("d").Table("t").Insert(reql.Datum(map[string]interface{}{"a": int64(1)}), reql.OptArgs{"return_changes": true})
+		assertTermEqual(t, got, want)
+	})
+	t.Run("getAll_already_snake", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.db("d").table("t").getAll("a", {index: "idx"})`)
+		want := reql.DB("d").Table("t").GetAll("a", reql.OptArgs{"index": "idx"})
+		assertTermEqual(t, got, want)
+	})
+	t.Run("changes_includeInitial", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.db("d").table("t").changes({includeInitial: true})`)
+		want := reql.DB("d").Table("t").Changes(reql.OptArgs{"include_initial": true})
+		assertTermEqual(t, got, want)
+	})
+	t.Run("filter_data_object_preserved", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.db("d").table("t").filter({firstName: "Alice"})`)
+		want := reql.DB("d").Table("t").Filter(reql.Datum(map[string]interface{}{"firstName": "Alice"}))
+		assertTermEqual(t, got, want)
+	})
+	t.Run("changes_string_key_includeInitial", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").changes({"includeInitial": true})`)
+		want := reql.Table("t").Changes(reql.OptArgs{"include_initial": true})
+		assertTermEqual(t, got, want)
+	})
+	t.Run("fold_finalEmit", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.expr([1]).fold(0, (a, x) => a.add(x), {finalEmit: a => a})`)
+		want := reql.Array(reql.Datum(int64(1))).Fold(reql.Datum(int64(0)), reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2), reql.OptArgs{"final_emit": reql.Func(reql.Var(1), 1)})
+		assertTermEqual(t, got, want)
+	})
+}
+
 func TestCamelToSnake(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

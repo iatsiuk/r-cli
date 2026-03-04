@@ -58,7 +58,7 @@
 - [x] run full parser test suite -- all tests must pass
 
 ### Task 3: Write unit tests for OptArgs key conversion in parser
-- [ ] add `TestParse_OptArgs_CamelCaseConversion` in `internal/reql/parser/parser_test.go`:
+- [x] add `TestParse_OptArgs_CamelCaseConversion` in `internal/reql/parser/parser_test.go`:
   - `r.db("d").table("t").between(1, 10, {index: "x", leftBound: "closed"})` -> OptArgs keys are `index`, `left_bound`
   - `r.db("d").table("t").insert({a: 1}, {returnChanges: true})` -> OptArgs key is `return_changes`
   - `r.db("d").table("t").getAll("a", {index: "idx"})` -> no conversion needed (already snake_case)
@@ -66,7 +66,7 @@
   - `r.db("d").table("t").filter({firstName: "Alice"})` -> data object key stays `firstName` (NOT converted)
   - `r.table("t").changes({"includeInitial": true})` -> string-literal OptArgs key also converted to `include_initial`
   - `r.expr([1]).fold(0, (a, x) => a.add(x), {finalEmit: a => a})` -> fold OptArgs key `final_emit`
-- [ ] run tests -- new tests must fail (conversion not yet wired)
+- [x] run tests -- new tests must fail (conversion not yet wired)
 
 ### Task 4: Wire camelToSnake into parseObjectBody
 - [ ] modify `parseObjectBody()` in `internal/reql/parser/parser.go` to apply `camelToSnake()` to each key (line `opts[key] = val` -> `opts[camelToSnake(key)] = val`)
