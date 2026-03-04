@@ -52,10 +52,10 @@
 - [x] run tests -- `TestCamelToSnake` must fail (function not yet implemented)
 
 ### Task 2: Implement camelToSnake helper
-- [ ] add `camelToSnake(s string) string` unexported function in `internal/reql/parser/parser.go`
-- [ ] logic: iterate runes, insert `_` before each uppercase letter and lowercase it; skip insert at position 0
-- [ ] run tests -- `TestCamelToSnake` must pass
-- [ ] run full parser test suite -- all tests must pass
+- [x] add `camelToSnake(s string) string` unexported function in `internal/reql/parser/parser.go`
+- [x] logic: iterate runes, insert `_` before each uppercase letter and lowercase it; skip insert at position 0
+- [x] run tests -- `TestCamelToSnake` must pass
+- [x] run full parser test suite -- all tests must pass
 
 ### Task 3: Write unit tests for OptArgs key conversion in parser
 - [ ] add `TestParse_OptArgs_CamelCaseConversion` in `internal/reql/parser/parser_test.go`:

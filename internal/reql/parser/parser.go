@@ -2183,6 +2183,25 @@ func (p *parser) parseDatumTerm() (reql.Term, error) {
 	}
 }
 
+// camelToSnake converts camelCase to snake_case (e.g. leftBound -> left_bound).
+func camelToSnake(s string) string {
+	if s == "" {
+		return s
+	}
+	out := make([]rune, 0, len(s)+4)
+	for i, r := range s {
+		if r >= 'A' && r <= 'Z' {
+			if i > 0 {
+				out = append(out, '_')
+			}
+			out = append(out, r+32)
+		} else {
+			out = append(out, r)
+		}
+	}
+	return string(out)
+}
+
 // parseNumberValue converts a number string to int or float64.
 func parseNumberValue(s string) (interface{}, error) {
 	for _, c := range s {
