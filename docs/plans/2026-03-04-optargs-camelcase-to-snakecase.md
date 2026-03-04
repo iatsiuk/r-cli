@@ -69,11 +69,11 @@
 - [x] run tests -- new tests must fail (conversion not yet wired)
 
 ### Task 4: Wire camelToSnake into parseObjectBody
-- [ ] modify `parseObjectBody()` in `internal/reql/parser/parser.go` to apply `camelToSnake()` to each key (line `opts[key] = val` -> `opts[camelToSnake(key)] = val`)
-- [ ] this covers both `parseOptArgs()` and `parseFoldOpts()` automatically (both delegate to `parseObjectBody`)
-- [ ] run tests -- `TestParse_OptArgs_CamelCaseConversion` must pass (including fold opts and data object preservation)
-- [ ] run full parser test suite -- all existing tests must still pass
-- [ ] run `make build` (includes linter) -- must pass
+- [x] modify `parseObjectBody()` in `internal/reql/parser/parser.go` to apply `camelToSnake()` to each key (line `opts[key] = val` -> `opts[camelToSnake(key)] = val`)
+- [x] this covers both `parseOptArgs()` and `parseFoldOpts()` automatically (both delegate to `parseObjectBody`)
+- [x] run tests -- `TestParse_OptArgs_CamelCaseConversion` must pass (including fold opts and data object preservation)
+- [x] run full parser test suite -- all existing tests must still pass
+- [x] run `make build` (includes linter) -- must pass
 
 ### Task 5: Write integration tests
 - [ ] add `TestParserOptArgsCamelCaseConversion` in `internal/integration/parser_optargs_test.go`:

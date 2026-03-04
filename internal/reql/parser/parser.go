@@ -1881,7 +1881,7 @@ func (p *parser) parseObjectBody(valueParser func() (interface{}, error)) (reql.
 		if err != nil {
 			return nil, err
 		}
-		opts[key] = val
+		opts[camelToSnake(key)] = val
 		if p.peek().Type == tokenComma {
 			p.advance()
 			if p.peek().Type == tokenRBrace {
