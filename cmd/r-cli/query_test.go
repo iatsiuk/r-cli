@@ -307,3 +307,23 @@ func TestRunQueryFileNoQueries(t *testing.T) {
 		t.Errorf("empty file: expected nil error, got: %v", err)
 	}
 }
+
+func TestRunQueryFileStdinDash(t *testing.T) {
+	t.Parallel()
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+	cmd.SetIn(strings.NewReader("!!!bad_query"))
+	cfg := &rootConfig{}
+
+	err := runQueryFile(cmd, cfg, "-", false)
+	// must get a parse/query error, not a file-open error
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if strings.Contains(err.Error(), "open -") {
+		t.Errorf("runQueryFile('-') tried to open file named '-', want stdin read; error: %v", err)
+	}
+	if !strings.Contains(err.Error(), "query") {
+		t.Errorf("expected query-related error, got: %v", err)
+	}
+}

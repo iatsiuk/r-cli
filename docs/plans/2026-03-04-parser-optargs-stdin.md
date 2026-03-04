@@ -84,8 +84,8 @@ Add test cases that currently fail, covering all broken chains:
 
 ### Task 2: Add parser unit test for `-F -` stdin (TDD red phase)
 
-- [ ] add test in `cmd/r-cli/query_test.go`: `runQueryFile` with path `"-"` reads from stdin
-- [ ] verify test fails
+- [x] add test in `cmd/r-cli/query_test.go`: `runQueryFile` with path `"-"` reads from stdin
+- [x] verify test fails
 
 ### Task 3: Add integration tests (TDD red phase)
 
