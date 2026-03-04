@@ -69,14 +69,21 @@ func runQueryExpr(cmd *cobra.Command, cfg *rootConfig, expr string) error {
 }
 
 // runQueryFile reads queries from path, splits on "---", and executes each.
+// If path is "-", reads from cmd's stdin.
 func runQueryFile(cmd *cobra.Command, cfg *rootConfig, path string, stopOnError bool) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("query: %w", err)
+	var r io.Reader
+	if path == "-" {
+		r = cmd.InOrStdin()
+	} else {
+		f, err := os.Open(path)
+		if err != nil {
+			return fmt.Errorf("query: %w", err)
+		}
+		defer func() { _ = f.Close() }()
+		r = f
 	}
-	defer func() { _ = f.Close() }()
 
-	queries, err := splitQueries(f)
+	queries, err := splitQueries(r)
 	if err != nil {
 		return fmt.Errorf("query: reading file: %w", err)
 	}

@@ -121,9 +121,9 @@ Replace ad-hoc chain helpers with OptArgs-aware versions. The fix should be syst
 
 ### Task 5: Implement `-F -` stdin support (green phase)
 
-- [ ] in `runQueryFile`: if `path == "-"`, use `cmd.InOrStdin()` instead of `os.Open`
-- [ ] run `make build`
-- [ ] run `go test ./cmd/r-cli/ -race` -- test from task 2 must pass
+- [x] in `runQueryFile`: if `path == "-"`, use `cmd.InOrStdin()` instead of `os.Open`
+- [x] run `make build`
+- [x] run `go test ./cmd/r-cli/ -race` -- test from task 2 must pass
 
 ### Task 6: Verify acceptance criteria
 - [ ] verify all 3 original error scenarios from transcripts work correctly
