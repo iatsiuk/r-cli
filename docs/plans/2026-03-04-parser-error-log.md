@@ -27,19 +27,19 @@ The log file is created lazily on first error. Directory `~/.r-cli/` is created 
 ## Implementation Steps
 
 ### Task 1: Create `internal/parselog` package with `Log` function
-- [ ] write tests for `Log(expr, err)`: appends correct JSONL line with all 4 fields
-- [ ] write test: creates directory if missing (use temp dir via `SetDir`)
-- [ ] write test: silently ignores write errors (read-only dir)
-- [ ] write test: concurrent calls produce valid JSONL lines (no corruption)
-- [ ] write test: does nothing when err is nil
-- [ ] write test: expression longer than 4096 bytes is truncated
-- [ ] write test: expression with `\n`, `\t`, `\r` and unicode is properly JSON-escaped
-- [ ] write test: `os.UserHomeDir()` failure results in silent no-op
-- [ ] write test: `SetDir`/`SetVersion` use `t.Cleanup` to restore previous state
-- [ ] implement `Log(expr string, err error)` in `internal/parselog/parselog.go`
-- [ ] add `SetDir(path)` for test injection (override default dir)
-- [ ] add `SetVersion(v string)` to set version string (called once at startup)
-- [ ] run tests - must pass before next task
+- [x] write tests for `Log(expr, err)`: appends correct JSONL line with all 4 fields
+- [x] write test: creates directory if missing (use temp dir via `SetDir`)
+- [x] write test: silently ignores write errors (read-only dir)
+- [x] write test: concurrent calls produce valid JSONL lines (no corruption)
+- [x] write test: does nothing when err is nil
+- [x] write test: expression longer than 4096 bytes is truncated
+- [x] write test: expression with `\n`, `\t`, `\r` and unicode is properly JSON-escaped
+- [x] write test: `os.UserHomeDir()` failure results in silent no-op
+- [x] write test: `SetDir`/`SetVersion` use `t.Cleanup` to restore previous state
+- [x] implement `Log(expr string, err error)` in `internal/parselog/parselog.go`
+- [x] add `SetDir(path)` for test injection (override default dir)
+- [x] add `SetVersion(v string)` to set version string (called once at startup)
+- [x] run tests - must pass before next task
 
 ### Task 2: Integrate logging into CLI call sites
 - [ ] call `parselog.SetVersion(version)` in `cmd/r-cli/main.go` before command execution
