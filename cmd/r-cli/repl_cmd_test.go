@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"r-cli/internal/parselog"
 )
 
 func TestReplCmdRegistered(t *testing.T) {
@@ -151,6 +156,33 @@ func TestMakeReplExecParseError(t *testing.T) {
 	err := execFn(context.Background(), "!!!invalid!!!", io.Discard)
 	if err == nil {
 		t.Error("expected parse error for invalid expression, got nil")
+	}
+}
+
+func TestMakeReplExecLogsParseError(t *testing.T) {
+	dir := t.TempDir()
+	parselog.SetDir(dir)
+	t.Cleanup(func() { parselog.SetDir(testLogDir) })
+
+	execFn := makeReplExec(nil, &rootConfig{})
+	_ = execFn(context.Background(), "!!!invalid!!!", io.Discard)
+
+	data, err := os.ReadFile(filepath.Join(dir, "parser-errors.log"))
+	if err != nil {
+		t.Fatalf("log file not created: %v", err)
+	}
+	var entry struct {
+		Expr string `json:"expr"`
+		Err  string `json:"err"`
+	}
+	if err := json.Unmarshal(bytes.TrimSpace(data), &entry); err != nil {
+		t.Fatalf("invalid JSONL: %v", err)
+	}
+	if entry.Expr != "!!!invalid!!!" {
+		t.Errorf("expr: got %q, want %q", entry.Expr, "!!!invalid!!!")
+	}
+	if entry.Err == "" {
+		t.Error("err field is empty")
 	}
 }
 

@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"r-cli/internal/parselog"
 )
 
 func TestQueryCmdRegistered(t *testing.T) {
@@ -115,6 +120,41 @@ func TestRunQueryExprParseError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "query:") {
 		t.Errorf("error should contain 'query:' prefix, got: %v", err)
+	}
+}
+
+func TestRunQueryExprLogsParseError(t *testing.T) {
+	dir := t.TempDir()
+	parselog.SetDir(dir)
+	t.Cleanup(func() { parselog.SetDir(testLogDir) })
+	parselog.SetVersion("test-ver")
+	t.Cleanup(func() { parselog.SetVersion("") })
+
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+	cfg := &rootConfig{}
+	_ = runQueryExpr(cmd, cfg, "!!!invalid!!!")
+
+	data, err := os.ReadFile(filepath.Join(dir, "parser-errors.log"))
+	if err != nil {
+		t.Fatalf("log file not created: %v", err)
+	}
+	var entry struct {
+		Ver  string `json:"ver"`
+		Err  string `json:"err"`
+		Expr string `json:"expr"`
+	}
+	if err := json.Unmarshal(bytes.TrimSpace(data), &entry); err != nil {
+		t.Fatalf("invalid JSONL: %v", err)
+	}
+	if entry.Ver != "test-ver" {
+		t.Errorf("ver: got %q, want %q", entry.Ver, "test-ver")
+	}
+	if entry.Expr != "!!!invalid!!!" {
+		t.Errorf("expr: got %q, want %q", entry.Expr, "!!!invalid!!!")
+	}
+	if entry.Err == "" {
+		t.Error("err field is empty")
 	}
 }
 

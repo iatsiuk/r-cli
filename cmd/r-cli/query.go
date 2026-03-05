@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"r-cli/internal/parselog"
 	"r-cli/internal/reql/parser"
 )
 
@@ -63,6 +64,7 @@ func readQueryExpr(args []string, stdin io.Reader) (string, error) {
 func runQueryExpr(cmd *cobra.Command, cfg *rootConfig, expr string) error {
 	term, err := parser.Parse(expr)
 	if err != nil {
+		parselog.Log(expr, err)
 		return &queryError{err: fmt.Errorf("query: %w", err)}
 	}
 	return execTerm(cmd.Context(), cfg, term, cmd.OutOrStdout())
