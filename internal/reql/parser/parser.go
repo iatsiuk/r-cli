@@ -1998,8 +1998,8 @@ func (p *parser) parseOneFieldSelector() (interface{}, error) {
 }
 
 // parseDatumValue parses a JSON-like datum literal into a native Go value.
-// Produces string, float64/int, bool, nil, []interface{}, or map[string]interface{}.
-// Never produces reql.Term -- used for field selectors and similar contexts.
+// Produces string, float64/int, bool, nil, map[string]interface{}, or reql.Term (MAKE_ARRAY for arrays).
+// Arrays become reql.Term because RethinkDB interprets bare JSON arrays in term arg positions as terms.
 func (p *parser) parseDatumValue() (interface{}, error) {
 	tok := p.peek()
 	switch tok.Type {

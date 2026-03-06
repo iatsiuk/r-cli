@@ -159,6 +159,15 @@ func TestHasFieldsNestedObject(t *testing.T) {
 	if len(rows) != 2 {
 		t.Errorf("got %d rows with profile field, want 2", len(rows))
 	}
+	for _, raw := range rows {
+		var doc map[string]interface{}
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		if _, ok := doc["profile"]; !ok {
+			t.Errorf("hasFields result doc %v must have 'profile' field", doc["id"])
+		}
+	}
 }
 
 func TestWithFieldsNestedObject(t *testing.T) {
@@ -203,8 +212,17 @@ func TestWithFieldsNestedObject(t *testing.T) {
 		if _, ok := doc["name"]; ok {
 			t.Error("withFields result must not contain 'name' (not selected)")
 		}
-		if _, ok := doc["stats"]; !ok {
+		stats, ok := doc["stats"]
+		if !ok {
 			t.Error("withFields result must contain 'stats'")
+			continue
+		}
+		statsMap, ok := stats.(map[string]interface{})
+		if !ok {
+			t.Fatalf("stats must be object, got %T", stats)
+		}
+		if _, ok := statsMap["score"]; !ok {
+			t.Error("stats object must contain 'score'")
 		}
 	}
 }
@@ -257,6 +275,9 @@ func TestToJSONAlias(t *testing.T) {
 	}
 	if err := json.Unmarshal([]byte(got2), &obj2); err != nil {
 		t.Fatalf("toJSON result not valid JSON: %q", got2)
+	}
+	if obj1["a"] != float64(1) {
+		t.Errorf("toJSONString: expected a=1, got %v", obj1["a"])
 	}
 	if obj1["a"] != obj2["a"] {
 		t.Errorf("toJSON result %q differs from toJSONString %q", got2, got)

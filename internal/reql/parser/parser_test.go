@@ -1700,16 +1700,19 @@ func TestParse_PluckWireJSON(t *testing.T) {
 func TestParse_FieldSelectorErrors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
+		name    string
 		input   string
 		wantMsg string
 	}{
 		// number arg rejected
-		{`r.table("t").pluck(123)`, "expected"},
+		{"pluck_number_arg", `r.table("t").pluck(123)`, "expected"},
+		// bool arg rejected
+		{"without_bool_arg", `r.table("t").without(true)`, "expected"},
 		// trailing comma rejected
-		{`r.table("t").pluck("a",)`, "trailing comma"},
+		{"pluck_trailing_comma", `r.table("t").pluck("a",)`, "trailing comma"},
 	}
 	for _, tc := range cases {
-		t.Run(tc.input, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			_, err := Parse(tc.input)
 			if err == nil {
