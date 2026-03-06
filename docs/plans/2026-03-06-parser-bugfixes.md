@@ -73,14 +73,14 @@ The term builder (`term.go`) currently accepts only `...string`. Before changing
 
 ### Task 4: Support object args in pluck/without/hasFields/withFields -- term layer implementation
 
-- [ ] change `Pluck` signature from `(fields ...string)` to `(fields ...interface{})`, use `toTerm(f)` for each arg (same pattern as `GetAll`)
-- [ ] change `Without` signature similarly
-- [ ] change `HasFields` signature similarly
-- [ ] change `WithFields` signature similarly
-- [ ] fix 4 `[]string...` call sites in `parser.go` (`chainPluck`, `chainWithout`, `chainHasFields`, `chainWithFields`) -- these will be fully rewritten in Task 6, but must compile now
-- [ ] run term tests -- all must pass
-- [ ] run `go test ./internal/reql/... -race` -- no regressions
-- [ ] run `make build` -- linter must pass
+- [x] change `Pluck` signature from `(fields ...string)` to `(fields ...interface{})`, use `toTerm(f)` for each arg (same pattern as `GetAll`)
+- [x] change `Without` signature similarly
+- [x] change `HasFields` signature similarly
+- [x] change `WithFields` signature similarly
+- [x] fix 4 `[]string...` call sites in `parser.go` (`chainPluck`, `chainWithout`, `chainHasFields`, `chainWithFields`) -- these will be fully rewritten in Task 6, but must compile now
+- [x] run term tests -- all must pass
+- [x] run `go test ./internal/reql/... -race` -- no regressions
+- [x] run `make build` -- linter must pass
 
 ### Task 5: Parser field selector support -- tests
 

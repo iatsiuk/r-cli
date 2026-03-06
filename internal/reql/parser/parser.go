@@ -1038,7 +1038,11 @@ func chainPluck(p *parser, t reql.Term) (reql.Term, error) {
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.Pluck(strs...), nil
+	args := make([]interface{}, len(strs))
+	for i, s := range strs {
+		args[i] = s
+	}
+	return t.Pluck(args...), nil
 }
 
 func chainWithout(p *parser, t reql.Term) (reql.Term, error) {
@@ -1046,7 +1050,11 @@ func chainWithout(p *parser, t reql.Term) (reql.Term, error) {
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.Without(strs...), nil
+	args := make([]interface{}, len(strs))
+	for i, s := range strs {
+		args[i] = s
+	}
+	return t.Without(args...), nil
 }
 
 func chainHasFields(p *parser, t reql.Term) (reql.Term, error) {
@@ -1054,7 +1062,11 @@ func chainHasFields(p *parser, t reql.Term) (reql.Term, error) {
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.HasFields(strs...), nil
+	args := make([]interface{}, len(strs))
+	for i, s := range strs {
+		args[i] = s
+	}
+	return t.HasFields(args...), nil
 }
 
 func chainWithFields(p *parser, t reql.Term) (reql.Term, error) {
@@ -1062,7 +1074,11 @@ func chainWithFields(p *parser, t reql.Term) (reql.Term, error) {
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.WithFields(strs...), nil
+	args := make([]interface{}, len(strs))
+	for i, s := range strs {
+		args[i] = s
+	}
+	return t.WithFields(args...), nil
 }
 
 func chainIndexWait(p *parser, t reql.Term) (reql.Term, error) {
