@@ -84,15 +84,15 @@ The term builder (`term.go`) currently accepts only `...string`. Before changing
 
 ### Task 5: Parser field selector support -- tests
 
-- [ ] add parser test: `without({perks: {refill: true}})` parses to correct term with nested object
-- [ ] add parser test: `pluck("name", {address: ["city"]})` parses to correct term with mixed string + object args
-- [ ] add parser test: `hasFields({profile: true})` parses to correct term
-- [ ] add parser test: `withFields("id", {stats: true})` parses to correct term
-- [ ] add parser test: `pluck("a", "b")` still works (backward compat, string-only)
-- [ ] add parser wire JSON test: marshal `pluck("name", {address: ["city"]})` and verify output contains `{"address":["city"]}`, NOT `[2,["city"]]`
-- [ ] add parser error test: `pluck(123)` -- rejects non-string/non-object arg
-- [ ] add parser error test: `pluck("a",)` -- rejects trailing comma
-- [ ] run parser tests -- new tests must FAIL (parseStringList rejects objects)
+- [x] add parser test: `without({perks: {refill: true}})` parses to correct term with nested object
+- [x] add parser test: `pluck("name", {address: ["city"]})` parses to correct term with mixed string + object args
+- [x] add parser test: `hasFields({profile: true})` parses to correct term
+- [x] add parser test: `withFields("id", {stats: true})` parses to correct term
+- [x] add parser test: `pluck("a", "b")` still works (backward compat, string-only)
+- [x] add parser wire JSON test: marshal `pluck("name", {address: ["city"]})` and verify output contains `{"address":["city"]}`, NOT `[2,["city"]]`
+- [x] add parser error test: `pluck(123)` -- rejects non-string/non-object arg
+- [x] add parser error test: `pluck("a",)` -- rejects trailing comma
+- [x] run parser tests -- new tests must FAIL (parseStringList rejects objects)
 
 ### Task 6: Parser field selector support -- implementation
 

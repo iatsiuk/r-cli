@@ -1649,6 +1649,81 @@ func TestParse_OptArgs_CamelCaseConversion(t *testing.T) {
 	})
 }
 
+func TestParse_FieldSelectorChains(t *testing.T) {
+	t.Parallel()
+	db := `r.db("test").table("users")`
+	dbterm := reql.DB("test").Table("users")
+	runParseTests(t, []parseTest{
+		{
+			"pluck_string_only_compat",
+			db + `.pluck("a", "b")`,
+			dbterm.Pluck("a", "b"),
+		},
+		{
+			"without_nested_object",
+			db + `.without({perks: {refill: true}})`,
+			dbterm.Without(map[string]interface{}{"perks": map[string]interface{}{"refill": true}}),
+		},
+		{
+			"pluck_mixed_string_object",
+			db + `.pluck("name", {address: ["city"]})`,
+			dbterm.Pluck("name", map[string]interface{}{"address": []interface{}{"city"}}),
+		},
+		{
+			"hasFields_object",
+			db + `.hasFields({profile: true})`,
+			dbterm.HasFields(map[string]interface{}{"profile": true}),
+		},
+		{
+			"withFields_mixed",
+			db + `.withFields("id", {stats: true})`,
+			dbterm.WithFields("id", map[string]interface{}{"stats": true}),
+		},
+	})
+}
+
+func TestParse_PluckWireJSON(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("test").table("users").pluck("name", {address: ["city"]})`)
+	b, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	wire := string(b)
+	// array must be raw JSON array, not MAKE_ARRAY term [2,...]
+	if strings.Contains(wire, `[2,`) {
+		t.Errorf("wire JSON contains MAKE_ARRAY term [2,...]: %s", wire)
+	}
+	if !strings.Contains(wire, `{"address":["city"]}`) {
+		t.Errorf("wire JSON missing raw object {\"address\":[\"city\"]}: %s", wire)
+	}
+}
+
+func TestParse_FieldSelectorErrors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		// number arg rejected
+		{`r.table("t").pluck(123)`, "expected"},
+		// trailing comma rejected
+		{`r.table("t").pluck("a",)`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
 func TestCamelToSnake(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
