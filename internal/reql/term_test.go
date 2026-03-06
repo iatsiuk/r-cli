@@ -1275,3 +1275,39 @@ func TestFold(t *testing.T) {
 		},
 	})
 }
+
+func TestFieldSelectorOperations(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"pluck_strings_compat",
+			table.Pluck("a", "b"),
+			`[33,[[15,[[14,["test"]],"users"]],"a","b"]]`,
+		},
+		{
+			"pluck_map_arg",
+			table.Pluck("name", map[string]interface{}{"address": []interface{}{"city"}}),
+			`[33,[[15,[[14,["test"]],"users"]],"name",{"address":["city"]}]]`,
+		},
+		{
+			"without_map_arg",
+			table.Without(map[string]interface{}{"address": map[string]interface{}{"zip": true}}),
+			`[34,[[15,[[14,["test"]],"users"]],{"address":{"zip":true}}]]`,
+		},
+		{
+			"hasfields_map_arg",
+			table.HasFields(map[string]interface{}{"profile": true}),
+			`[32,[[15,[[14,["test"]],"users"]],{"profile":true}]]`,
+		},
+		{
+			"withfields_map_arg",
+			table.WithFields(map[string]interface{}{"stats": true}),
+			`[96,[[15,[[14,["test"]],"users"]],{"stats":true}]]`,
+		},
+	})
+}

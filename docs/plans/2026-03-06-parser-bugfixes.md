@@ -64,12 +64,12 @@ Changing `Pluck(fields ...string)` to `Pluck(fields ...interface{})` breaks 4 ca
 
 The term builder (`term.go`) currently accepts only `...string`. Before changing the parser, the builder must support mixed args (strings + maps).
 
-- [ ] add term test: `Pluck` with native Go map arg -- `t.Pluck("name", map[string]interface{}{"address": []interface{}{"city"}})` serializes as `[33,[term,"name",{"address":["city"]}]]` (raw array, NOT `[2,["city"]]`)
-- [ ] add term test: `Without` with map arg serializes correctly
-- [ ] add term test: `HasFields` with map arg serializes correctly
-- [ ] add term test: `WithFields` with map arg serializes correctly
-- [ ] add term test: backward compat -- `Pluck("a", "b")` still serializes as before
-- [ ] run term tests -- new tests must FAIL (methods accept only strings)
+- [x] add term test: `Pluck` with native Go map arg -- `t.Pluck("name", map[string]interface{}{"address": []interface{}{"city"}})` serializes as `[33,[term,"name",{"address":["city"]}]]` (raw array, NOT `[2,["city"]]`)
+- [x] add term test: `Without` with map arg serializes correctly
+- [x] add term test: `HasFields` with map arg serializes correctly
+- [x] add term test: `WithFields` with map arg serializes correctly
+- [x] add term test: backward compat -- `Pluck("a", "b")` still serializes as before
+- [x] run term tests -- new tests must FAIL (methods accept only strings)
 
 ### Task 4: Support object args in pluck/without/hasFields/withFields -- term layer implementation
 
