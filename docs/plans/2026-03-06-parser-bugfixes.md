@@ -96,11 +96,11 @@ The term builder (`term.go`) currently accepts only `...string`. Before changing
 
 ### Task 6: Parser field selector support -- implementation
 
-- [ ] add `parseDatumValue()` method -- parses a JSON-like datum literal returning native Go types: string, number, bool, null, `[]interface{}` (for arrays), `map[string]interface{}` (for objects); NO `reql.Term` / `reql.Array` -- pure Go data; nested recursion for objects/arrays
-- [ ] add `parseFieldSelectors()` method -- parses `(arg, arg, ...)` where each arg is a string literal or a `{...}` object; delegates object values to `parseDatumValue()`; rejects other arg types (numbers, bools, r.* calls) with error
-- [ ] replace `parseStringList()` calls in `chainPluck`/`chainWithout`/`chainHasFields`/`chainWithFields` with `parseFieldSelectors()`, pass results to updated `...interface{}` methods
-- [ ] run parser tests -- all must pass
-- [ ] run `make build` -- linter must pass
+- [x] add `parseDatumValue()` method -- parses a JSON-like datum literal returning native Go types: string, number, bool, null, `[]interface{}` (for arrays), `map[string]interface{}` (for objects); NO `reql.Term` / `reql.Array` -- pure Go data; nested recursion for objects/arrays
+- [x] add `parseFieldSelectors()` method -- parses `(arg, arg, ...)` where each arg is a string literal or a `{...}` object; delegates object values to `parseDatumValue()`; rejects other arg types (numbers, bools, r.* calls) with error
+- [x] replace `parseStringList()` calls in `chainPluck`/`chainWithout`/`chainHasFields`/`chainWithFields` with `parseFieldSelectors()`, pass results to updated `...interface{}` methods
+- [x] run parser tests -- all must pass
+- [x] run `make build` -- linter must pass
 
 ### Task 7: Integration tests
 

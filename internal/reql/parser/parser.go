@@ -1034,49 +1034,33 @@ func chainDuring(p *parser, t reql.Term) (reql.Term, error) {
 }
 
 func chainPluck(p *parser, t reql.Term) (reql.Term, error) {
-	strs, err := p.parseStringList()
+	args, err := p.parseFieldSelectors()
 	if err != nil {
 		return reql.Term{}, err
-	}
-	args := make([]interface{}, len(strs))
-	for i, s := range strs {
-		args[i] = s
 	}
 	return t.Pluck(args...), nil
 }
 
 func chainWithout(p *parser, t reql.Term) (reql.Term, error) {
-	strs, err := p.parseStringList()
+	args, err := p.parseFieldSelectors()
 	if err != nil {
 		return reql.Term{}, err
-	}
-	args := make([]interface{}, len(strs))
-	for i, s := range strs {
-		args[i] = s
 	}
 	return t.Without(args...), nil
 }
 
 func chainHasFields(p *parser, t reql.Term) (reql.Term, error) {
-	strs, err := p.parseStringList()
+	args, err := p.parseFieldSelectors()
 	if err != nil {
 		return reql.Term{}, err
-	}
-	args := make([]interface{}, len(strs))
-	for i, s := range strs {
-		args[i] = s
 	}
 	return t.HasFields(args...), nil
 }
 
 func chainWithFields(p *parser, t reql.Term) (reql.Term, error) {
-	strs, err := p.parseStringList()
+	args, err := p.parseFieldSelectors()
 	if err != nil {
 		return reql.Term{}, err
-	}
-	args := make([]interface{}, len(strs))
-	for i, s := range strs {
-		args[i] = s
 	}
 	return t.WithFields(args...), nil
 }
@@ -1967,6 +1951,135 @@ func (p *parser) parseStringList() ([]string, error) {
 		return nil, err
 	}
 	return strs, nil
+}
+
+// parseFieldSelectors parses (arg, arg, ...) where each arg is a string literal
+// or a {key: val, ...} object. Returns []interface{} for use with Pluck/Without/etc.
+func (p *parser) parseFieldSelectors() ([]interface{}, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return nil, err
+	}
+	var args []interface{}
+	for p.peek().Type != tokenRParen && p.peek().Type != tokenEOF {
+		v, err := p.parseOneFieldSelector()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, v)
+		if p.peek().Type == tokenEOF {
+			break
+		}
+		if p.peek().Type != tokenRParen {
+			if _, err := p.expect(tokenComma); err != nil {
+				return nil, err
+			}
+			if p.peek().Type == tokenRParen {
+				return nil, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
+			}
+		}
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return nil, err
+	}
+	return args, nil
+}
+
+func (p *parser) parseOneFieldSelector() (interface{}, error) {
+	tok := p.peek()
+	switch tok.Type {
+	case tokenString:
+		p.advance()
+		return tok.Value, nil
+	case tokenLBrace:
+		return p.parseDatumObject()
+	default:
+		return nil, fmt.Errorf("expected string or object in field selector at position %d, got %q", tok.Pos, tok.Value)
+	}
+}
+
+// parseDatumValue parses a JSON-like datum literal into a native Go value.
+// Produces string, float64/int, bool, nil, []interface{}, or map[string]interface{}.
+// Never produces reql.Term -- used for field selectors and similar contexts.
+func (p *parser) parseDatumValue() (interface{}, error) {
+	tok := p.peek()
+	switch tok.Type {
+	case tokenString:
+		p.advance()
+		return tok.Value, nil
+	case tokenNumber:
+		p.advance()
+		return parseNumberValue(tok.Value)
+	case tokenBool:
+		p.advance()
+		return tok.Value == "true", nil
+	case tokenNull:
+		p.advance()
+		return nil, nil
+	case tokenLBracket:
+		return p.parseDatumArray()
+	case tokenLBrace:
+		return p.parseDatumObject()
+	default:
+		return nil, fmt.Errorf("expected datum value at position %d, got %q", tok.Pos, tok.Value)
+	}
+}
+
+// parseDatumArray parses [v, v, ...] into []interface{} with native Go values.
+func (p *parser) parseDatumArray() ([]interface{}, error) {
+	if _, err := p.expect(tokenLBracket); err != nil {
+		return nil, err
+	}
+	var arr []interface{}
+	for p.peek().Type != tokenRBracket && p.peek().Type != tokenEOF {
+		v, err := p.parseDatumValue()
+		if err != nil {
+			return nil, err
+		}
+		arr = append(arr, v)
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type == tokenRBracket {
+				return nil, fmt.Errorf("trailing comma in array at position %d", p.peek().Pos)
+			}
+		}
+	}
+	if _, err := p.expect(tokenRBracket); err != nil {
+		return nil, err
+	}
+	return arr, nil
+}
+
+// parseDatumObject parses {key: val, ...} into map[string]interface{} with native Go values.
+// Keys are preserved as-is (no camelToSnake conversion).
+func (p *parser) parseDatumObject() (map[string]interface{}, error) {
+	if _, err := p.expect(tokenLBrace); err != nil {
+		return nil, err
+	}
+	obj := map[string]interface{}{}
+	for p.peek().Type != tokenRBrace && p.peek().Type != tokenEOF {
+		key, err := p.parseObjectKey()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := p.expect(tokenColon); err != nil {
+			return nil, err
+		}
+		val, err := p.parseDatumValue()
+		if err != nil {
+			return nil, err
+		}
+		obj[key] = val
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type == tokenRBrace {
+				return nil, fmt.Errorf("trailing comma in object at position %d", p.peek().Pos)
+			}
+		}
+	}
+	if _, err := p.expect(tokenRBrace); err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
 
 // parseTwoArgs parses (expr1, expr2) and returns both terms.
