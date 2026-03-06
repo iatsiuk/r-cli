@@ -1573,6 +1573,8 @@ func registerStringChain(m map[string]chainFn) {
 	m["upcase"] = noArgChain(func(t reql.Term) reql.Term { return t.Upcase() })
 	m["downcase"] = noArgChain(func(t reql.Term) reql.Term { return t.Downcase() })
 	m["toJSONString"] = noArgChain(func(t reql.Term) reql.Term { return t.ToJSONString() })
+	m["toJSON"] = noArgChain(func(t reql.Term) reql.Term { return t.ToJSONString() })
+	m["toJsonString"] = noArgChain(func(t reql.Term) reql.Term { return t.ToJSONString() })
 	m["toISO8601"] = noArgChain(func(t reql.Term) reql.Term { return t.ToISO8601() })
 	m["toEpochTime"] = noArgChain(func(t reql.Term) reql.Term { return t.ToEpochTime() })
 }

@@ -55,10 +55,10 @@ Changing `Pluck(fields ...string)` to `Pluck(fields ...interface{})` breaks 4 ca
 
 ### Task 2: Add toJSON + toJsonString aliases -- implementation
 
-- [ ] register `toJSON` as `noArgChain` in `registerStringChain()` mapping to `ToJSONString()`, next to existing `toJSONString` entry
-- [ ] register `toJsonString` as `noArgChain` similarly
-- [ ] run parser tests -- all must pass
-- [ ] run `make build` -- linter must pass
+- [x] register `toJSON` as `noArgChain` in `registerStringChain()` mapping to `ToJSONString()`, next to existing `toJSONString` entry
+- [x] register `toJsonString` as `noArgChain` similarly
+- [x] run parser tests -- all must pass
+- [x] run `make build` -- linter must pass
 
 ### Task 3: Support object args in pluck/without/hasFields/withFields -- term layer tests
 
