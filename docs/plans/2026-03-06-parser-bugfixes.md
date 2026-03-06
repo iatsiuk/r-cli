@@ -121,14 +121,14 @@ term_test.go to expect correct MAKE_ARRAY wire format.
 
 ### Task 8: Verify acceptance criteria
 
-- [ ] verify `toJSON()` and `toJsonString()` work as aliases for `toJSONString()`
-- [ ] verify `without({nested: true})` parses and executes correctly
-- [ ] verify `pluck("name", {address: ["city"]})` parses, serializes correctly (no MAKE_ARRAY), and executes
-- [ ] verify backward compat: string-only `pluck`/`without`/`hasFields`/`withFields` unchanged
-- [ ] verify error on invalid selector args: `pluck(123)`, `without(true)`
-- [ ] run full test suite: `go test ./... -race`
-- [ ] run `make test-integration`
-- [ ] run `make build` -- linter passes
+- [x] verify `toJSON()` and `toJsonString()` work as aliases for `toJSONString()`
+- [x] verify `without({nested: true})` parses and executes correctly
+- [x] verify `pluck("name", {address: ["city"]})` parses, serializes correctly (no MAKE_ARRAY), and executes
+- [x] verify backward compat: string-only `pluck`/`without`/`hasFields`/`withFields` unchanged
+- [x] verify error on invalid selector args: `pluck(123)`, `without(true)`
+- [x] run full test suite: `go test ./... -race`
+- [x] run `make test-integration`
+- [x] run `make build` -- linter passes
 
 ## Technical Details
 
