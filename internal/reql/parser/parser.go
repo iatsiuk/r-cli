@@ -2001,6 +2001,11 @@ func (p *parser) parseOneFieldSelector() (interface{}, error) {
 // Produces string, float64/int, bool, nil, map[string]interface{}, or reql.Term (MAKE_ARRAY for arrays).
 // Arrays become reql.Term because RethinkDB interprets bare JSON arrays in term arg positions as terms.
 func (p *parser) parseDatumValue() (interface{}, error) {
+	p.depth++
+	if p.depth > maxDepth {
+		return nil, fmt.Errorf("datum too deeply nested (max depth %d)", maxDepth)
+	}
+	defer func() { p.depth-- }()
 	tok := p.peek()
 	switch tok.Type {
 	case tokenString:
