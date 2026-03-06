@@ -49,9 +49,9 @@ Changing `Pluck(fields ...string)` to `Pluck(fields ...interface{})` breaks 4 ca
 
 ### Task 1: Add toJSON + toJsonString aliases -- tests
 
-- [ ] add parser test: `toJSON` chain produces same term as `toJSONString` (e.g. `r.db("d").table("t").toJSON()` == `dbterm.ToJSONString()`)
-- [ ] add parser test: `toJsonString` chain (lowercase j) produces same term as `toJSONString`
-- [ ] run parser tests -- new tests must FAIL (methods not registered)
+- [x] add parser test: `toJSON` chain produces same term as `toJSONString` (e.g. `r.db("d").table("t").toJSON()` == `dbterm.ToJSONString()`)
+- [x] add parser test: `toJsonString` chain (lowercase j) produces same term as `toJSONString`
+- [x] run parser tests -- new tests must FAIL (methods not registered)
 
 ### Task 2: Add toJSON + toJsonString aliases -- implementation
 

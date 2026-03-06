@@ -326,6 +326,8 @@ func TestParse_ChainMethodMapping(t *testing.T) {
 		{"append", db + `.append(1)`, dbterm.Append(1)},
 		{"prepend", db + `.prepend(1)`, dbterm.Prepend(1)},
 		{"setInsert", db + `.setInsert("x")`, dbterm.SetInsert("x")},
+		{"toJSON", db + `.toJSON()`, dbterm.ToJSONString()},
+		{"toJsonString", db + `.toJsonString()`, dbterm.ToJSONString()},
 	})
 }
 
