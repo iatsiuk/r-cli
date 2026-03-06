@@ -1291,8 +1291,8 @@ func TestFieldSelectorOperations(t *testing.T) {
 		},
 		{
 			"pluck_map_arg",
-			table.Pluck("name", map[string]interface{}{"address": []interface{}{"city"}}),
-			`[33,[[15,[[14,["test"]],"users"]],"name",{"address":["city"]}]]`,
+			table.Pluck("name", map[string]interface{}{"address": Array("city")}),
+			`[33,[[15,[[14,["test"]],"users"]],"name",{"address":[2,["city"]]}]]`,
 		},
 		{
 			"without_map_arg",

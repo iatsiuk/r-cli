@@ -104,13 +104,20 @@ The term builder (`term.go`) currently accepts only `...string`. Before changing
 
 ### Task 7: Integration tests
 
-- [ ] add integration test: `pluck` with nested object -- insert doc with nested fields, `pluck("name", {address: ["city"]})`, verify only selected fields returned
-- [ ] add integration test: `without` with nested object -- insert doc with nested field, `without({address: {zip: true}})`, verify nested field removed
-- [ ] add integration test: `hasFields` with nested object -- filter docs by nested field presence
-- [ ] add integration test: `withFields` with nested object -- select docs having nested fields
-- [ ] add integration test: `toJSON()` -- verify returns JSON string representation
-- [ ] add integration test: `toJsonString()` -- verify same result as `toJSON()`
-- [ ] run `make test-integration` -- all must pass
+- [x] add integration test: `pluck` with nested object -- insert doc with nested fields, `pluck("name", {address: ["city"]})`, verify only selected fields returned
+- [x] add integration test: `without` with nested object -- insert doc with nested field, `without({address: {zip: true}})`, verify nested field removed
+- [x] add integration test: `hasFields` with nested object -- filter docs by nested field presence
+- [x] add integration test: `withFields` with nested object -- select docs having nested fields
+- [x] add integration test: `toJSON()` -- verify returns JSON string representation
+- [x] add integration test: `toJsonString()` -- verify same result as `toJSON()`
+- [x] run `make test-integration` -- all must pass
+
+NOTE: Integration tests revealed that `parseDatumArray` was returning `[]interface{}` which
+marshals as plain JSON array `["city"]`. RethinkDB interprets bare arrays in term arg positions
+as term arrays (first element must be a TermType integer), causing "Expected a TermType as a
+NUMBER but found STRING" error. Fixed `parseDatumArray` to return `reql.Array(...)` (MAKE_ARRAY
+term) so arrays serialize as `[2, ["city"]]` per protocol spec. Updated parser_test.go and
+term_test.go to expect correct MAKE_ARRAY wire format.
 
 ### Task 8: Verify acceptance criteria
 

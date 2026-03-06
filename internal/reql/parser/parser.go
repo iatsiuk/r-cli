@@ -2016,7 +2016,11 @@ func (p *parser) parseDatumValue() (interface{}, error) {
 		p.advance()
 		return nil, nil
 	case tokenLBracket:
-		return p.parseDatumArray()
+		t, err := p.parseDatumArray()
+		if err != nil {
+			return nil, err
+		}
+		return t, nil
 	case tokenLBrace:
 		return p.parseDatumObject()
 	default:
@@ -2024,29 +2028,31 @@ func (p *parser) parseDatumValue() (interface{}, error) {
 	}
 }
 
-// parseDatumArray parses [v, v, ...] into []interface{} with native Go values.
-func (p *parser) parseDatumArray() ([]interface{}, error) {
+// parseDatumArray parses [v, v, ...] into a reql.Array (MAKE_ARRAY) term.
+// Arrays inside field selector objects must be MAKE_ARRAY terms, not plain JSON
+// arrays, because RethinkDB interprets bare arrays in term arg positions as terms.
+func (p *parser) parseDatumArray() (reql.Term, error) {
 	if _, err := p.expect(tokenLBracket); err != nil {
-		return nil, err
+		return reql.Term{}, err
 	}
-	var arr []interface{}
+	var elems []interface{}
 	for p.peek().Type != tokenRBracket && p.peek().Type != tokenEOF {
 		v, err := p.parseDatumValue()
 		if err != nil {
-			return nil, err
+			return reql.Term{}, err
 		}
-		arr = append(arr, v)
+		elems = append(elems, v)
 		if p.peek().Type == tokenComma {
 			p.advance()
 			if p.peek().Type == tokenRBracket {
-				return nil, fmt.Errorf("trailing comma in array at position %d", p.peek().Pos)
+				return reql.Term{}, fmt.Errorf("trailing comma in array at position %d", p.peek().Pos)
 			}
 		}
 	}
 	if _, err := p.expect(tokenRBracket); err != nil {
-		return nil, err
+		return reql.Term{}, err
 	}
-	return arr, nil
+	return reql.Array(elems...), nil
 }
 
 // parseDatumObject parses {key: val, ...} into map[string]interface{} with native Go values.

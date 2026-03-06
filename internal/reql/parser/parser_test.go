@@ -1667,7 +1667,7 @@ func TestParse_FieldSelectorChains(t *testing.T) {
 		{
 			"pluck_mixed_string_object",
 			db + `.pluck("name", {address: ["city"]})`,
-			dbterm.Pluck("name", map[string]interface{}{"address": []interface{}{"city"}}),
+			dbterm.Pluck("name", map[string]interface{}{"address": reql.Array("city")}),
 		},
 		{
 			"hasFields_object",
@@ -1690,12 +1690,10 @@ func TestParse_PluckWireJSON(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	wire := string(b)
-	// array must be raw JSON array, not MAKE_ARRAY term [2,...]
-	if strings.Contains(wire, `[2,`) {
-		t.Errorf("wire JSON contains MAKE_ARRAY term [2,...]: %s", wire)
-	}
-	if !strings.Contains(wire, `{"address":["city"]}`) {
-		t.Errorf("wire JSON missing raw object {\"address\":[\"city\"]}: %s", wire)
+	// array inside field selector object must be MAKE_ARRAY [2,...] so that RethinkDB
+	// does not misinterpret ["city"] as a term array (where first element must be a TermType number)
+	if !strings.Contains(wire, `{"address":[2,`) {
+		t.Errorf("wire JSON must use MAKE_ARRAY {\"address\":[2,...]}: %s", wire)
 	}
 }
 
