@@ -296,21 +296,21 @@ func (t Term) Count() Term {
 }
 
 // Pluck creates a PLUCK term ([33, [term, fields...]]).
-func (t Term) Pluck(fields ...string) Term {
+func (t Term) Pluck(fields ...interface{}) Term {
 	args := make([]Term, 0, 1+len(fields))
 	args = append(args, t)
 	for _, f := range fields {
-		args = append(args, Datum(f))
+		args = append(args, toTerm(f))
 	}
 	return Term{termType: proto.TermPluck, args: args}
 }
 
 // Without creates a WITHOUT term ([34, [term, fields...]]).
-func (t Term) Without(fields ...string) Term {
+func (t Term) Without(fields ...interface{}) Term {
 	args := make([]Term, 0, 1+len(fields))
 	args = append(args, t)
 	for _, f := range fields {
-		args = append(args, Datum(f))
+		args = append(args, toTerm(f))
 	}
 	return Term{termType: proto.TermWithout, args: args}
 }
@@ -321,11 +321,11 @@ func (t Term) GetField(field string) Term {
 }
 
 // HasFields creates a HAS_FIELDS term ([32, [term, fields...]]).
-func (t Term) HasFields(fields ...string) Term {
+func (t Term) HasFields(fields ...interface{}) Term {
 	args := make([]Term, 0, 1+len(fields))
 	args = append(args, t)
 	for _, f := range fields {
-		args = append(args, Datum(f))
+		args = append(args, toTerm(f))
 	}
 	return Term{termType: proto.TermHasFields, args: args}
 }
@@ -971,11 +971,11 @@ func (t Term) Bracket(field string) Term {
 }
 
 // WithFields creates a WITH_FIELDS term ([96, [seq, fields...]]).
-func (t Term) WithFields(fields ...string) Term {
+func (t Term) WithFields(fields ...interface{}) Term {
 	args := make([]Term, 1, 1+len(fields))
 	args[0] = t
 	for _, f := range fields {
-		args = append(args, Datum(f))
+		args = append(args, toTerm(f))
 	}
 	return Term{termType: proto.TermWithFields, args: args}
 }

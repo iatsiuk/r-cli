@@ -1034,35 +1034,35 @@ func chainDuring(p *parser, t reql.Term) (reql.Term, error) {
 }
 
 func chainPluck(p *parser, t reql.Term) (reql.Term, error) {
-	strs, err := p.parseStringList()
+	args, err := p.parseFieldSelectors()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.Pluck(strs...), nil
+	return t.Pluck(args...), nil
 }
 
 func chainWithout(p *parser, t reql.Term) (reql.Term, error) {
-	strs, err := p.parseStringList()
+	args, err := p.parseFieldSelectors()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.Without(strs...), nil
+	return t.Without(args...), nil
 }
 
 func chainHasFields(p *parser, t reql.Term) (reql.Term, error) {
-	strs, err := p.parseStringList()
+	args, err := p.parseFieldSelectors()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.HasFields(strs...), nil
+	return t.HasFields(args...), nil
 }
 
 func chainWithFields(p *parser, t reql.Term) (reql.Term, error) {
-	strs, err := p.parseStringList()
+	args, err := p.parseFieldSelectors()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.WithFields(strs...), nil
+	return t.WithFields(args...), nil
 }
 
 func chainIndexWait(p *parser, t reql.Term) (reql.Term, error) {
@@ -1573,6 +1573,8 @@ func registerStringChain(m map[string]chainFn) {
 	m["upcase"] = noArgChain(func(t reql.Term) reql.Term { return t.Upcase() })
 	m["downcase"] = noArgChain(func(t reql.Term) reql.Term { return t.Downcase() })
 	m["toJSONString"] = noArgChain(func(t reql.Term) reql.Term { return t.ToJSONString() })
+	m["toJSON"] = noArgChain(func(t reql.Term) reql.Term { return t.ToJSONString() })
+	m["toJsonString"] = noArgChain(func(t reql.Term) reql.Term { return t.ToJSONString() })
 	m["toISO8601"] = noArgChain(func(t reql.Term) reql.Term { return t.ToISO8601() })
 	m["toEpochTime"] = noArgChain(func(t reql.Term) reql.Term { return t.ToEpochTime() })
 }
@@ -1949,6 +1951,146 @@ func (p *parser) parseStringList() ([]string, error) {
 		return nil, err
 	}
 	return strs, nil
+}
+
+// parseFieldSelectors parses (arg, arg, ...) where each arg is a string literal
+// or a {key: val, ...} object. Returns []interface{} for use with Pluck/Without/etc.
+func (p *parser) parseFieldSelectors() ([]interface{}, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return nil, err
+	}
+	var args []interface{}
+	for p.peek().Type != tokenRParen && p.peek().Type != tokenEOF {
+		v, err := p.parseOneFieldSelector()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, v)
+		if p.peek().Type == tokenEOF {
+			break
+		}
+		if p.peek().Type != tokenRParen {
+			if _, err := p.expect(tokenComma); err != nil {
+				return nil, err
+			}
+			if p.peek().Type == tokenRParen {
+				return nil, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
+			}
+		}
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return nil, err
+	}
+	return args, nil
+}
+
+func (p *parser) parseOneFieldSelector() (interface{}, error) {
+	tok := p.peek()
+	switch tok.Type {
+	case tokenString:
+		p.advance()
+		return tok.Value, nil
+	case tokenLBrace:
+		return p.parseDatumObject()
+	default:
+		return nil, fmt.Errorf("expected string or object in field selector at position %d, got %q", tok.Pos, tok.Value)
+	}
+}
+
+// parseDatumValue parses a JSON-like datum literal into a native Go value.
+// Produces string, float64/int, bool, nil, map[string]interface{}, or reql.Term (MAKE_ARRAY for arrays).
+// Arrays become reql.Term because RethinkDB interprets bare JSON arrays in term arg positions as terms.
+func (p *parser) parseDatumValue() (interface{}, error) {
+	p.depth++
+	if p.depth > maxDepth {
+		return nil, fmt.Errorf("datum too deeply nested (max depth %d)", maxDepth)
+	}
+	defer func() { p.depth-- }()
+	tok := p.peek()
+	switch tok.Type {
+	case tokenString:
+		p.advance()
+		return tok.Value, nil
+	case tokenNumber:
+		p.advance()
+		return parseNumberValue(tok.Value)
+	case tokenBool:
+		p.advance()
+		return tok.Value == "true", nil
+	case tokenNull:
+		p.advance()
+		return nil, nil
+	case tokenLBracket:
+		t, err := p.parseDatumArray()
+		if err != nil {
+			return nil, err
+		}
+		return t, nil
+	case tokenLBrace:
+		return p.parseDatumObject()
+	default:
+		return nil, fmt.Errorf("expected datum value at position %d, got %q", tok.Pos, tok.Value)
+	}
+}
+
+// parseDatumArray parses [v, v, ...] into a reql.Array (MAKE_ARRAY) term.
+// Arrays inside field selector objects must be MAKE_ARRAY terms, not plain JSON
+// arrays, because RethinkDB interprets bare arrays in term arg positions as terms.
+func (p *parser) parseDatumArray() (reql.Term, error) {
+	if _, err := p.expect(tokenLBracket); err != nil {
+		return reql.Term{}, err
+	}
+	var elems []interface{}
+	for p.peek().Type != tokenRBracket && p.peek().Type != tokenEOF {
+		v, err := p.parseDatumValue()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		elems = append(elems, v)
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type == tokenRBracket {
+				return reql.Term{}, fmt.Errorf("trailing comma in array at position %d", p.peek().Pos)
+			}
+		}
+	}
+	if _, err := p.expect(tokenRBracket); err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Array(elems...), nil
+}
+
+// parseDatumObject parses {key: val, ...} into map[string]interface{} with native Go values.
+// Keys are preserved as-is (no camelToSnake conversion).
+func (p *parser) parseDatumObject() (map[string]interface{}, error) {
+	if _, err := p.expect(tokenLBrace); err != nil {
+		return nil, err
+	}
+	obj := map[string]interface{}{}
+	for p.peek().Type != tokenRBrace && p.peek().Type != tokenEOF {
+		key, err := p.parseObjectKey()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := p.expect(tokenColon); err != nil {
+			return nil, err
+		}
+		val, err := p.parseDatumValue()
+		if err != nil {
+			return nil, err
+		}
+		obj[key] = val
+		if p.peek().Type == tokenComma {
+			p.advance()
+			if p.peek().Type == tokenRBrace {
+				return nil, fmt.Errorf("trailing comma in object at position %d", p.peek().Pos)
+			}
+		}
+	}
+	if _, err := p.expect(tokenRBrace); err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
 
 // parseTwoArgs parses (expr1, expr2) and returns both terms.

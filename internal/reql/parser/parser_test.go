@@ -326,6 +326,8 @@ func TestParse_ChainMethodMapping(t *testing.T) {
 		{"append", db + `.append(1)`, dbterm.Append(1)},
 		{"prepend", db + `.prepend(1)`, dbterm.Prepend(1)},
 		{"setInsert", db + `.setInsert("x")`, dbterm.SetInsert("x")},
+		{"toJSON", db + `.toJSON()`, dbterm.ToJSONString()},
+		{"toJsonString", db + `.toJsonString()`, dbterm.ToJSONString()},
 	})
 }
 
@@ -1645,6 +1647,82 @@ func TestParse_OptArgs_CamelCaseConversion(t *testing.T) {
 		want := reql.Array(reql.Datum(int64(1))).Fold(reql.Datum(int64(0)), reql.Func(reql.Var(1).Add(reql.Var(2)), 1, 2), reql.OptArgs{"final_emit": reql.Func(reql.Var(1), 1)})
 		assertTermEqual(t, got, want)
 	})
+}
+
+func TestParse_FieldSelectorChains(t *testing.T) {
+	t.Parallel()
+	db := `r.db("test").table("users")`
+	dbterm := reql.DB("test").Table("users")
+	runParseTests(t, []parseTest{
+		{
+			"pluck_string_only_compat",
+			db + `.pluck("a", "b")`,
+			dbterm.Pluck("a", "b"),
+		},
+		{
+			"without_nested_object",
+			db + `.without({perks: {refill: true}})`,
+			dbterm.Without(map[string]interface{}{"perks": map[string]interface{}{"refill": true}}),
+		},
+		{
+			"pluck_mixed_string_object",
+			db + `.pluck("name", {address: ["city"]})`,
+			dbterm.Pluck("name", map[string]interface{}{"address": reql.Array("city")}),
+		},
+		{
+			"hasFields_object",
+			db + `.hasFields({profile: true})`,
+			dbterm.HasFields(map[string]interface{}{"profile": true}),
+		},
+		{
+			"withFields_mixed",
+			db + `.withFields("id", {stats: true})`,
+			dbterm.WithFields("id", map[string]interface{}{"stats": true}),
+		},
+	})
+}
+
+func TestParse_PluckWireJSON(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("test").table("users").pluck("name", {address: ["city"]})`)
+	b, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	wire := string(b)
+	// array inside field selector object must be MAKE_ARRAY [2,...] so that RethinkDB
+	// does not misinterpret ["city"] as a term array (where first element must be a TermType number)
+	if !strings.Contains(wire, `{"address":[2,`) {
+		t.Errorf("wire JSON must use MAKE_ARRAY {\"address\":[2,...]}: %s", wire)
+	}
+}
+
+func TestParse_FieldSelectorErrors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		// number arg rejected
+		{"pluck_number_arg", `r.table("t").pluck(123)`, "expected"},
+		// bool arg rejected
+		{"without_bool_arg", `r.table("t").without(true)`, "expected"},
+		// trailing comma rejected
+		{"pluck_trailing_comma", `r.table("t").pluck("a",)`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
 }
 
 func TestCamelToSnake(t *testing.T) {
