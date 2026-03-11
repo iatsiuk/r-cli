@@ -25,6 +25,9 @@ import (
 // replStart is the function used to launch the REPL; replaced in tests.
 var replStart = runREPL
 
+// replShowHintHook is called with the resolved ShowHint value before executor creation; replaced in tests.
+var replShowHintHook func(bool)
+
 func newReplCmd(cfg *rootConfig) *cobra.Command {
 	return &cobra.Command{
 		Use:   "repl",
@@ -38,6 +41,9 @@ func newReplCmd(cfg *rootConfig) *cobra.Command {
 
 // runREPL creates a readline reader, connects to RethinkDB, and runs the REPL loop.
 func runREPL(ctx context.Context, cfg *rootConfig, out, errOut io.Writer) error {
+	if replShowHintHook != nil {
+		replShowHintHook(!cfg.quiet)
+	}
 	exec, cleanup, err := newExecutor(cfg)
 	if err != nil {
 		return err

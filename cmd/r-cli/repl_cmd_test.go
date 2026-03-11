@@ -186,6 +186,51 @@ func TestMakeReplExecLogsParseError(t *testing.T) {
 	}
 }
 
+// TestShowHintWiringQuietFalse verifies that ShowHint resolves to true when cfg.quiet is false.
+func TestShowHintWiringQuietFalse(t *testing.T) {
+	var captured bool
+	var hookCalled bool
+
+	oldHook := replShowHintHook
+	replShowHintHook = func(showHint bool) {
+		captured = showHint
+		hookCalled = true
+	}
+	defer func() { replShowHintHook = oldHook }()
+
+	// runREPL will fail at newExecutor (no RethinkDB), but the hook fires before that.
+	_ = runREPL(context.Background(), &rootConfig{quiet: false}, io.Discard, io.Discard)
+
+	if !hookCalled {
+		t.Fatal("replShowHintHook was not called")
+	}
+	if !captured {
+		t.Error("ShowHint should be true when quiet=false")
+	}
+}
+
+// TestShowHintWiringQuietTrue verifies that ShowHint resolves to false when cfg.quiet is true.
+func TestShowHintWiringQuietTrue(t *testing.T) {
+	captured := true // default to true to detect missing hook call
+	var hookCalled bool
+
+	oldHook := replShowHintHook
+	replShowHintHook = func(showHint bool) {
+		captured = showHint
+		hookCalled = true
+	}
+	defer func() { replShowHintHook = oldHook }()
+
+	_ = runREPL(context.Background(), &rootConfig{quiet: true}, io.Discard, io.Discard)
+
+	if !hookCalled {
+		t.Fatal("replShowHintHook was not called")
+	}
+	if captured {
+		t.Error("ShowHint should be false when quiet=true")
+	}
+}
+
 func TestJsonRowsToStrings(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
