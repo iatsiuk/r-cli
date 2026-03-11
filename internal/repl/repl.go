@@ -33,6 +33,7 @@ type Config struct {
 	Prompt      string
 	OnUseDB     func(db string)     // called when .use <db> is executed
 	OnFormat    func(format string) // called when .format <fmt> is executed
+	ShowHint    bool                // print available dot-commands to errOut on startup
 }
 
 // Repl is the interactive REPL.
@@ -45,6 +46,7 @@ type Repl struct {
 	prompt      string
 	onUseDB     func(db string)
 	onFormat    func(format string)
+	showHint    bool
 }
 
 // New creates a Repl from Config.
@@ -78,27 +80,54 @@ func New(cfg *Config) *Repl {
 		prompt:      prompt,
 		onUseDB:     onUseDB,
 		onFormat:    onFormat,
+		showHint:    cfg.ShowHint,
 	}
 }
 
 const contPrompt = "... "
 
+// printHelp writes the list of available dot-commands to w.
+func printHelp(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "Available commands:")
+	_, _ = fmt.Fprintln(w, "  .exit, .quit          exit the REPL")
+	_, _ = fmt.Fprintln(w, "  .use <database>       change current database")
+	_, _ = fmt.Fprintln(w, "  .format <fmt>         set output format (json|jsonl|raw|table)")
+	_, _ = fmt.Fprintln(w, "  .help                 show this help")
+}
+
+// readLine wraps Readline and normalizes errors.
+// Returns ("", false, nil) on EOF, ("", true, ErrInterrupt) on Ctrl+C,
+// (line, true, nil) on success, or ("", false, err) on unexpected error.
+func (r *Repl) readLine() (line string, cont bool, err error) {
+	l, e := r.reader.Readline()
+	if e == nil {
+		return l, true, nil
+	}
+	if errors.Is(e, io.EOF) {
+		return "", false, nil
+	}
+	if errors.Is(e, ErrInterrupt) {
+		return "", true, ErrInterrupt
+	}
+	return "", false, e
+}
+
 // Run starts the REPL loop. Returns nil on clean exit (EOF).
 func (r *Repl) Run(ctx context.Context) error {
+	if r.showHint {
+		printHelp(r.errOut)
+	}
 	r.reader.SetPrompt(r.prompt)
 	var lines []string
 	for {
-		line, err := r.reader.Readline()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
-			if errors.Is(err, ErrInterrupt) {
-				lines = lines[:0]
-				r.reader.SetPrompt(r.prompt)
-				continue
-			}
+		line, cont, err := r.readLine()
+		if !cont {
 			return err
+		}
+		if errors.Is(err, ErrInterrupt) {
+			lines = lines[:0]
+			r.reader.SetPrompt(r.prompt)
+			continue
 		}
 
 		if len(lines) == 0 {
@@ -181,11 +210,7 @@ func (r *Repl) dotCommand(line string) bool {
 		}
 		r.onFormat(parts[1])
 	case ".help":
-		_, _ = fmt.Fprintln(r.out, "Available commands:")
-		_, _ = fmt.Fprintln(r.out, "  .exit, .quit          exit the REPL")
-		_, _ = fmt.Fprintln(r.out, "  .use <database>       change current database")
-		_, _ = fmt.Fprintln(r.out, "  .format <fmt>         set output format (json|jsonl|raw|table)")
-		_, _ = fmt.Fprintln(r.out, "  .help                 show this help")
+		printHelp(r.out)
 	default:
 		_, _ = fmt.Fprintf(r.errOut, "unknown command: %s\n", parts[0])
 	}
