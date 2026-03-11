@@ -33,7 +33,7 @@ type Config struct {
 	Prompt      string
 	OnUseDB     func(db string)     // called when .use <db> is executed
 	OnFormat    func(format string) // called when .format <fmt> is executed
-	ShowHint    bool               // print available dot-commands to errOut on startup
+	ShowHint    bool                // print available dot-commands to errOut on startup
 }
 
 // Repl is the interactive REPL.
@@ -95,6 +95,23 @@ func printHelp(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  .help                 show this help")
 }
 
+// readLine wraps Readline and normalizes errors.
+// Returns ("", false, nil) on EOF, ("", true, ErrInterrupt) on Ctrl+C,
+// (line, true, nil) on success, or ("", false, err) on unexpected error.
+func (r *Repl) readLine() (line string, cont bool, err error) {
+	l, e := r.reader.Readline()
+	if e == nil {
+		return l, true, nil
+	}
+	if errors.Is(e, io.EOF) {
+		return "", false, nil
+	}
+	if errors.Is(e, ErrInterrupt) {
+		return "", true, ErrInterrupt
+	}
+	return "", false, e
+}
+
 // Run starts the REPL loop. Returns nil on clean exit (EOF).
 func (r *Repl) Run(ctx context.Context) error {
 	if r.showHint {
@@ -103,17 +120,14 @@ func (r *Repl) Run(ctx context.Context) error {
 	r.reader.SetPrompt(r.prompt)
 	var lines []string
 	for {
-		line, err := r.reader.Readline()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
-			if errors.Is(err, ErrInterrupt) {
-				lines = lines[:0]
-				r.reader.SetPrompt(r.prompt)
-				continue
-			}
+		line, cont, err := r.readLine()
+		if !cont {
 			return err
+		}
+		if errors.Is(err, ErrInterrupt) {
+			lines = lines[:0]
+			r.reader.SetPrompt(r.prompt)
+			continue
 		}
 
 		if len(lines) == 0 {

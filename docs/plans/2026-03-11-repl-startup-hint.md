@@ -32,11 +32,11 @@ Show available dot-commands when user enters interactive REPL, printed to stderr
 - [x] run tests (`go test ./cmd/r-cli/... -race -count=1`) -- must pass
 
 ### Task 3: Verify acceptance criteria
-- [ ] verify hint appears on REPL start (manual or integration check)
-- [ ] verify `--quiet` suppresses hint
-- [ ] verify `.help` still works and shows the same text
-- [ ] run full test suite (`make test`)
-- [ ] run linter (`make build`)
+- [x] verify hint appears on REPL start (manual or integration check)
+- [x] verify `--quiet` suppresses hint
+- [x] verify `.help` still works and shows the same text
+- [x] run full test suite (`make test`)
+- [x] run linter (`make build`)
 
 ## Technical Details
 - `ShowHint` defaults to `false` (zero value) so existing callers/tests are unaffected
