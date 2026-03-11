@@ -548,6 +548,45 @@ func TestIsCompleteEscapeInString(t *testing.T) {
 	}
 }
 
+func TestReplShowHintTrue(t *testing.T) {
+	t.Parallel()
+	var errOut bytes.Buffer
+	r := New(&Config{
+		Reader:   &fakeReader{lines: []string{}},
+		Exec:     func(_ context.Context, _ string, _ io.Writer) error { return nil },
+		Out:      io.Discard,
+		ErrOut:   &errOut,
+		ShowHint: true,
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	output := errOut.String()
+	for _, want := range []string{".exit", ".quit", ".use", ".format", ".help"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("startup hint missing %q; got: %q", want, output)
+		}
+	}
+}
+
+func TestReplShowHintFalse(t *testing.T) {
+	t.Parallel()
+	var errOut bytes.Buffer
+	r := New(&Config{
+		Reader:   &fakeReader{lines: []string{}},
+		Exec:     func(_ context.Context, _ string, _ io.Writer) error { return nil },
+		Out:      io.Discard,
+		ErrOut:   &errOut,
+		ShowHint: false,
+	})
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut.Len() != 0 {
+		t.Errorf("expected empty errOut when ShowHint=false, got: %q", errOut.String())
+	}
+}
+
 func TestReplCtrlCDuringExecution(t *testing.T) {
 	t.Parallel()
 

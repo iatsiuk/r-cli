@@ -18,12 +18,12 @@ Show available dot-commands when user enters interactive REPL, printed to stderr
 ## Implementation Steps
 
 ### Task 1: Add `ShowHint` field to `repl.Config` and print hint on REPL start
-- [ ] write test: `Run` prints help lines to `errOut` when `ShowHint` is true
-- [ ] write test: `Run` prints nothing to `errOut` when `ShowHint` is false (default, backward compat)
-- [ ] add `ShowHint bool` field to `repl.Config`
-- [ ] in `Repl.Run`, print the same help text as `.help` to `r.errOut` when `showHint` is true, before entering the main loop
-- [ ] extract help text into a helper (e.g. `printHelp(w io.Writer)`) shared by `dotCommand(".help")` and startup hint to avoid duplication
-- [ ] run tests (`go test ./internal/repl/... -race -count=1`) -- must pass
+- [x] write test: `Run` prints help lines to `errOut` when `ShowHint` is true
+- [x] write test: `Run` prints nothing to `errOut` when `ShowHint` is false (default, backward compat)
+- [x] add `ShowHint bool` field to `repl.Config`
+- [x] in `Repl.Run`, print the same help text as `.help` to `r.errOut` when `showHint` is true, before entering the main loop
+- [x] extract help text into a helper (e.g. `printHelp(w io.Writer)`) shared by `dotCommand(".help")` and startup hint to avoid duplication
+- [x] run tests (`go test ./internal/repl/... -race -count=1`) -- must pass
 
 ### Task 2: Wire `ShowHint` from CLI with `--quiet` awareness
 - [ ] write test: `repl.Config.ShowHint` is true when `cfg.quiet` is false
