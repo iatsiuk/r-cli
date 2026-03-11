@@ -91,6 +91,7 @@ func runREPL(ctx context.Context, cfg *rootConfig, out, errOut io.Writer) error 
 		Out:         out,
 		ErrOut:      errOut,
 		InterruptCh: interruptCh,
+		ShowHint:    !cfg.quiet,
 		OnUseDB: func(db string) {
 			localCfg.database = db
 			completer.SetCurrentDB(db)

@@ -26,10 +26,10 @@ Show available dot-commands when user enters interactive REPL, printed to stderr
 - [x] run tests (`go test ./internal/repl/... -race -count=1`) -- must pass
 
 ### Task 2: Wire `ShowHint` from CLI with `--quiet` awareness
-- [ ] write test: `repl.Config.ShowHint` is true when `cfg.quiet` is false
-- [ ] write test: `repl.Config.ShowHint` is false when `cfg.quiet` is true
-- [ ] set `ShowHint: !cfg.quiet` in `repl_cmd.go` when constructing `repl.Config`
-- [ ] run tests (`go test ./cmd/r-cli/... -race -count=1`) -- must pass
+- [x] write test: `repl.Config.ShowHint` is true when `cfg.quiet` is false
+- [x] write test: `repl.Config.ShowHint` is false when `cfg.quiet` is true
+- [x] set `ShowHint: !cfg.quiet` in `repl_cmd.go` when constructing `repl.Config`
+- [x] run tests (`go test ./cmd/r-cli/... -race -count=1`) -- must pass
 
 ### Task 3: Verify acceptance criteria
 - [ ] verify hint appears on REPL start (manual or integration check)

@@ -186,6 +186,56 @@ func TestMakeReplExecLogsParseError(t *testing.T) {
 	}
 }
 
+// TestReplConfigShowHintTrueWhenNotQuiet verifies that ShowHint is true (cfg.quiet=false).
+func TestReplConfigShowHintTrueWhenNotQuiet(t *testing.T) {
+	var capturedCfg *rootConfig
+	oldStart := replStart
+	replStart = func(_ context.Context, cfg *rootConfig, _, _ io.Writer) error {
+		capturedCfg = cfg
+		return nil
+	}
+	defer func() { replStart = oldStart }()
+
+	root := buildRootCmd(&rootConfig{})
+	root.SetArgs([]string{"repl"})
+	root.SetOut(io.Discard)
+	root.SetErr(io.Discard)
+	_ = root.Execute()
+
+	if capturedCfg == nil {
+		t.Fatal("replStart not called")
+	}
+	// ShowHint = !cfg.quiet; quiet is false so ShowHint should be true
+	if capturedCfg.quiet {
+		t.Error("expected cfg.quiet=false (ShowHint=true), got quiet=true")
+	}
+}
+
+// TestReplConfigShowHintFalseWhenQuiet verifies that ShowHint is false (cfg.quiet=true).
+func TestReplConfigShowHintFalseWhenQuiet(t *testing.T) {
+	var capturedCfg *rootConfig
+	oldStart := replStart
+	replStart = func(_ context.Context, cfg *rootConfig, _, _ io.Writer) error {
+		capturedCfg = cfg
+		return nil
+	}
+	defer func() { replStart = oldStart }()
+
+	root := buildRootCmd(&rootConfig{})
+	root.SetArgs([]string{"--quiet", "repl"})
+	root.SetOut(io.Discard)
+	root.SetErr(io.Discard)
+	_ = root.Execute()
+
+	if capturedCfg == nil {
+		t.Fatal("replStart not called")
+	}
+	// ShowHint = !cfg.quiet; quiet is true so ShowHint should be false
+	if !capturedCfg.quiet {
+		t.Error("expected cfg.quiet=true (ShowHint=false), got quiet=false")
+	}
+}
+
 func TestJsonRowsToStrings(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
