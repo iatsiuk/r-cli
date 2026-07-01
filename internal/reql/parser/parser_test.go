@@ -1755,3 +1755,18 @@ func TestCamelToSnake(t *testing.T) {
 		}
 	}
 }
+
+// TestParse_ObjectLiteralWriteDetection guards against a write term hidden
+// inside an object-literal value (parseObjectTerm stores parseExpr results,
+// including Terms, in a native map wrapped by reql.Datum) evading
+// ContainsWrite's read-only gate.
+func TestParse_ObjectLiteralWriteDetection(t *testing.T) {
+	t.Parallel()
+	term, err := Parse(`r.db("d").table("t").filter({a: r.db("d2").table("t2").insert({x: 1})})`)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if !term.ContainsWrite() {
+		t.Fatal("ContainsWrite() = false for write hidden in filter's object-literal predicate, want true")
+	}
+}

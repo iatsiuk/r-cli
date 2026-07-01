@@ -8,10 +8,10 @@ import (
 
 // ContainsWrite reports whether the term tree contains any write operation
 // (data write, DDL, index DDL, admin write, permission grant, write hook).
-// It walks nested terms so writes hidden inside forEach/do/function bodies
-// or optarg values (e.g. Fold's emit/finalEmit lambdas) are detected.
-// Native Go datums (builder-path documents) are treated as data and ignored;
-// only raw-JSON datums (the run path) are scanned.
+// It walks nested terms so writes hidden inside forEach/do/function bodies,
+// optarg values (e.g. Fold's emit/finalEmit lambdas), or object/array literals
+// (e.g. filter({a: r.table(...).insert(...)}), which the parser stores as a
+// native Datum) are detected.
 func (t Term) ContainsWrite() bool {
 	if t.err != nil {
 		return false
@@ -28,47 +28,40 @@ func (t Term) ContainsWrite() bool {
 		}
 	}
 	for _, v := range t.opts {
-		if optValueContainsWrite(v) {
+		if datumContainsWrite(v) {
 			return true
 		}
 	}
 	return false
 }
 
-// optValueContainsWrite scans an OptArgs value for embedded write terms.
-// Values are usually datum literals, but Fold's emit/finalEmit accept full
-// expressions, so a value can be a Term (or a slice/map containing one).
-func optValueContainsWrite(v interface{}) bool {
-	switch val := v.(type) {
-	case Term:
-		return val.ContainsWrite()
-	case []interface{}:
-		for _, item := range val {
-			if optValueContainsWrite(item) {
-				return true
-			}
-		}
-	case map[string]interface{}:
-		for _, item := range val {
-			if optValueContainsWrite(item) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// datumContainsWrite scans raw-JSON datums (json.RawMessage / []byte) for write
-// terms; native Go datums are data, not terms, and are ignored.
+// datumContainsWrite scans a datum value for embedded write terms. Datums are
+// usually plain data (json.RawMessage/[]byte from the run path, or scalar Go
+// values from the builder path), but object/array literals and Fold's
+// emit/finalEmit accept full expressions, so a value can be a Term (or a
+// slice/map containing one).
 func datumContainsWrite(datum interface{}) bool {
 	switch v := datum.(type) {
 	case json.RawMessage:
 		return rawJSONContainsWrite(v)
 	case []byte:
 		return rawJSONContainsWrite(v)
-	default:
-		return false
+	case Term:
+		return v.ContainsWrite()
+	case []interface{}:
+		for _, item := range v {
+			if datumContainsWrite(item) {
+				return true
+			}
+		}
+	case map[string]interface{}:
+		for _, item := range v {
+			if datumContainsWrite(item) {
+				return true
+			}
+		}
 	}
+	return false
 }
 
 // rawJSONContainsWrite decodes a wire-format ReQL term and looks for write

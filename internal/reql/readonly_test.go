@@ -96,6 +96,29 @@ func TestContainsWriteInOptArgs(t *testing.T) {
 	}
 }
 
+func TestContainsWriteInDatumLiteral(t *testing.T) {
+	t.Parallel()
+	// mirrors what the string parser produces for an object literal like
+	// filter({a: r.table("t2").insert({x: 1})}): a native map/slice datum
+	// (not t.opts, not a MAKE_ARRAY term) holding an embedded write Term.
+	writeInMap := DB("d").Table("t").Filter(Datum(map[string]interface{}{
+		"a": DB("d").Table("t2").Insert(Datum(map[string]interface{}{"x": 1})),
+	}))
+	if !writeInMap.ContainsWrite() {
+		t.Errorf("ContainsWrite() = false for write nested in object-literal datum, want true")
+	}
+	writeInSlice := DB("d").Table("t").Filter(Datum([]interface{}{
+		DB("d").Table("t2").Insert(Datum(map[string]interface{}{"x": 1})),
+	}))
+	if !writeInSlice.ContainsWrite() {
+		t.Errorf("ContainsWrite() = false for write nested in array-literal datum, want true")
+	}
+	read := DB("d").Table("t").Filter(Datum(map[string]interface{}{"a": 1}))
+	if read.ContainsWrite() {
+		t.Errorf("ContainsWrite() = true for plain object-literal datum, want false")
+	}
+}
+
 func TestContainsWriteRawJSON(t *testing.T) {
 	t.Parallel()
 	write := Datum(json.RawMessage(`[56,[[15,["t"]],{"a":1}]]`))
