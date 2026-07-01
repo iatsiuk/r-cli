@@ -147,6 +147,27 @@ func TestReadOnlyRejectsAdminWrites(t *testing.T) {
 	}
 }
 
+// TestReadOnlyRejectsRawJSONWrites covers write vectors reachable only via the
+// `run` raw-JSON path (a reql.Datum wrapping wire bytes): terms with no reql
+// builder (set_write_hook, term 189) and grant/insert encoded as raw wire
+// terms. The guard fires before any dial, so the container is never mutated.
+func TestReadOnlyRejectsRawJSONWrites(t *testing.T) {
+	t.Parallel()
+	ro := newReadOnlyExecutor(t)
+
+	raws := []struct {
+		name string
+		term reql.Term
+	}{
+		{"set_write_hook", reql.Datum(json.RawMessage(`[189,[[15,["docs"]]]]`))},
+		{"grant_raw", reql.Datum(json.RawMessage(`[188,["ro_raw_user",{"read":true}]]`))},
+		{"insert_raw", reql.Datum(json.RawMessage(`[56,[[15,["docs"]],{"id":"x"}]]`))},
+	}
+	for _, r := range raws {
+		assertReadOnly(t, ro, r.name, r.term)
+	}
+}
+
 func TestReadOnlyAllowsReads(t *testing.T) {
 	t.Parallel()
 	exec := newExecutor(t)
