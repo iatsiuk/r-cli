@@ -231,3 +231,18 @@ const (
 	TermGetNearest      TermType = 168
 	TermPolygonSub      TermType = 171
 )
+
+// IsWriteTerm reports whether tt mutates server state (data writes, DDL,
+// index DDL, admin writes, permissions, write hooks).
+func IsWriteTerm(tt TermType) bool {
+	switch tt {
+	case TermInsert, TermUpdate, TermDelete, TermReplace,
+		TermDBCreate, TermDBDrop, TermTableCreate, TermTableDrop,
+		TermIndexCreate, TermIndexDrop, TermIndexRename,
+		TermReconfigure, TermRebalance, TermSync,
+		TermGrant, TermSetWriteHook:
+		return true
+	default:
+		return false
+	}
+}
