@@ -170,6 +170,7 @@ Dot-commands:
 | `--binary-format` | | native | `native` converts BINARY pseudo-types, `raw` passes through |
 | `--quiet` | | false | Suppress non-data stderr output |
 | `--verbose` | | false | Show connection info and query timing |
+| `--read-only` | | false | Reject write operations before they reach the server |
 | `--tls-cert` | | | CA certificate PEM file |
 | `--tls-client-cert` | | | Client certificate PEM file |
 | `--tls-key` | | | Client private key PEM file |
@@ -193,6 +194,7 @@ Format is auto-detected: `json` (pretty-printed) on TTY, `jsonl` (one JSON per l
 | `RETHINKDB_USER` | `--user` |
 | `RETHINKDB_PASSWORD` | `--password` |
 | `RETHINKDB_DATABASE` | `--db` |
+| `RETHINKDB_READ_ONLY` | `--read-only` (accepts `true`/`false`) |
 
 CLI flags always take precedence over environment variables.
 
