@@ -50,6 +50,9 @@ r-cli -H db.example.com -P 28015 -u admin -p secret 'r.dbList()'
 
 # TLS connection
 r-cli --tls-cert ca.pem -H db.example.com 'r.dbList()'
+
+# read-only mode: rejects inserts, updates, deletes, DDL, and admin writes
+r-cli --read-only 'r.db("test").table("users").insert({})'  # exits 2, no data written
 ```
 
 ## Commands

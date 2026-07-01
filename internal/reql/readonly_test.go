@@ -17,8 +17,12 @@ func TestContainsWriteBuilderWrites(t *testing.T) {
 		{"delete", DB("d").Table("t").Delete()},
 		{"replace", DB("d").Table("t").Replace(map[string]interface{}{"a": 1})},
 		{"db_create", DBCreate("d")},
+		{"db_drop", DBDrop("d")},
 		{"table_create", DB("d").TableCreate("t")},
+		{"table_drop", DB("d").TableDrop("t")},
 		{"index_create", DB("d").Table("t").IndexCreate("idx")},
+		{"index_drop", DB("d").Table("t").IndexDrop("idx")},
+		{"index_rename", DB("d").Table("t").IndexRename("old", "new")},
 		{"reconfigure", DB("d").Table("t").Reconfigure(OptArgs{"shards": 1, "replicas": 1})},
 		{"rebalance", DB("d").Table("t").Rebalance()},
 		{"sync", DB("d").Table("t").Sync()},
@@ -64,6 +68,34 @@ func TestContainsWriteNested(t *testing.T) {
 	}
 }
 
+func TestContainsWriteInOptArgs(t *testing.T) {
+	t.Parallel()
+	write := DB("d").Table("t").Fold(Datum(0), Func(Var(1), 1), OptArgs{
+		"emit": Func(DB("d").Table("t2").Insert(Var(2)), 2),
+	})
+	if !write.ContainsWrite() {
+		t.Errorf("ContainsWrite() = false for write nested in Fold emit optarg, want true")
+	}
+	read := DB("d").Table("t").Fold(Datum(0), Func(Var(1), 1), OptArgs{
+		"emit": Func(Var(2), 2),
+	})
+	if read.ContainsWrite() {
+		t.Errorf("ContainsWrite() = true for read-only Fold optargs, want false")
+	}
+	writeInSlice := DB("d").Table("t").Fold(Datum(0), Func(Var(1), 1), OptArgs{
+		"emit": []interface{}{Func(DB("d").Table("t2").Insert(Var(2)), 2)},
+	})
+	if !writeInSlice.ContainsWrite() {
+		t.Errorf("ContainsWrite() = false for write nested in optarg slice, want true")
+	}
+	writeInMap := DB("d").Table("t").Fold(Datum(0), Func(Var(1), 1), OptArgs{
+		"emit": map[string]interface{}{"fn": Func(DB("d").Table("t2").Insert(Var(2)), 2)},
+	})
+	if !writeInMap.ContainsWrite() {
+		t.Errorf("ContainsWrite() = false for write nested in optarg map, want true")
+	}
+}
+
 func TestContainsWriteRawJSON(t *testing.T) {
 	t.Parallel()
 	write := Datum(json.RawMessage(`[56,[[15,["t"]],{"a":1}]]`))
@@ -78,6 +110,31 @@ func TestContainsWriteRawJSON(t *testing.T) {
 	dataArray := Datum(json.RawMessage(`[2,[56,[2,[1,2]]]]`))
 	if dataArray.ContainsWrite() {
 		t.Errorf("ContainsWrite() = true for MAKE_ARRAY data, want false")
+	}
+	// bare data array with no numeric term-type head
+	bareArray := Datum(json.RawMessage(`["not","a","term"]`))
+	if bareArray.ContainsWrite() {
+		t.Errorf("ContainsWrite() = true for bare data array, want false")
+	}
+	// object literal (e.g. r.object result) with a nested write
+	nestedObject := Datum(json.RawMessage(`{"nested":[56,[[15,["t"]],{"a":1}]]}`))
+	if !nestedObject.ContainsWrite() {
+		t.Errorf("ContainsWrite() = false for write nested in object literal, want true")
+	}
+	// write hidden in the opts position (element[2]) of a term array
+	writeInOpts := Datum(json.RawMessage(`[39,[[15,["t"]]],{"index":[56,[[15,["t2"]],{"a":1}]]}]`))
+	if !writeInOpts.ContainsWrite() {
+		t.Errorf("ContainsWrite() = false for write nested in opts position, want true")
+	}
+	// malformed JSON must not be treated as a write
+	malformed := Datum(json.RawMessage(`not json`))
+	if malformed.ContainsWrite() {
+		t.Errorf("ContainsWrite() = true for malformed JSON, want false")
+	}
+	// raw []byte datum takes the same path as json.RawMessage
+	rawBytes := Datum([]byte(`[56,[[15,["t"]],{"a":1}]]`))
+	if !rawBytes.ContainsWrite() {
+		t.Errorf("ContainsWrite() = false for []byte insert, want true")
 	}
 }
 

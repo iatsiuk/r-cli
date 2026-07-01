@@ -9,8 +9,9 @@ import (
 // ContainsWrite reports whether the term tree contains any write operation
 // (data write, DDL, index DDL, admin write, permission grant, write hook).
 // It walks nested terms so writes hidden inside forEach/do/function bodies
-// are detected. Native Go datums (builder-path documents) are treated as data
-// and ignored; only raw-JSON datums (the run path) are scanned.
+// or optarg values (e.g. Fold's emit/finalEmit lambdas) are detected.
+// Native Go datums (builder-path documents) are treated as data and ignored;
+// only raw-JSON datums (the run path) are scanned.
 func (t Term) ContainsWrite() bool {
 	if t.err != nil {
 		return false
@@ -24,6 +25,34 @@ func (t Term) ContainsWrite() bool {
 	for _, a := range t.args {
 		if a.ContainsWrite() {
 			return true
+		}
+	}
+	for _, v := range t.opts {
+		if optValueContainsWrite(v) {
+			return true
+		}
+	}
+	return false
+}
+
+// optValueContainsWrite scans an OptArgs value for embedded write terms.
+// Values are usually datum literals, but Fold's emit/finalEmit accept full
+// expressions, so a value can be a Term (or a slice/map containing one).
+func optValueContainsWrite(v interface{}) bool {
+	switch val := v.(type) {
+	case Term:
+		return val.ContainsWrite()
+	case []interface{}:
+		for _, item := range val {
+			if optValueContainsWrite(item) {
+				return true
+			}
+		}
+	case map[string]interface{}:
+		for _, item := range val {
+			if optValueContainsWrite(item) {
+				return true
+			}
 		}
 	}
 	return false

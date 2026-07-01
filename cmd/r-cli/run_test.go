@@ -2,12 +2,16 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"strings"
 	"testing"
 	"time"
+
+	"r-cli/internal/query"
+	"r-cli/internal/reql"
 )
 
 // stubIter is a minimal RowIterator for testing writeOutput.
@@ -102,6 +106,20 @@ func TestReadTermInvalidStdinJSON(t *testing.T) {
 	_, err := readTerm(nil, strings.NewReader("not-json"))
 	if err == nil {
 		t.Error("expected error for invalid JSON stdin, got nil")
+	}
+}
+
+// TestExecTermReadOnlyRejectsRawWrite verifies that newExecutor wires
+// cfg.readOnly through to the query executor: an unreachable host would
+// otherwise surface a connection error instead of ErrReadOnly, since the
+// guard must fire before any dial attempt.
+func TestExecTermReadOnlyRejectsRawWrite(t *testing.T) {
+	t.Parallel()
+	cfg := &rootConfig{host: "127.0.0.1", port: 1, readOnly: true}
+	term := reql.Datum(json.RawMessage(`[56,[[15,["t"]],{"a":1}]]`))
+	err := execTerm(context.Background(), cfg, term, io.Discard)
+	if !errors.Is(err, query.ErrReadOnly) {
+		t.Fatalf("expected ErrReadOnly, got: %v", err)
 	}
 }
 
