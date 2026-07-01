@@ -159,6 +159,11 @@ func TestContainsWriteRawJSON(t *testing.T) {
 	if !rawBytes.ContainsWrite() {
 		t.Errorf("ContainsWrite() = false for []byte insert, want true")
 	}
+	// set_write_hook (189) has no reql builder; only reachable via raw JSON
+	setWriteHook := Datum(json.RawMessage(`[189,[[15,["t"]],[69]]]`))
+	if !setWriteHook.ContainsWrite() {
+		t.Errorf("ContainsWrite() = false for raw-JSON set_write_hook, want true")
+	}
 }
 
 func TestContainsWriteNoFalsePositive(t *testing.T) {
