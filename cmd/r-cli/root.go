@@ -14,6 +14,7 @@ import (
 	"golang.org/x/term"
 
 	"r-cli/internal/conn"
+	"r-cli/internal/query"
 	"r-cli/internal/response"
 )
 
@@ -44,6 +45,7 @@ type rootConfig struct {
 	tlsClientCert      string
 	tlsKey             string
 	insecureSkipVerify bool
+	readOnly           bool
 }
 
 // stdinIsTTY reports whether stdin is connected to a terminal; replaceable in tests.
@@ -122,6 +124,7 @@ func buildRootCmd(cfg *rootConfig) *cobra.Command {
 	f.StringVar(&cfg.tlsClientCert, "tls-client-cert", "", "path to client certificate PEM file")
 	f.StringVar(&cfg.tlsKey, "tls-key", "", "path to client private key PEM file")
 	f.BoolVar(&cfg.insecureSkipVerify, "insecure-skip-verify", false, "skip TLS certificate verification (insecure)")
+	f.BoolVar(&cfg.readOnly, "read-only", false, "reject write operations before they reach the server")
 
 	cmd.SetUsageTemplate(withEnvVarsTemplate(cmd))
 	return cmd
@@ -136,6 +139,7 @@ Environment Variables:
   RETHINKDB_USER      override default user
   RETHINKDB_PASSWORD  set password
   RETHINKDB_DATABASE  set default database
+  RETHINKDB_READ_ONLY reject write operations (true/false)
 {{- end}}`
 
 // withEnvVarsTemplate returns a usage template with an env vars section injected
@@ -172,8 +176,8 @@ func isQueryError(err error) bool {
 	var cl *response.ReqlClientError
 	var ne *response.ReqlNonExistenceError
 	var pe *response.ReqlPermissionError
-	return errors.As(err, &qe) || errors.As(err, &c) || errors.As(err, &r) || errors.As(err, &cl) ||
-		errors.As(err, &ne) || errors.As(err, &pe)
+	return errors.Is(err, query.ErrReadOnly) || errors.As(err, &qe) || errors.As(err, &c) ||
+		errors.As(err, &r) || errors.As(err, &cl) || errors.As(err, &ne) || errors.As(err, &pe)
 }
 
 // resolveEnvVars applies env var values for flags not explicitly set via CLI.
@@ -189,6 +193,15 @@ func (c *rootConfig) resolveEnvVars(changed func(string) bool) error {
 				return fmt.Errorf("RETHINKDB_PORT %q: not a valid port number", v)
 			}
 			c.port = n
+		}
+	}
+	if !changed("read-only") {
+		if v := os.Getenv("RETHINKDB_READ_ONLY"); v != "" {
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return fmt.Errorf("RETHINKDB_READ_ONLY %q: not a valid boolean", v)
+			}
+			c.readOnly = b
 		}
 	}
 	return nil

@@ -4,14 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"r-cli/internal/parselog"
+	"r-cli/internal/query"
 )
 
 func TestQueryCmdRegistered(t *testing.T) {
@@ -120,6 +124,39 @@ func TestRunQueryExprParseError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "query:") {
 		t.Errorf("error should contain 'query:' prefix, got: %v", err)
+	}
+}
+
+// TestRunQueryExprReadOnlyRejectsParsedWrite verifies the main `query` path
+// (string expression -> parser -> executor) is gated by read-only: a parsed
+// write is rejected with ErrReadOnly before any dial to the unreachable host.
+func TestRunQueryExprReadOnlyRejectsParsedWrite(t *testing.T) {
+	t.Parallel()
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+	cmd.SetOut(io.Discard)
+	cfg := &rootConfig{host: "127.0.0.1", port: 1, readOnly: true}
+	err := runQueryExpr(cmd, cfg, `r.db("d").table("t").insert({"a": 1})`)
+	if !errors.Is(err, query.ErrReadOnly) {
+		t.Fatalf("expected ErrReadOnly, got: %v", err)
+	}
+}
+
+// TestRunQueryExprReadOnlyAllowsParsedRead verifies a parsed read passes the
+// read-only guard: it is not rejected with ErrReadOnly but instead reaches the
+// dial stage and fails against the unreachable host.
+func TestRunQueryExprReadOnlyAllowsParsedRead(t *testing.T) {
+	t.Parallel()
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+	cmd.SetOut(io.Discard)
+	cfg := &rootConfig{host: "127.0.0.1", port: 1, readOnly: true, timeout: 2 * time.Second}
+	err := runQueryExpr(cmd, cfg, `r.db("d").table("t").get("k")`)
+	if err == nil {
+		t.Fatal("expected a connection error for unreachable host, got nil")
+	}
+	if errors.Is(err, query.ErrReadOnly) {
+		t.Fatalf("read query wrongly rejected as read-only: %v", err)
 	}
 }
 

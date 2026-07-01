@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"r-cli/internal/conn"
@@ -13,14 +14,32 @@ import (
 	"r-cli/internal/response"
 )
 
+// ErrReadOnly is returned by Run when read-only mode is enabled and the query
+// contains a write operation.
+var ErrReadOnly = errors.New("read-only mode: write operations are not permitted")
+
 // Executor executes ReQL queries via a managed connection.
 type Executor struct {
-	mgr *connmgr.ConnManager
+	mgr      *connmgr.ConnManager
+	readOnly bool
+}
+
+// Option configures an Executor.
+type Option func(*Executor)
+
+// WithReadOnly enables or disables read-only mode. When enabled, Run rejects
+// queries containing write operations before opening a connection.
+func WithReadOnly(readOnly bool) Option {
+	return func(e *Executor) { e.readOnly = readOnly }
 }
 
 // New creates an Executor backed by the given connection manager.
-func New(mgr *connmgr.ConnManager) *Executor {
-	return &Executor{mgr: mgr}
+func New(mgr *connmgr.ConnManager, opts ...Option) *Executor {
+	e := &Executor{mgr: mgr}
+	for _, opt := range opts {
+		opt(e)
+	}
+	return e
 }
 
 // Run executes a ReQL term and returns profile data, a cursor over the results, and any error.
@@ -28,6 +47,9 @@ func New(mgr *connmgr.ConnManager) *Executor {
 // If opts contains "noreply": true, the query is sent without waiting for a
 // response and Run returns (nil, nil, nil).
 func (e *Executor) Run(ctx context.Context, term reql.Term, opts reql.OptArgs) (json.RawMessage, cursor.Cursor, error) {
+	if e.readOnly && term.ContainsWrite() {
+		return nil, nil, fmt.Errorf("query: %w", ErrReadOnly)
+	}
 	c, err := e.mgr.Get(ctx)
 	if err != nil {
 		return nil, nil, err

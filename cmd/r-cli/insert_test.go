@@ -3,12 +3,31 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"strings"
 	"testing"
+
+	"r-cli/internal/query"
 )
+
+// TestRunInsertReadOnlyRejected verifies the bulk insert path is gated by
+// read-only: the first batch is rejected with ErrReadOnly before any dial to
+// the unreachable host, so no partial batch reaches the server.
+func TestRunInsertReadOnlyRejected(t *testing.T) {
+	t.Parallel()
+	cfg := &rootConfig{host: "127.0.0.1", port: 1, readOnly: true}
+	ic := &insertConfig{batchSize: 10, conflict: "error"}
+	var out bytes.Buffer
+	in := strings.NewReader(`{"id":"u1"}` + "\n")
+	err := runInsert(context.Background(), cfg, ic, "d", "t", in, &out)
+	if !errors.Is(err, query.ErrReadOnly) {
+		t.Fatalf("expected ErrReadOnly, got: %v", err)
+	}
+}
 
 func TestInsertCmdRegistered(t *testing.T) {
 	t.Parallel()

@@ -50,6 +50,9 @@ r-cli -H db.example.com -P 28015 -u admin -p secret 'r.dbList()'
 
 # TLS connection
 r-cli --tls-cert ca.pem -H db.example.com 'r.dbList()'
+
+# read-only mode: rejects inserts, updates, deletes, DDL, and admin writes
+r-cli --read-only 'r.db("test").table("users").insert({})'  # exits 2, no data written
 ```
 
 ## Commands
@@ -170,6 +173,7 @@ Dot-commands:
 | `--binary-format` | | native | `native` converts BINARY pseudo-types, `raw` passes through |
 | `--quiet` | | false | Suppress non-data stderr output |
 | `--verbose` | | false | Show connection info and query timing |
+| `--read-only` | | false | Reject write operations before they reach the server |
 | `--tls-cert` | | | CA certificate PEM file |
 | `--tls-client-cert` | | | Client certificate PEM file |
 | `--tls-key` | | | Client private key PEM file |
@@ -193,6 +197,7 @@ Format is auto-detected: `json` (pretty-printed) on TTY, `jsonl` (one JSON per l
 | `RETHINKDB_USER` | `--user` |
 | `RETHINKDB_PASSWORD` | `--password` |
 | `RETHINKDB_DATABASE` | `--db` |
+| `RETHINKDB_READ_ONLY` | `--read-only` (accepts `true`/`false`) |
 
 CLI flags always take precedence over environment variables.
 

@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"r-cli/internal/conn"
+	"r-cli/internal/query"
 	"r-cli/internal/response"
 )
 
@@ -421,6 +422,83 @@ func TestVerboseFlagDefault(t *testing.T) {
 	}
 }
 
+func TestReadOnlyFlagDefault(t *testing.T) {
+	t.Parallel()
+	cmd := newRootCmd()
+	v, err := cmd.PersistentFlags().GetBool("read-only")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v {
+		t.Error("read-only flag: expected false by default")
+	}
+}
+
+func TestReadOnlyFlagSetsConfig(t *testing.T) {
+	t.Parallel()
+	cfg := &rootConfig{}
+	cmd := buildRootCmd(cfg)
+	if err := cmd.ParseFlags([]string{"--read-only"}); err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.readOnly {
+		t.Error("read-only flag: expected cfg.readOnly true after --read-only")
+	}
+}
+
+func TestEnvVarReadOnlyTrue(t *testing.T) {
+	t.Setenv("RETHINKDB_READ_ONLY", "true")
+	cfg := &rootConfig{}
+	if err := cfg.resolveEnvVars(func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.readOnly {
+		t.Error("read-only: expected true from RETHINKDB_READ_ONLY=true")
+	}
+}
+
+func TestEnvVarReadOnlyFalse(t *testing.T) {
+	t.Setenv("RETHINKDB_READ_ONLY", "false")
+	cfg := &rootConfig{readOnly: true}
+	if err := cfg.resolveEnvVars(func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.readOnly {
+		t.Error("read-only: expected false from RETHINKDB_READ_ONLY=false")
+	}
+}
+
+func TestEnvVarReadOnlyInvalid(t *testing.T) {
+	t.Setenv("RETHINKDB_READ_ONLY", "notabool")
+	cfg := &rootConfig{}
+	if err := cfg.resolveEnvVars(func(string) bool { return false }); err == nil {
+		t.Error("expected error for invalid RETHINKDB_READ_ONLY, got nil")
+	}
+	if cfg.readOnly {
+		t.Error("read-only should remain false after error")
+	}
+}
+
+func TestReadOnlyFlagPrecedenceOverEnvVar(t *testing.T) {
+	t.Setenv("RETHINKDB_READ_ONLY", "false")
+	cfg := &rootConfig{readOnly: true}
+	// simulate --read-only explicitly set
+	if err := cfg.resolveEnvVars(func(name string) bool { return name == "read-only" }); err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.readOnly {
+		t.Error("read-only: explicit flag should win over RETHINKDB_READ_ONLY=false")
+	}
+}
+
+func TestExitCodeReadOnly(t *testing.T) {
+	t.Parallel()
+	err := fmt.Errorf("query: %w", query.ErrReadOnly)
+	if code := exitCode(err); code != exitQuery {
+		t.Errorf("exitCode(read-only): got %d, want %d", code, exitQuery)
+	}
+}
+
 func TestExitCodeSuccess(t *testing.T) {
 	t.Parallel()
 	if code := exitCode(nil); code != exitOK {
@@ -734,6 +812,7 @@ func TestHelpEnvVarsSection(t *testing.T) {
 		"RETHINKDB_USER",
 		"RETHINKDB_PASSWORD",
 		"RETHINKDB_DATABASE",
+		"RETHINKDB_READ_ONLY",
 	}
 
 	for _, tc := range tests {

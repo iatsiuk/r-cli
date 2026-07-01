@@ -366,6 +366,73 @@ func TestExecutorRunServerError(t *testing.T) {
 	}
 }
 
+func TestExecutorReadOnlyRejectsWrite(t *testing.T) {
+	t.Parallel()
+	// nil manager is safe: the guard runs before mgr.Get, so no network is touched.
+	ex := New(nil, WithReadOnly(true))
+	_, _, err := ex.Run(context.Background(), reql.DB("test").Table("users").Insert(map[string]interface{}{"id": 1}), nil)
+	if err == nil {
+		t.Fatal("expected ErrReadOnly, got nil")
+	}
+	if !errors.Is(err, ErrReadOnly) {
+		t.Errorf("expected ErrReadOnly, got: %v", err)
+	}
+}
+
+func TestExecutorDefaultAllowsWrite(t *testing.T) {
+	t.Parallel()
+	const pass = "testpass"
+	handler := func(nc net.Conn, token uint64, _ []byte) {
+		sendResponse(nc, token, map[string]interface{}{
+			"t": 1, // ResponseSuccessAtom
+			"r": []interface{}{map[string]interface{}{"inserted": 1}},
+		})
+	}
+	addr, stop := startQueryServer(t, pass, handler)
+	defer stop()
+
+	ex := newTestExecutor(t, addr, pass)
+	_, cur, err := ex.Run(context.Background(), reql.DB("test").Table("users").Insert(map[string]interface{}{"id": 1}), nil)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if cur != nil {
+		_ = cur.Close()
+	}
+}
+
+func TestExecutorReadOnlyAllowsRead(t *testing.T) {
+	t.Parallel()
+	const pass = "testpass"
+	handler := func(nc net.Conn, token uint64, _ []byte) {
+		sendResponse(nc, token, seqResp([]interface{}{
+			map[string]interface{}{"id": 1, "name": "Alice"},
+		}))
+	}
+	addr, stop := startQueryServer(t, pass, handler)
+	defer stop()
+
+	host, portStr, _ := net.SplitHostPort(addr)
+	port, _ := strconv.Atoi(portStr)
+	cfg := conn.Config{Host: host, Port: port, User: "admin", Password: pass}
+	mgr := connmgr.NewFromConfig(cfg, nil)
+	t.Cleanup(func() { _ = mgr.Close() })
+	ex := New(mgr, WithReadOnly(true))
+
+	_, cur, err := ex.Run(context.Background(), reql.DB("test").Table("users").Filter(map[string]interface{}{"name": "Alice"}), nil)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	defer func() { _ = cur.Close() }()
+	items, err := cur.All()
+	if err != nil {
+		t.Fatalf("All: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("got %d items, want 1", len(items))
+	}
+}
+
 func TestExecutorRunReturnsProfile(t *testing.T) {
 	t.Parallel()
 	const pass = "testpass"

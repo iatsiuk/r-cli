@@ -145,6 +145,67 @@ func TestTermTypeExtendedConstants(t *testing.T) {
 	})
 }
 
+func TestIsWriteTermTrue(t *testing.T) {
+	t.Parallel()
+	writeTerms := []struct {
+		name string
+		tt   TermType
+	}{
+		{"INSERT", TermInsert},
+		{"UPDATE", TermUpdate},
+		{"DELETE", TermDelete},
+		{"REPLACE", TermReplace},
+		{"DB_CREATE", TermDBCreate},
+		{"DB_DROP", TermDBDrop},
+		{"TABLE_CREATE", TermTableCreate},
+		{"TABLE_DROP", TermTableDrop},
+		{"INDEX_CREATE", TermIndexCreate},
+		{"INDEX_DROP", TermIndexDrop},
+		{"INDEX_RENAME", TermIndexRename},
+		{"RECONFIGURE", TermReconfigure},
+		{"REBALANCE", TermRebalance},
+		{"SYNC", TermSync},
+		{"GRANT", TermGrant},
+		{"SET_WRITE_HOOK", TermSetWriteHook},
+	}
+	for _, tc := range writeTerms {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if !IsWriteTerm(tc.tt) {
+				t.Errorf("IsWriteTerm(%s=%d) = false, want true", tc.name, tc.tt)
+			}
+		})
+	}
+}
+
+func TestIsWriteTermFalse(t *testing.T) {
+	t.Parallel()
+	readTerms := []struct {
+		name string
+		tt   TermType
+	}{
+		{"GET", TermGet},
+		{"GET_ALL", TermGetAll},
+		{"FILTER", TermFilter},
+		{"TABLE", TermTable},
+		{"DB_LIST", TermDBList},
+		{"TABLE_LIST", TermTableList},
+		{"INDEX_LIST", TermIndexList},
+		{"INDEX_WAIT", TermIndexWait},
+		{"CONFIG", TermConfig},
+		{"STATUS", TermStatus},
+		{"WAIT", TermWait},
+	}
+	for _, tc := range readTerms {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if IsWriteTerm(tc.tt) {
+				t.Errorf("IsWriteTerm(%s=%d) = true, want false", tc.name, tc.tt)
+			}
+		})
+	}
+}
+
 func TestTermTypeDocumentConstants(t *testing.T) {
 	t.Parallel()
 	testTerms(t, []struct {

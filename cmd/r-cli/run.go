@@ -68,7 +68,7 @@ func newExecutor(cfg *rootConfig) (*query.Executor, func(), error) {
 		User:     cfg.user,
 		Password: cfg.password,
 	}, tlsCfg)
-	return query.New(mgr), func() { _ = mgr.Close() }, nil
+	return query.New(mgr, query.WithReadOnly(cfg.readOnly)), func() { _ = mgr.Close() }, nil
 }
 
 // execTerm builds a connection, runs the given ReQL term, and writes output.
