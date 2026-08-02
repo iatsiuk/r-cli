@@ -842,3 +842,89 @@ func TestParserGroupZeroParamFunction(t *testing.T) {
 		t.Errorf("single group count = %v, want 3", counts["true"])
 	}
 }
+
+func TestParserInfixArithmetic(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+
+	cases := []struct {
+		name string
+		expr string
+		want float64
+	}{
+		{"mul_chain", `r.expr(60*60*24*30)`, 2592000},
+		{"precedence", `r.expr(1+2*3)`, 7},
+		{"grouping", `r.expr((1+2)*3)`, 9},
+		{"div_mod", `r.expr(10/2%3)`, 2},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got float64
+			if err := json.Unmarshal(parseRunAtom(t, exec, tc.expr), &got); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("%s = %v, want %v", tc.expr, got, tc.want)
+			}
+		})
+	}
+}
+
+// atomStrings runs expr and decodes its single atom result as a string array.
+func atomStrings(t *testing.T, exec *query.Executor, expr string) []string {
+	t.Helper()
+	var out []string
+	if err := json.Unmarshal(parseRunAtom(t, exec, expr), &out); err != nil {
+		t.Fatalf("unmarshal %q: %v", expr, err)
+	}
+	return out
+}
+
+func TestParserArithmeticBetweenBound(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "events")
+	seedTable(t, exec, dbName, "events", []map[string]interface{}{
+		{"id": "a", "ts": 1779222884700},
+		{"id": "b", "ts": 1779222884701},
+		{"id": "c", "ts": 1779222884705},
+	})
+	waitForIndex(t, exec, dbName, "events", "ts")
+
+	// between over a selection returns an atom array, so the ids are collected server-side
+	const tmpl = `r.db("%s").table("events").between(%s, %s, {index:"ts"}).orderBy("id").map(function(e){ return e("id") })`
+	computed := fmt.Sprintf(tmpl, dbName, "1779222884700", "1779222884700+2")
+	literal := fmt.Sprintf(tmpl, dbName, "1779222884700", "1779222884702")
+
+	got := atomStrings(t, exec, computed)
+	want := atomStrings(t, exec, literal)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("arithmetic bound ids = %v, literal bound ids = %v", got, want)
+	}
+	if !reflect.DeepEqual(got, []string{"a", "b"}) {
+		t.Errorf("ids = %v, want [a b]", got)
+	}
+}
+
+func TestParserArithmeticNowFilter(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "events")
+
+	insert := fmt.Sprintf(
+		`r.db("%s").table("events").insert([{id:"recent", ts: r.now()}, {id:"old", ts: r.now().sub(60*60*24*7)}])`,
+		dbName)
+	parseRunAtom(t, exec, insert)
+
+	expr := fmt.Sprintf(
+		`r.db("%s").table("events").filter(function(e){ return e("ts").gt(r.now().sub(60*60*24)) })`, dbName)
+	got := rowIDs(t, parseRunRows(t, exec, expr))
+	want := []string{"recent"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ids = %v, want %v", got, want)
+	}
+}

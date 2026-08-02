@@ -2275,6 +2275,71 @@ func TestParse_TableListBranchSlice_Errors(t *testing.T) {
 	}
 }
 
+func TestParse_InfixArithmetic(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"add", `r.expr(1+2)`, `[24,[1,2]]`},
+		{"sub", `r.expr(1-2)`, `[25,[1,2]]`},
+		{"mul_chain_left_associative", `r.expr(60*60*24)`, `[26,[[26,[60,60]],24]]`},
+		{"mul_binds_tighter_than_add", `r.expr(1+2*3)`, `[24,[1,[26,[2,3]]]]`},
+		{"parentheses_win_over_precedence", `r.expr((1+2)*3)`, `[26,[[24,[1,2]],3]]`},
+		{"sub_left_associative", `r.expr(10-2-3)`, `[25,[[25,[10,2]],3]]`},
+		{"div_then_mod_left_associative", `r.expr(10/2%3)`, `[28,[[27,[10,2]],3]]`},
+		{"negative_literal_after_operator", `r.expr(1 - -2)`, `[25,[1,-2]]`},
+		{"folded_mul_chain_as_method_argument", `r.now().sub(60*60*24*30)`, `[25,[[103,[]],[26,[[26,[[26,[60,60]],24]],30]]]]`},
+		{
+			"between_arithmetic_upper_bound",
+			`r.table("t").between(1779222884700, 1779222884700+1, {index:"d"})`,
+			`[182,[[15,["t"]],1779222884700,[24,[1779222884700,1]]],{"index":"d"}]`,
+		},
+		{
+			"method_form_add_unchanged",
+			`r.table("t").filter(x => x("a").add(1))`,
+			`[39,[[15,["t"]],[69,[[2,[1]],[24,[[170,[[10,[1]],"a"]],1]]]]]]`,
+		},
+		{
+			"operands_are_chained_terms",
+			`r.table("t").count()+1`,
+			`[24,[[43,[[15,["t"]]]],1]]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_InfixArithmetic_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+	}{
+		{"missing_right_operand", `r.expr(1+)`},
+		{"missing_multiplicative_operand", `r.expr(60*)`},
+		{"missing_left_operand", `r.expr(*2)`},
+		{"dangling_operator_at_eof", `r.expr(1) +`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}
+
 func TestParse_AssignToken_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

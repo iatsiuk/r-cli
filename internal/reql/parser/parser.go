@@ -133,6 +133,50 @@ func (p *parser) parseExpr() (reql.Term, error) {
 		return reql.Term{}, fmt.Errorf("expression too deeply nested (max depth %d)", maxDepth)
 	}
 	defer func() { p.depth-- }()
+	return p.parseAdditive()
+}
+
+// infixOps maps an operator token to the builder method it produces.
+var infixOps = map[tokenType]func(reql.Term, interface{}) reql.Term{
+	tokenPlus:    reql.Term.Add,
+	tokenMinus:   reql.Term.Sub,
+	tokenStar:    reql.Term.Mul,
+	tokenSlash:   reql.Term.Div,
+	tokenPercent: reql.Term.Mod,
+}
+
+var (
+	additiveOps       = map[tokenType]bool{tokenPlus: true, tokenMinus: true}
+	multiplicativeOps = map[tokenType]bool{tokenStar: true, tokenSlash: true, tokenPercent: true}
+)
+
+// parseBinary parses `next { op next }` left-associatively for the given operator set.
+func (p *parser) parseBinary(ops map[tokenType]bool, next func() (reql.Term, error)) (reql.Term, error) {
+	left, err := next()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	for ops[p.peek().Type] {
+		op := p.advance().Type
+		right, err := next()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		left = infixOps[op](left, right)
+	}
+	return left, nil
+}
+
+func (p *parser) parseAdditive() (reql.Term, error) {
+	return p.parseBinary(additiveOps, p.parseMultiplicative)
+}
+
+func (p *parser) parseMultiplicative() (reql.Term, error) {
+	return p.parseBinary(multiplicativeOps, p.parsePostfix)
+}
+
+// parsePostfix parses a primary expression followed by its method and bracket chain.
+func (p *parser) parsePostfix() (reql.Term, error) {
 	t, err := p.parsePrimary()
 	if err != nil {
 		return reql.Term{}, err
