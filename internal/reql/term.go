@@ -94,6 +94,17 @@ func toTerm(v interface{}) Term {
 	return Datum(v)
 }
 
+// splitOptArgs separates a trailing OptArgs value from positional arguments.
+func splitOptArgs(args []interface{}) (positional []interface{}, opts map[string]interface{}) {
+	if len(args) == 0 {
+		return args, nil
+	}
+	if o, ok := args[len(args)-1].(OptArgs); ok {
+		return args[:len(args)-1], map[string]interface{}(o)
+	}
+	return args, nil
+}
+
 // Array creates a MAKE_ARRAY term ([2, [items...]]).
 func Array(items ...interface{}) Term {
 	args := make([]Term, len(items))
@@ -350,9 +361,21 @@ func (t Term) Reduce(fn Term) Term {
 	return Term{termType: proto.TermReduce, args: []Term{t, fn}}
 }
 
-// Group creates a GROUP term ([144, [term, field]]).
-func (t Term) Group(field string) Term {
-	return Term{termType: proto.TermGroup, args: []Term{t, Datum(field)}}
+// Group creates a GROUP term ([144, [term, fields...]], opts?).
+// A trailing OptArgs becomes the term options. Every field containing
+// IMPLICIT_VAR (Row()) is auto-wrapped in FUNC.
+func (t Term) Group(fields ...interface{}) Term {
+	keys, opts := splitOptArgs(fields)
+	args := make([]Term, 1, 1+len(keys))
+	args[0] = t
+	for _, f := range keys {
+		wrapped, err := wrapImplicitVar(toTerm(f))
+		if err != nil {
+			return errTerm(err)
+		}
+		args = append(args, wrapped)
+	}
+	return Term{termType: proto.TermGroup, args: args, opts: opts}
 }
 
 // Ungroup creates an UNGROUP term ([150, [term]]).

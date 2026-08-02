@@ -276,6 +276,56 @@ func TestAggregationOperations(t *testing.T) {
 	}
 }
 
+func TestGroupBuilder(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	tests := []struct {
+		name    string
+		term    Term
+		want    string
+		wantErr bool
+	}{
+		{"single_field", table.Group("a"), `[144,[[15,["t"]],"a"]]`, false},
+		{"multiple_fields", table.Group("a", "b"), `[144,[[15,["t"]],"a","b"]]`, false},
+		{
+			"implicit_var_wrapped",
+			table.Group(Row().Bracket("a")),
+			`[144,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]`,
+			false,
+		},
+		{
+			"explicit_func",
+			table.Group(Func(Var(1).Bracket("a"), 1)),
+			`[144,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]`,
+			false,
+		},
+		{"field_with_optargs", table.Group("a", OptArgs{"index": "i"}), `[144,[[15,["t"]],"a"],{"index":"i"}]`, false},
+		{"optargs_only", table.Group(OptArgs{"multi": true}), `[144,[[15,["t"]]],{"multi":true}]`, false},
+		{"implicit_var_in_nested_func", table.Group(Func(Row(), 1)), "", true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), "IMPLICIT_VAR") {
+					t.Errorf("expected IMPLICIT_VAR error, got: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestIndexOperations(t *testing.T) {
 	t.Parallel()
 	table := DB("test").Table("users")
