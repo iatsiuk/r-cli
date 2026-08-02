@@ -110,6 +110,12 @@ var tokenNames = map[tokenType]string{
 	tokenNull:      "null",
 	tokenArrow:     "'=>'",
 	tokenSemicolon: "';'",
+	tokenPlus:      "'+'",
+	tokenMinus:     "'-'",
+	tokenStar:      "'*'",
+	tokenSlash:     "'/'",
+	tokenPercent:   "'%'",
+	tokenAssign:    "'='",
 }
 
 func (p *parser) expect(tt tokenType) (token, error) {
