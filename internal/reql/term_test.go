@@ -461,6 +461,69 @@ func TestFuncWrapBuilders(t *testing.T) {
 	}
 }
 
+func TestTermValuedArguments(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"get_field_string", table.GetField("a"), `[31,[[15,["t"]],"a"]]`},
+		{"get_field_var", table.GetField(Var(1)), `[31,[[15,["t"]],[10,[1]]]]`},
+		{"bracket_string", table.Bracket("a"), `[170,[[15,["t"]],"a"]]`},
+		{"bracket_var", table.Bracket(Var(1)), `[170,[[15,["t"]],[10,[1]]]]`},
+		{"match_string", Datum("x").Match(`\w+`), `[97,["x","\\w+"]]`},
+		{"match_var", Datum("x").Match(Var(1)), `[97,["x",[10,[1]]]]`},
+	})
+}
+
+func TestSliceTableListBranchChain(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	tests := []struct {
+		name        string
+		term        Term
+		want        string
+		errContains string
+	}{
+		{name: "slice_two_bounds", term: table.Slice(0, 2), want: `[30,[[15,["t"]],0,2]]`},
+		{name: "slice_one_bound", term: table.Slice(-2), want: `[30,[[15,["t"]],-2]]`},
+		{name: "slice_no_bounds", term: table.Slice(), errContains: "Slice"},
+		{name: "slice_three_bounds", term: table.Slice(1, 2, 3), errContains: "Slice"},
+		{name: "table_list_top_level", term: TableList(), want: `[62,[]]`},
+		{name: "table_list_on_db", term: DB("d").TableList(), want: `[62,[[14,["d"]]]]`},
+		{name: "branch_chain", term: Datum(true).Branch(1, 2), want: `[65,[true,1,2]]`},
+		{
+			name: "branch_chain_on_expression",
+			term: table.Count().Gt(0).Branch(Array(1), Array()),
+			want: `[65,[[21,[[43,[[15,["t"]]]],0]],[2,[1]],[2,[]]]]`,
+		},
+		{name: "branch_chain_one_branch", term: Datum(true).Branch(1), errContains: "Branch"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.errContains != "" {
+				if err == nil {
+					t.Fatalf("expected error, got %s", got)
+				}
+				if !strings.Contains(err.Error(), tc.errContains) {
+					t.Errorf("expected error containing %q, got: %v", tc.errContains, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestIndexOperations(t *testing.T) {
 	t.Parallel()
 	table := DB("test").Table("users")

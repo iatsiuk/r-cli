@@ -146,6 +146,11 @@ func DBList() Term {
 	return Term{termType: proto.TermDBList}
 }
 
+// TableList creates a TABLE_LIST term ([62, []]) using the connection-default database.
+func TableList() Term {
+	return Term{termType: proto.TermTableList}
+}
+
 // TableCreate creates a TABLE_CREATE term ([60, [db, name]], opts?) chained on a DB term.
 // Optional OptArgs can specify options like {"primary_key": "id"}.
 func (t Term) TableCreate(name string, opts ...OptArgs) Term {
@@ -335,8 +340,9 @@ func (t Term) Without(fields ...interface{}) Term {
 }
 
 // GetField creates a GET_FIELD term ([31, [term, field]]).
-func (t Term) GetField(field string) Term {
-	return Term{termType: proto.TermGetField, args: []Term{t, Datum(field)}}
+// field can be a string literal or a Term, e.g. a function parameter reference.
+func (t Term) GetField(field interface{}) Term {
+	return Term{termType: proto.TermGetField, args: []Term{t, toTerm(field)}}
 }
 
 // HasFields creates a HAS_FIELDS term ([32, [term, fields...]]).
@@ -673,9 +679,10 @@ func (t Term) Zip() Term {
 	return Term{termType: proto.TermZip, args: []Term{t}}
 }
 
-// Match creates a MATCH term ([97, [term, "pattern"]]).
-func (t Term) Match(pattern string) Term {
-	return Term{termType: proto.TermMatch, args: []Term{t, Datum(pattern)}}
+// Match creates a MATCH term ([97, [term, pattern]]).
+// pattern can be a string literal or a Term, e.g. a function parameter reference.
+func (t Term) Match(pattern interface{}) Term {
+	return Term{termType: proto.TermMatch, args: []Term{t, toTerm(pattern)}}
 }
 
 // Split creates a SPLIT term ([149, [term]] or [149, [term, "delim"]]).
@@ -878,9 +885,18 @@ func (t Term) Prepend(value interface{}) Term {
 	return Term{termType: proto.TermPrepend, args: []Term{t, toTerm(value)}}
 }
 
-// Slice creates a SLICE term ([30, [term, start, end]]).
-func (t Term) Slice(start, end int) Term {
-	return Term{termType: proto.TermSlice, args: []Term{t, Datum(start), Datum(end)}}
+// Slice creates a SLICE term ([30, [term, start]] or [30, [term, start, end]]).
+// With a single bound the slice runs to the end of the sequence.
+func (t Term) Slice(bounds ...int) Term {
+	if len(bounds) == 0 || len(bounds) > 2 {
+		return errTerm(errors.New("reql: Slice requires 1 or 2 bounds"))
+	}
+	args := make([]Term, 0, 1+len(bounds))
+	args = append(args, t)
+	for _, b := range bounds {
+		args = append(args, Datum(b))
+	}
+	return Term{termType: proto.TermSlice, args: args}
 }
 
 // Difference creates a DIFFERENCE term ([95, [term, array]]).
@@ -967,6 +983,15 @@ func Branch(args ...interface{}) Term {
 	return Term{termType: proto.TermBranch, args: termArgs}
 }
 
+// Branch creates a BRANCH term with the receiver as the condition
+// ([65, [cond, true_val, false_val, ...]]).
+func (t Term) Branch(branches ...interface{}) Term {
+	args := make([]interface{}, 0, 1+len(branches))
+	args = append(args, t)
+	args = append(args, branches...)
+	return Branch(args...)
+}
+
 // ForEach creates a FOR_EACH term ([68, [seq, fn]]).
 func (t Term) ForEach(fn Term) Term {
 	wrapped, err := funcWrap(fn)
@@ -1041,8 +1066,9 @@ func (t Term) Contains(values ...interface{}) Term {
 }
 
 // Bracket creates a BRACKET term ([170, [term, field]]).
-func (t Term) Bracket(field string) Term {
-	return Term{termType: proto.TermBracket, args: []Term{t, Datum(field)}}
+// field can be a string literal or a Term, e.g. a function parameter reference.
+func (t Term) Bracket(field interface{}) Term {
+	return Term{termType: proto.TermBracket, args: []Term{t, toTerm(field)}}
 }
 
 // WithFields creates a WITH_FIELDS term ([96, [seq, fields...]]).
