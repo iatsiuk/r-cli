@@ -402,6 +402,65 @@ func TestAggregateBuilders(t *testing.T) {
 	}
 }
 
+func TestFuncWrapBuilders(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	rowField := Row().Bracket("a")
+	funcBody := `[69,[[2,[1]],[170,[[10,[1]],"a"]]]]`
+	tests := []struct {
+		name        string
+		term        Term
+		want        string
+		errContains string
+	}{
+		{name: "map", term: table.Map(rowField), want: `[38,[[15,["t"]],` + funcBody + `]]`},
+		{name: "concat_map", term: table.ConcatMap(rowField), want: `[40,[[15,["t"]],` + funcBody + `]]`},
+		{name: "for_each", term: table.ForEach(rowField), want: `[68,[[15,["t"]],` + funcBody + `]]`},
+		{name: "reduce", term: table.Reduce(Row()), want: `[37,[[15,["t"]],[69,[[2,[1]],[10,[1]]]]]]`},
+		{name: "contains", term: table.Contains(rowField), want: `[93,[[15,["t"]],` + funcBody + `]]`},
+		{name: "offsets_of", term: table.OffsetsOf(rowField), want: `[87,[[15,["t"]],` + funcBody + `]]`},
+		{name: "order_by", term: table.OrderBy(rowField), want: `[41,[[15,["t"]],` + funcBody + `]]`},
+		{name: "update", term: table.Update(rowField), want: `[53,[[15,["t"]],` + funcBody + `]]`},
+		{name: "replace", term: table.Replace(rowField), want: `[55,[[15,["t"]],` + funcBody + `]]`},
+		{
+			name: "explicit_func_unchanged",
+			term: table.Map(Func(Var(1), 1)),
+			want: `[38,[[15,["t"]],[69,[[2,[1]],[10,[1]]]]]]`,
+		},
+		{name: "plain_datum_unchanged", term: table.Map(Datum("a")), want: `[38,[[15,["t"]],"a"]]`},
+		{name: "implicit_var_in_nested_func", term: table.Map(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "order_by_nested_func", term: table.OrderBy(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "contains_nested_func", term: table.Contains(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "update_nested_func", term: table.Update(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "replace_nested_func", term: table.Replace(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "offsets_of_nested_func", term: table.OffsetsOf(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "concat_map_nested_func", term: table.ConcatMap(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "for_each_nested_func", term: table.ForEach(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "reduce_nested_func", term: table.Reduce(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.errContains != "" {
+				if err == nil {
+					t.Fatalf("expected error, got %s", got)
+				}
+				if !strings.Contains(err.Error(), tc.errContains) {
+					t.Errorf("expected error containing %q, got: %v", tc.errContains, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestIndexOperations(t *testing.T) {
 	t.Parallel()
 	table := DB("test").Table("users")

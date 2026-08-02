@@ -94,6 +94,13 @@ func toTerm(v interface{}) Term {
 	return Datum(v)
 }
 
+// funcWrap converts v to a Term and wraps it in FUNC when it contains
+// IMPLICIT_VAR (Row()). Applied to every function-position argument, mirroring
+// the funcWrap behaviour of the official drivers.
+func funcWrap(v interface{}) (Term, error) {
+	return wrapImplicitVar(toTerm(v))
+}
+
 // splitOptArgs separates a trailing OptArgs value from positional arguments.
 func splitOptArgs(args []interface{}) (positional []interface{}, opts map[string]interface{}) {
 	if len(args) == 0 {
@@ -167,8 +174,7 @@ func (t Term) Table(name string) Term {
 // Filter creates a FILTER term ([39, [seq, predicate]]).
 // If predicate contains IMPLICIT_VAR (Row()), it is auto-wrapped in FUNC.
 func (t Term) Filter(predicate interface{}) Term {
-	pt := toTerm(predicate)
-	wrapped, err := wrapImplicitVar(pt)
+	wrapped, err := funcWrap(predicate)
 	if err != nil {
 		return errTerm(err)
 	}
@@ -187,7 +193,11 @@ func (t Term) Insert(doc interface{}, opts ...OptArgs) Term {
 
 // Update creates an UPDATE term ([53, [table, doc]]).
 func (t Term) Update(doc interface{}, opts ...OptArgs) Term {
-	term := Term{termType: proto.TermUpdate, args: []Term{t, toTerm(doc)}}
+	wrapped, err := funcWrap(doc)
+	if err != nil {
+		return errTerm(err)
+	}
+	term := Term{termType: proto.TermUpdate, args: []Term{t, wrapped}}
 	if len(opts) > 0 {
 		term.opts = opts[0]
 	}
@@ -205,7 +215,11 @@ func (t Term) Delete(opts ...OptArgs) Term {
 
 // Replace creates a REPLACE term ([55, [table, doc]]).
 func (t Term) Replace(doc interface{}) Term {
-	return Term{termType: proto.TermReplace, args: []Term{t, toTerm(doc)}}
+	wrapped, err := funcWrap(doc)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: proto.TermReplace, args: []Term{t, wrapped}}
 }
 
 // OptArgs is a map of optional arguments passed as the last element to terms like GetAll.
@@ -267,21 +281,15 @@ func Desc(field string) Term {
 // OrderBy creates an ORDERBY term ([41, [term, fields...]], opts?).
 // The last argument may be an OptArgs to specify options (e.g. {"index": "field"}).
 func (t Term) OrderBy(fields ...interface{}) Term {
-	var opts map[string]interface{}
-	termFields := fields
-	if len(fields) > 0 {
-		if o, ok := fields[len(fields)-1].(OptArgs); ok {
-			opts = map[string]interface{}(o)
-			termFields = fields[:len(fields)-1]
-		}
-	}
-	args := []Term{t}
+	termFields, opts := splitOptArgs(fields)
+	args := make([]Term, 1, 1+len(termFields))
+	args[0] = t
 	for _, f := range termFields {
-		if ft, ok := f.(Term); ok {
-			args = append(args, ft)
-		} else {
-			args = append(args, Datum(f))
+		wrapped, err := funcWrap(f)
+		if err != nil {
+			return errTerm(err)
 		}
+		args = append(args, wrapped)
 	}
 	return Term{termType: proto.TermOrderBy, args: args, opts: opts}
 }
@@ -353,12 +361,20 @@ func (t Term) Distinct() Term {
 
 // Map creates a MAP term ([38, [term, func]]).
 func (t Term) Map(fn Term) Term {
-	return Term{termType: proto.TermMap, args: []Term{t, fn}}
+	wrapped, err := funcWrap(fn)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: proto.TermMap, args: []Term{t, wrapped}}
 }
 
 // Reduce creates a REDUCE term ([37, [term, func]]).
 func (t Term) Reduce(fn Term) Term {
-	return Term{termType: proto.TermReduce, args: []Term{t, fn}}
+	wrapped, err := funcWrap(fn)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: proto.TermReduce, args: []Term{t, wrapped}}
 }
 
 // Group creates a GROUP term ([144, [term, fields...]], opts?).
@@ -369,7 +385,7 @@ func (t Term) Group(fields ...interface{}) Term {
 	args := make([]Term, 1, 1+len(keys))
 	args[0] = t
 	for _, f := range keys {
-		wrapped, err := wrapImplicitVar(toTerm(f))
+		wrapped, err := funcWrap(f)
 		if err != nil {
 			return errTerm(err)
 		}
@@ -394,7 +410,7 @@ func (t Term) aggregate(tt proto.TermType, args []interface{}) Term {
 	terms := make([]Term, 1, 2)
 	terms[0] = t
 	for _, f := range fields {
-		wrapped, err := wrapImplicitVar(toTerm(f))
+		wrapped, err := funcWrap(f)
 		if err != nil {
 			return errTerm(err)
 		}
@@ -919,7 +935,11 @@ func (t Term) Info() Term {
 
 // OffsetsOf creates an OFFSETS_OF term ([87, [seq, pred]]).
 func (t Term) OffsetsOf(predicate interface{}) Term {
-	return Term{termType: proto.TermOffsetsOf, args: []Term{t, toTerm(predicate)}}
+	wrapped, err := funcWrap(predicate)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: proto.TermOffsetsOf, args: []Term{t, wrapped}}
 }
 
 // Fold creates a FOLD term ([187, [seq, base, fn], opts?]).
@@ -949,7 +969,11 @@ func Branch(args ...interface{}) Term {
 
 // ForEach creates a FOR_EACH term ([68, [seq, fn]]).
 func (t Term) ForEach(fn Term) Term {
-	return Term{termType: proto.TermForEach, args: []Term{t, fn}}
+	wrapped, err := funcWrap(fn)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: proto.TermForEach, args: []Term{t, wrapped}}
 }
 
 // Default creates a DEFAULT term ([92, [term, default_val]]).
@@ -974,7 +998,11 @@ func (t Term) TypeOf() Term {
 
 // ConcatMap creates a CONCAT_MAP term ([40, [seq, fn]]).
 func (t Term) ConcatMap(fn Term) Term {
-	return Term{termType: proto.TermConcatMap, args: []Term{t, fn}}
+	wrapped, err := funcWrap(fn)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: proto.TermConcatMap, args: []Term{t, wrapped}}
 }
 
 // Nth creates an NTH term ([45, [seq, index]]).
@@ -1003,7 +1031,11 @@ func (t Term) Contains(values ...interface{}) Term {
 	args := make([]Term, 1, 1+len(values))
 	args[0] = t
 	for _, v := range values {
-		args = append(args, toTerm(v))
+		wrapped, err := funcWrap(v)
+		if err != nil {
+			return errTerm(err)
+		}
+		args = append(args, wrapped)
 	}
 	return Term{termType: proto.TermContains, args: args}
 }
