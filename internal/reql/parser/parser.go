@@ -271,11 +271,31 @@ func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
 	}
 	ids := p.pushScope([]string{tok.Value})
 	defer p.popScope()
-	body, err := p.parseExpr()
+	body, err := p.parseArrowBody()
 	if err != nil {
 		return reql.Term{}, err
 	}
 	return reql.Func(body, ids...), nil
+}
+
+// parseArrowBody parses the body of an arrow lambda: either a statement block or a
+// single expression. The caller must have pushed the parameter scope.
+func (p *parser) parseArrowBody() (reql.Term, error) {
+	if p.blockBodyAhead() {
+		return p.parseBlockBody()
+	}
+	return p.parseExpr()
+}
+
+// blockBodyAhead reports whether the current '{' opens a statement block rather than
+// an object literal. Only a following statement keyword makes it a block, so that
+// `x => {a: 1}` keeps returning an object.
+func (p *parser) blockBodyAhead() bool {
+	if p.peek().Type != tokenLBrace || p.pos+1 >= len(p.tokens) {
+		return false
+	}
+	next := p.tokens[p.pos+1]
+	return next.Type == tokenIdent && (next.Value == "return" || localKeywords[next.Value])
 }
 
 // parseFunctionExpr parses function(params){ locals* return? body ;? } and returns a FUNC term.
@@ -486,7 +506,7 @@ func (p *parser) parseLambda() (reql.Term, error) {
 	}
 	ids := p.pushScope(names)
 	defer p.popScope()
-	body, err := p.parseExpr()
+	body, err := p.parseArrowBody()
 	if err != nil {
 		return reql.Term{}, err
 	}

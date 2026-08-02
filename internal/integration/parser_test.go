@@ -985,3 +985,73 @@ func TestParserFunctionLocalUsedTwice(t *testing.T) {
 		t.Errorf("sum = %v, want 78", gotLocal)
 	}
 }
+
+func TestParserArrowBlockBodyMap(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "name": "alice"},
+		{"id": "2", "name": "bob"},
+	})
+
+	expr := fmt.Sprintf(
+		`r.db("%s").table("docs").map(g => { return {id: g("id"), n: g("name").upcase()} })`, dbName)
+	got := make(map[string]string)
+	for _, raw := range parseRunRows(t, exec, expr) {
+		var doc struct {
+			ID string `json:"id"`
+			N  string `json:"n"`
+		}
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		got[doc.ID] = doc.N
+	}
+	want := map[string]string{"1": "ALICE", "2": "BOB"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("reshaped rows = %v, want %v", got, want)
+	}
+}
+
+// TestParserArrowBlockBodyGroupPipeline runs the account-balance report from the
+// parser error log: group, ungroup, an arrow lambda with a block body, then orderBy.
+func TestParserArrowBlockBodyGroupPipeline(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "accounts")
+	seedTable(t, exec, dbName, "accounts", []map[string]interface{}{
+		{"id": "1", "currency": "USD", "balance": map[string]interface{}{"amount": 10}},
+		{"id": "2", "currency": "USD", "balance": map[string]interface{}{"amount": 30}},
+		{"id": "3", "currency": "EUR", "balance": map[string]interface{}{"amount": 5}},
+		{"id": "4", "currency": "EUR", "balance": map[string]interface{}{"amount": 0}},
+	})
+
+	expr := fmt.Sprintf(`r.db("%s").table("accounts").filter(t => t("balance")("amount").gt(0))`+
+		`.group("currency").ungroup()`+
+		`.map(g => {return {currency:g("group"), accounts:g("reduction").count(), `+
+		`total:g("reduction").sum(x=>x("balance")("amount"))}})`+
+		`.orderBy(r.desc("accounts"))`, dbName)
+
+	var got []struct {
+		Currency string  `json:"currency"`
+		Accounts float64 `json:"accounts"`
+		Total    float64 `json:"total"`
+	}
+	if err := json.Unmarshal(parseRunAtom(t, exec, expr), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("got %d rows (%v), want 2", len(got), got)
+	}
+	if got[0].Currency != "USD" || got[0].Accounts != 2 || got[0].Total != 40 {
+		t.Errorf("first row = %+v, want USD/2/40", got[0])
+	}
+	if got[1].Currency != "EUR" || got[1].Accounts != 1 || got[1].Total != 5 {
+		t.Errorf("second row = %+v, want EUR/1/5", got[1])
+	}
+}

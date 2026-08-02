@@ -2458,6 +2458,93 @@ r.db("restored").table("routes")
 	}
 }
 
+func TestParse_ArrowBlockBody(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"block_body_returns_object",
+			`r.table("t").map(g => { return {a: g("b")} })`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"a":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"block_body_with_local",
+			`r.table("t").map(g => { var x = g("b"); return {a: x} })`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"a":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"object_literal_body_unchanged",
+			`r.table("t").map(g => {a: g("b")})`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"a":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"parenthesized_object_literal_unchanged",
+			`r.table("t").map(g => ({a: g("b")}))`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"a":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"multi_parameter_arrow_with_block_body",
+			`r.table("t").map((x, y) => { return x.add(y) })`,
+			`[38,[[15,["t"]],[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]]]`,
+		},
+		{
+			"single_parenthesized_parameter_with_block_body",
+			`r.table("t").map((g) => { return g("b") })`,
+			`[38,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"b"]]]]]]`,
+		},
+		{
+			"block_body_without_return_keyword",
+			`r.table("t").map(g => { var x = g("b"); x })`,
+			`[38,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"b"]]]]]]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_ArrowBlockBody_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+	}{
+		{"empty_return", `r.table("t").map(g => { return })`},
+		{"unterminated_block", `r.table("t").map(g => { return g("b") )`},
+		{"local_without_body", `r.table("t").map(g => { var x = 1; })`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}
+
+// TestParse_ArrowBlockBody_ProductionExpression parses the account-balance report
+// recorded in the parser error log, whose map body is an arrow lambda block.
+func TestParse_ArrowBlockBody_ProductionExpression(t *testing.T) {
+	t.Parallel()
+	const expr = `r.table("accounts").filter(t => t("balance")("amount").gt(0)).group("currency").ungroup().` +
+		`map(g => {return {currency:g("group"), accounts:g("reduction").count(), ` +
+		`total:g("reduction").sum(x=>x("balance")("amount"))}}).orderBy(r.desc("accounts"))`
+	if _, err := Parse(expr); err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+}
+
 func TestParse_AssignToken_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
