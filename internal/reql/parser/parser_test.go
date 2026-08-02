@@ -1161,7 +1161,8 @@ func TestParse_BracketNumericIndex_Errors(t *testing.T) {
 		wantMsg string
 	}{
 		{`r.table("t")(0.5)`, "bracket index must be an integer"},
-		{`r.table("t")(true)`, "expected string or integer in bracket notation"},
+		{`r.table("t")(true)`, "expected string, integer or expression in bracket notation"},
+		{`r.table("t")(null)`, "expected string, integer or expression in bracket notation"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
@@ -1893,6 +1894,105 @@ func TestParse_Aggregate_Errors(t *testing.T) {
 		{"avg_two_fields", `r.table("t").avg("a","b")`, "at most one field argument"},
 		{"sum_two_fields", `r.table("t").sum("a","b")`, "at most one field argument"},
 		{"min_trailing_comma", `r.table("t").min("a",)`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParse_TermValuedArguments(t *testing.T) {
+	t.Parallel()
+	tbl := reql.Table("t")
+	runParseTests(t, []parseTest{
+		{
+			"bracket_string_key",
+			`r.table("t")("field")`,
+			tbl.Bracket("field"),
+		},
+		{
+			"bracket_integer_index",
+			`r.table("t")(0)`,
+			tbl.Nth(0),
+		},
+		{
+			"bracket_lambda_param_key",
+			`r.table("t").map(function(f){ return f(f) })`,
+			tbl.Map(reql.Func(reql.Var(1).Bracket(reql.Var(1)), 1)),
+		},
+		{
+			"hasFields_lambda_param",
+			`r.expr(["a","b"]).map(function(f){ return r.table("t").filter(function(o){ return o.hasFields(f) }).count() })`,
+			reql.Array("a", "b").Map(reql.Func(
+				tbl.Filter(reql.Func(reql.Var(2).HasFields(reql.Var(1)), 2)).Count(), 1)),
+		},
+		{
+			"getField_lambda_param",
+			`r.table("t").map(function(f){ return r.table("u").get(f).getField(f) })`,
+			tbl.Map(reql.Func(reql.Table("u").Get(reql.Var(1)).GetField(reql.Var(1)), 1)),
+		},
+		{
+			"match_lambda_param",
+			`r.table("t").map(function(f){ return f.match(f) })`,
+			tbl.Map(reql.Func(reql.Var(1).Match(reql.Var(1)), 1)),
+		},
+		{
+			"getField_string_key",
+			`r.table("t").getField("a")`,
+			tbl.GetField("a"),
+		},
+		{
+			"match_string_pattern",
+			`r.table("t")("name").match("^a")`,
+			tbl.Bracket("name").Match("^a"),
+		},
+		{
+			"hasFields_array_selector",
+			`r.table("t").filter(f => f.hasFields(["a","b"]))`,
+			tbl.Filter(reql.Func(reql.Var(1).HasFields(reql.Array("a", "b")), 1)),
+		},
+		{
+			"pluck_nested_object_selector",
+			`r.table("t").pluck("a",{"p":["b","c"]})`,
+			tbl.Pluck("a", map[string]interface{}{"p": reql.Array("b", "c")}),
+		},
+		{
+			"pluck_plain_string",
+			`r.table("t").pluck("a")`,
+			tbl.Pluck("a"),
+		},
+		{
+			"without_expression_selector",
+			`r.table("t").without(r.row("a"))`,
+			tbl.Without(reql.Row().Bracket("a")),
+		},
+		{
+			"withFields_array_selector",
+			`r.table("t").withFields(["a","b"])`,
+			tbl.WithFields(reql.Array("a", "b")),
+		},
+	})
+}
+
+func TestParse_TermValuedArguments_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"bracket_float_index", `r.table("t")(0.5)`, "bracket index must be an integer"},
+		{"bracket_empty", `r.table("t")()`, "position"},
+		{"getField_no_arg", `r.table("t").getField()`, "position"},
+		{"hasFields_trailing_comma", `r.table("t").hasFields("a",)`, "trailing comma"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

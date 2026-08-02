@@ -525,6 +525,93 @@ func TestParserAggregateNestedFieldLambda(t *testing.T) {
 	}
 }
 
+func TestParserFieldProbingIdiom(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "name": "alice", "city": "berlin"},
+		{"id": "2", "name": "bob"},
+		{"id": "3", "city": "lisbon"},
+	})
+
+	// lambda parameter used as a hasFields selector, one count per probed field name
+	expr := fmt.Sprintf(
+		`r.expr(["name","city","zip"]).map(function(f){ return [f, r.db("%s").table("docs").filter(function(o){ return o.hasFields(f) }).count()] })`,
+		dbName,
+	)
+	var rows [][]interface{}
+	if err := json.Unmarshal(parseRunAtom(t, exec, expr), &rows); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	got := make(map[string]float64, len(rows))
+	for _, row := range rows {
+		if len(row) != 2 {
+			t.Fatalf("row %v has %d elements, want 2", row, len(row))
+		}
+		name, ok := row[0].(string)
+		if !ok {
+			t.Fatalf("row key %v is not a string", row[0])
+		}
+		count, ok := row[1].(float64)
+		if !ok {
+			t.Fatalf("row count %v is not a number", row[1])
+		}
+		got[name] = count
+	}
+	want := map[string]float64{"name": 2, "city": 2, "zip": 0}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("field counts = %v, want %v", got, want)
+	}
+}
+
+func TestParserHasFieldsArraySelector(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "name": "alice", "city": "berlin"},
+		{"id": "2", "name": "bob"},
+		{"id": "3", "city": "lisbon"},
+	})
+
+	expr := fmt.Sprintf(
+		`r.db("%s").table("docs").filter(f => f.hasFields(["name","city"])).count()`, dbName)
+	var got float64
+	if err := json.Unmarshal(parseRunAtom(t, exec, expr), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 1 {
+		t.Errorf("count = %v, want 1 (only the document with both fields)", got)
+	}
+}
+
+func TestParserBracketLambdaParamKey(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "name": "alice", "city": "berlin"},
+	})
+
+	expr := fmt.Sprintf(
+		`r.expr(["name","city"]).map(function(f){ return r.db("%s").table("docs").get("1")(f) })`, dbName)
+	var got []string
+	if err := json.Unmarshal(parseRunAtom(t, exec, expr), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	want := []string{"alice", "berlin"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("field values = %v, want %v", got, want)
+	}
+}
+
 func TestParserFixesCLI(t *testing.T) {
 	t.Parallel()
 	qexec := newExecutor(t)

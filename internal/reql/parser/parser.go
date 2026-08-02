@@ -1551,7 +1551,7 @@ func registerCoreChain(m map[string]chainFn) {
 func registerFieldChain(m map[string]chainFn) {
 	m["pluck"] = chainPluck
 	m["without"] = chainWithout
-	m["getField"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.GetField(s) })
+	m["getField"] = oneArgChain(func(t, field reql.Term) reql.Term { return t.GetField(field) })
 	m["hasFields"] = chainHasFields
 	m["merge"] = oneArgChain(func(t, obj reql.Term) reql.Term { return t.Merge(obj) })
 	m["withFields"] = chainWithFields
@@ -1602,7 +1602,7 @@ func registerArithChain(m map[string]chainFn) {
 }
 
 func registerStringChain(m map[string]chainFn) {
-	m["match"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.Match(s) })
+	m["match"] = oneArgChain(func(t, re reql.Term) reql.Term { return t.Match(re) })
 	m["split"] = chainSplit
 	m["upcase"] = noArgChain(func(t reql.Term) reql.Term { return t.Upcase() })
 	m["downcase"] = noArgChain(func(t reql.Term) reql.Term { return t.Downcase() })
@@ -1689,33 +1689,46 @@ func (p *parser) parseOneArg() (reql.Term, error) {
 	return t, nil
 }
 
-// parseBracketArg parses term("field") or term(0) bracket notation.
-// String arg -> Bracket(field); integer arg -> Nth(n); float -> error.
+// parseBracketArg parses term("field"), term(0) or term(expr) bracket notation.
+// String arg -> Bracket(field); integer arg -> Nth(n); float -> error;
+// anything else -> Bracket(expr), which covers lambda parameters used as field keys.
 func (p *parser) parseBracketArg(t reql.Term) (reql.Term, error) {
 	if _, err := p.expect(tokenLParen); err != nil {
 		return reql.Term{}, err
 	}
 	tok := p.peek()
 	switch tok.Type {
-	case tokenString:
-		p.advance()
-		if _, err := p.expect(tokenRParen); err != nil {
-			return reql.Term{}, err
-		}
-		return t.Bracket(tok.Value), nil
-	case tokenNumber:
-		p.advance()
-		if _, err := p.expect(tokenRParen); err != nil {
-			return reql.Term{}, err
-		}
-		n, err := strconv.Atoi(tok.Value)
-		if err != nil {
-			return reql.Term{}, fmt.Errorf("bracket index must be an integer, got %q at position %d", tok.Value, tok.Pos)
-		}
-		return t.Nth(n), nil
+	case tokenString, tokenNumber:
+		return p.parseBracketLiteral(t, tok)
+	case tokenRParen, tokenBool, tokenNull:
+		// a bool or null can name neither a field nor an index
+		return reql.Term{}, fmt.Errorf("expected string, integer or expression in bracket notation at position %d", tok.Pos)
 	default:
-		return reql.Term{}, fmt.Errorf("expected string or integer in bracket notation at position %d", tok.Pos)
+		field, err := p.parseExpr()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
+			return reql.Term{}, err
+		}
+		return t.Bracket(field), nil
 	}
+}
+
+// parseBracketLiteral consumes a string or number bracket key already peeked as tok.
+func (p *parser) parseBracketLiteral(t reql.Term, tok token) (reql.Term, error) {
+	p.advance()
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	if tok.Type == tokenString {
+		return t.Bracket(tok.Value), nil
+	}
+	n, err := strconv.Atoi(tok.Value)
+	if err != nil {
+		return reql.Term{}, fmt.Errorf("bracket index must be an integer, got %q at position %d", tok.Value, tok.Pos)
+	}
+	return t.Nth(n), nil
 }
 
 // parseOneStringArg parses (string_literal) and returns the string value.
@@ -2018,6 +2031,10 @@ func (p *parser) parseFieldSelectors() ([]interface{}, error) {
 	return args, nil
 }
 
+// parseOneFieldSelector parses one pluck/without/hasFields/withFields argument:
+// a string literal, a {...} object, a [...] array, or any expression (a lambda
+// parameter holding the field name). Scalar literals other than strings can never
+// name a field, so they stay an error.
 func (p *parser) parseOneFieldSelector() (interface{}, error) {
 	tok := p.peek()
 	switch tok.Type {
@@ -2026,8 +2043,12 @@ func (p *parser) parseOneFieldSelector() (interface{}, error) {
 		return tok.Value, nil
 	case tokenLBrace:
 		return p.parseDatumObject()
+	case tokenLBracket:
+		return p.parseDatumArray()
+	case tokenNumber, tokenBool, tokenNull:
+		return nil, fmt.Errorf("expected string, object, array or expression in field selector at position %d, got %q", tok.Pos, tok.Value)
 	default:
-		return nil, fmt.Errorf("expected string or object in field selector at position %d, got %q", tok.Pos, tok.Value)
+		return p.parseExpr()
 	}
 }
 
