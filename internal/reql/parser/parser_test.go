@@ -1725,6 +1725,87 @@ func TestParse_FieldSelectorErrors(t *testing.T) {
 	}
 }
 
+func TestParse_Group(t *testing.T) {
+	t.Parallel()
+	tbl := reql.Table("t")
+	runParseTests(t, []parseTest{
+		{
+			"single_string_key",
+			`r.table("t").group("a")`,
+			tbl.Group("a"),
+		},
+		{
+			"multiple_string_keys",
+			`r.table("t").group("a","b","c")`,
+			tbl.Group("a", "b", "c"),
+		},
+		{
+			"row_key_func_wrapped",
+			`r.table("t").group(r.row("a"))`,
+			tbl.Group(reql.Func(reql.Var(1).Bracket("a"), 1)),
+		},
+		{
+			"arrow_lambda_key",
+			`r.table("t").group(t => t("a"))`,
+			tbl.Group(reql.Func(reql.Var(1).Bracket("a"), 1)),
+		},
+		{
+			"function_returning_array",
+			`r.table("t").group(function(t){ return [t("a"), t("b")] })`,
+			tbl.Group(reql.Func(reql.Array(reql.Var(1).Bracket("a"), reql.Var(1).Bracket("b")), 1)),
+		},
+		{
+			"array_of_row_keys",
+			`r.table("t").group([r.row("a"), r.row("b")])`,
+			tbl.Group(reql.Func(reql.Array(reql.Var(1).Bracket("a"), reql.Var(1).Bracket("b")), 1)),
+		},
+		{
+			"lambda_and_string_key",
+			`r.table("t").group(t => t("a"), "b")`,
+			tbl.Group(reql.Func(reql.Var(1).Bracket("a"), 1), "b"),
+		},
+		{
+			"key_with_index_optargs",
+			`r.table("t").group("a",{index:"i"})`,
+			tbl.Group("a", reql.OptArgs{"index": "i"}),
+		},
+		{
+			"optargs_only",
+			`r.table("t").group({multi:true})`,
+			tbl.Group(reql.OptArgs{"multi": true}),
+		},
+		{
+			"group_count_ungroup_orderby",
+			`r.table("t").group("a").count().ungroup().orderBy(r.desc("reduction"))`,
+			tbl.Group("a").Count().Ungroup().OrderBy(reql.Desc("reduction")),
+		},
+	})
+}
+
+func TestParse_Group_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"no_args", `r.table("t").group()`, "group: requires at least one key or an optargs object"},
+		{"trailing_comma", `r.table("t").group("a",)`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
 func TestCamelToSnake(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

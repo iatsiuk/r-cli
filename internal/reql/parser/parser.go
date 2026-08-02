@@ -916,11 +916,9 @@ func chainDelete(p *parser, t reql.Term) (reql.Term, error) {
 	return t.Delete(opts), nil
 }
 
-func chainOrderBy(p *parser, t reql.Term) (reql.Term, error) {
-	args, opts, err := p.parseArgListWithOpts()
-	if err != nil {
-		return reql.Term{}, err
-	}
+// argsWithOpts converts parsed terms to a variadic argument list with the
+// optional trailing OptArgs appended, as the variadic builders expect.
+func argsWithOpts(args []reql.Term, opts reql.OptArgs) []interface{} {
 	iargs := make([]interface{}, len(args))
 	for i, a := range args {
 		iargs[i] = a
@@ -928,7 +926,27 @@ func chainOrderBy(p *parser, t reql.Term) (reql.Term, error) {
 	if opts != nil {
 		iargs = append(iargs, opts)
 	}
-	return t.OrderBy(iargs...), nil
+	return iargs
+}
+
+func chainOrderBy(p *parser, t reql.Term) (reql.Term, error) {
+	args, opts, err := p.parseArgListWithOpts()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	return t.OrderBy(argsWithOpts(args, opts)...), nil
+}
+
+func chainGroup(p *parser, t reql.Term) (reql.Term, error) {
+	pos := p.peek().Pos
+	args, opts, err := p.parseArgListWithOpts()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if len(args) == 0 && opts == nil {
+		return reql.Term{}, fmt.Errorf("group: requires at least one key or an optargs object at position %d", pos)
+	}
+	return t.Group(argsWithOpts(args, opts)...), nil
 }
 
 func chainLimit(p *parser, t reql.Term) (reql.Term, error) {
@@ -1528,7 +1546,7 @@ func registerFieldChain(m map[string]chainFn) {
 	m["default"] = oneArgChain(func(t, val reql.Term) reql.Term { return t.Default(val) })
 	m["map"] = oneArgChain(func(t, fn reql.Term) reql.Term { return t.Map(fn) })
 	m["reduce"] = oneArgChain(func(t, fn reql.Term) reql.Term { return t.Reduce(fn) })
-	m["group"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.Group(s) })
+	m["group"] = chainGroup
 	m["ungroup"] = noArgChain(func(t reql.Term) reql.Term { return t.Ungroup() })
 	m["concatMap"] = oneArgChain(func(t, fn reql.Term) reql.Term { return t.ConcatMap(fn) })
 	m["forEach"] = oneArgChain(func(t, fn reql.Term) reql.Term { return t.ForEach(fn) })

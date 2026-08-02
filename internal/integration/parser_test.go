@@ -6,9 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
+	"r-cli/internal/query"
 	"r-cli/internal/reql/parser"
 )
 
@@ -295,6 +297,123 @@ func TestParserFixesArrowParenObject(t *testing.T) {
 	}
 	if doc["full"] != "Alice Smith" {
 		t.Errorf("full=%v, want 'Alice Smith'", doc["full"])
+	}
+}
+
+// ungroupedCounts runs expr and reads the array returned by group(...).count().ungroup()
+// into a map keyed by the JSON encoding of the group key.
+func ungroupedCounts(t *testing.T, exec *query.Executor, expr string) map[string]float64 {
+	t.Helper()
+	term, err := parser.Parse(expr)
+	if err != nil {
+		t.Fatalf("parse %q: %v", expr, err)
+	}
+	_, cur, err := exec.Run(context.Background(), term, nil)
+	if err != nil {
+		t.Fatalf("run %q: %v", expr, err)
+	}
+	defer closeCursor(cur)
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	var rows []struct {
+		Group     json.RawMessage `json:"group"`
+		Reduction float64         `json:"reduction"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		t.Fatalf("unmarshal ungroup rows: %v", err)
+	}
+	counts := make(map[string]float64, len(rows))
+	for _, row := range rows {
+		counts[string(row.Group)] = row.Reduction
+	}
+	return counts
+}
+
+func TestParserGroupMultipleKeys(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "dept": "eng", "city": "berlin"},
+		{"id": "2", "dept": "eng", "city": "berlin"},
+		{"id": "3", "dept": "eng", "city": "lisbon"},
+		{"id": "4", "dept": "hr", "city": "lisbon"},
+	})
+
+	expr := fmt.Sprintf(`r.db("%s").table("docs").group("dept","city").count().ungroup()`, dbName)
+	counts := ungroupedCounts(t, exec, expr)
+	want := map[string]float64{
+		`["eng","berlin"]`: 2,
+		`["eng","lisbon"]`: 1,
+		`["hr","lisbon"]`:  1,
+	}
+	if len(counts) != len(want) {
+		t.Fatalf("got %d groups (%v), want %d", len(counts), counts, len(want))
+	}
+	for key, n := range want {
+		if counts[key] != n {
+			t.Errorf("group %s count=%v, want %v", key, counts[key], n)
+		}
+	}
+}
+
+func TestParserGroupLambdaMatchesRow(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "dept": "eng"},
+		{"id": "2", "dept": "eng"},
+		{"id": "3", "dept": "hr"},
+	})
+
+	lambda := ungroupedCounts(t, exec, fmt.Sprintf(
+		`r.db("%s").table("docs").group(d => d("dept")).count().ungroup()`, dbName))
+	row := ungroupedCounts(t, exec, fmt.Sprintf(
+		`r.db("%s").table("docs").group(r.row("dept")).count().ungroup()`, dbName))
+
+	if !reflect.DeepEqual(lambda, row) {
+		t.Fatalf("lambda group %v differs from r.row group %v", lambda, row)
+	}
+	if lambda[`"eng"`] != 2 || lambda[`"hr"`] != 1 {
+		t.Errorf("group counts = %v, want eng=2 hr=1", lambda)
+	}
+}
+
+func TestParserGroupWithIndexOptArgs(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "dept": "eng", "city": "berlin"},
+		{"id": "2", "dept": "eng", "city": "lisbon"},
+		{"id": "3", "dept": "hr", "city": "lisbon"},
+	})
+	waitForIndex(t, exec, dbName, "docs", "dept")
+
+	// index optarg supplies the group key; a positional key adds a second one
+	expr := fmt.Sprintf(`r.db("%s").table("docs").group("city",{index:"dept"}).count().ungroup()`, dbName)
+	counts := ungroupedCounts(t, exec, expr)
+	want := map[string]float64{
+		`["berlin","eng"]`: 1,
+		`["lisbon","eng"]`: 1,
+		`["lisbon","hr"]`:  1,
+	}
+	if len(counts) != len(want) {
+		t.Fatalf("got %d groups (%v), want %d", len(counts), counts, len(want))
+	}
+	for key, n := range want {
+		if counts[key] != n {
+			t.Errorf("group %s count=%v, want %v", key, counts[key], n)
+		}
 	}
 }
 
