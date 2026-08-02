@@ -2533,6 +2533,74 @@ func TestParse_ArrowBlockBody_Errors(t *testing.T) {
 	}
 }
 
+func TestParse_UnsupportedInputHints(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name     string
+		input    string
+		wantMsgs []string
+	}{
+		{
+			"new_date_in_between_bound",
+			`r.table("t").between(["A", new Date("2026-06-19T07:40:13.981Z").getTime()], ["A", r.maxval], {index:"i"})`,
+			[]string{"new Date()", "r.iso8601", "r.epochTime"},
+		},
+		{
+			"new_date_standalone",
+			`new Date()`,
+			[]string{"new Date()", "r.iso8601", "r.epochTime"},
+		},
+		{
+			"table_without_r_prefix",
+			`table("x").count()`,
+			[]string{`unknown identifier "table"`, "r.table(...)"},
+		},
+		{
+			"db_without_r_prefix",
+			`db("x").tableList()`,
+			[]string{`unknown identifier "db"`, "r.db(...)"},
+		},
+		{
+			"multiple_statements",
+			`r.table("x").count(); r.table("y").count()`,
+			[]string{"multiple statements", "one query at a time", "--file", "---"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			for _, want := range tc.wantMsgs {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), want)
+				}
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}
+
+// TestParse_UnknownIdentifier_Generic keeps the generic message for names that are not
+// builders, so only a missing r. prefix gets the suggestion.
+func TestParse_UnknownIdentifier_Generic(t *testing.T) {
+	t.Parallel()
+	_, err := Parse(`notAKnownName("x")`)
+	if err == nil {
+		t.Fatal("Parse: expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), `unexpected token "notAKnownName"`) {
+		t.Errorf("error %q is not the generic unexpected-token error", err.Error())
+	}
+	if strings.Contains(err.Error(), "did you mean") {
+		t.Errorf("error %q must not suggest an r.* builder", err.Error())
+	}
+}
+
 // TestParse_ArrowBlockBody_ProductionExpression parses the account-balance report
 // recorded in the parser error log, whose map body is an arrow lambda block.
 func TestParse_ArrowBlockBody_ProductionExpression(t *testing.T) {

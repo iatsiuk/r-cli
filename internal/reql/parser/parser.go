@@ -21,6 +21,10 @@ func Parse(input string) (reql.Term, error) {
 	}
 	if p.peek().Type != tokenEOF {
 		tok := p.peek()
+		if tok.Type == tokenSemicolon && p.peekAt(1).Type != tokenEOF {
+			return reql.Term{}, fmt.Errorf("multiple statements are not supported, run one query at a time "+
+				"or use --file with '---' separators at position %d", tok.Pos)
+		}
 		return reql.Term{}, fmt.Errorf("unexpected token %q at position %d", tok.Value, tok.Pos)
 	}
 	return t, nil
@@ -100,6 +104,14 @@ func (p *parser) popScope() {
 func (p *parser) peek() token {
 	if p.pos < len(p.tokens) {
 		return p.tokens[p.pos]
+	}
+	return token{Type: tokenEOF}
+}
+
+// peekAt returns the token offset positions ahead of the current one.
+func (p *parser) peekAt(offset int) token {
+	if p.pos+offset < len(p.tokens) {
+		return p.tokens[p.pos+offset]
 	}
 	return token{Type: tokenEOF}
 }
@@ -256,6 +268,22 @@ func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 	if tok.Value == "r" {
 		p.advance()
 		return p.parseRExpr()
+	}
+	return p.parseUnknownIdent(tok)
+}
+
+// parseUnknownIdent reports an identifier that is not a local, a parameter, a lambda
+// or the r namespace. Such an identifier is always an error; shapes seen in real input
+// get an actionable hint instead of the generic unexpected-token message.
+func (p *parser) parseUnknownIdent(tok token) (reql.Term, error) {
+	next := p.peekAt(1)
+	if tok.Value == "new" && next.Type == tokenIdent && next.Value == "Date" {
+		return reql.Term{}, fmt.Errorf("new Date() is not supported, use r.iso8601(\"...\") "+
+			"or r.epochTime(n) at position %d", tok.Pos)
+	}
+	if _, ok := rBuilders[tok.Value]; ok {
+		return reql.Term{}, fmt.Errorf("unknown identifier %q, did you mean r.%s(...)? at position %d",
+			tok.Value, tok.Value, tok.Pos)
 	}
 	return p.parseDatumTerm()
 }
