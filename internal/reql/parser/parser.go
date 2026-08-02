@@ -949,6 +949,22 @@ func chainGroup(p *parser, t reql.Term) (reql.Term, error) {
 	return t.Group(argsWithOpts(args, opts)...), nil
 }
 
+// chainAggregate builds min/max/sum/avg: no args, one field expression, an
+// optional trailing OptArgs, or an opts-only form such as max({index:"d"}).
+func chainAggregate(name string, build func(reql.Term, ...interface{}) reql.Term) chainFn {
+	return func(p *parser, t reql.Term) (reql.Term, error) {
+		pos := p.peek().Pos
+		args, opts, err := p.parseArgListWithOpts()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if len(args) > 1 {
+			return reql.Term{}, fmt.Errorf("%s: takes at most one field argument at position %d", name, pos)
+		}
+		return build(t, argsWithOpts(args, opts)...), nil
+	}
+}
+
 func chainLimit(p *parser, t reql.Term) (reql.Term, error) {
 	n, err := p.parseOneIntArg()
 	if err != nil {
@@ -1550,10 +1566,10 @@ func registerFieldChain(m map[string]chainFn) {
 	m["ungroup"] = noArgChain(func(t reql.Term) reql.Term { return t.Ungroup() })
 	m["concatMap"] = oneArgChain(func(t, fn reql.Term) reql.Term { return t.ConcatMap(fn) })
 	m["forEach"] = oneArgChain(func(t, fn reql.Term) reql.Term { return t.ForEach(fn) })
-	m["sum"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.Sum(s) })
-	m["avg"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.Avg(s) })
-	m["min"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.Min(s) })
-	m["max"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.Max(s) })
+	m["sum"] = chainAggregate("sum", reql.Term.Sum)
+	m["avg"] = chainAggregate("avg", reql.Term.Avg)
+	m["min"] = chainAggregate("min", reql.Term.Min)
+	m["max"] = chainAggregate("max", reql.Term.Max)
 }
 
 func registerCompareChain(m map[string]chainFn) {

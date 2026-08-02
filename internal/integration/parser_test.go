@@ -417,6 +417,114 @@ func TestParserGroupWithIndexOptArgs(t *testing.T) {
 	}
 }
 
+// parseRunAtom runs expr and returns its single atom result.
+func parseRunAtom(t *testing.T, exec *query.Executor, expr string) json.RawMessage {
+	t.Helper()
+	term, err := parser.Parse(expr)
+	if err != nil {
+		t.Fatalf("parse %q: %v", expr, err)
+	}
+	_, cur, err := exec.Run(context.Background(), term, nil)
+	if err != nil {
+		t.Fatalf("run %q: %v", expr, err)
+	}
+	defer closeCursor(cur)
+	raw, err := cur.Next()
+	if err != nil {
+		t.Fatalf("cursor next: %v", err)
+	}
+	return raw
+}
+
+func TestParserAggregateNoArgs(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "items")
+	seedTable(t, exec, dbName, "items", []map[string]interface{}{
+		{"id": "1", "val": 10},
+		{"id": "2", "val": 30},
+		{"id": "3", "val": 20},
+	})
+
+	cases := []struct {
+		name string
+		expr string
+		want float64
+	}{
+		{"min", fmt.Sprintf(`r.db("%s").table("items").map(function(d){ return d("val") }).min()`, dbName), 10},
+		{"max", fmt.Sprintf(`r.db("%s").table("items").map(function(d){ return d("val") }).max()`, dbName), 30},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got float64
+			if err := json.Unmarshal(parseRunAtom(t, exec, tc.expr), &got); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("%s = %v, want %v", tc.name, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParserAggregateWithIndexOptArgs(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "items")
+	seedTable(t, exec, dbName, "items", []map[string]interface{}{
+		{"id": "1", "score": 10},
+		{"id": "2", "score": 30},
+		{"id": "3", "score": 20},
+	})
+	waitForIndex(t, exec, dbName, "items", "score")
+
+	cases := []struct {
+		name string
+		expr string
+		want string
+	}{
+		{"min", fmt.Sprintf(`r.db("%s").table("items").min({index:"score"})`, dbName), "1"},
+		{"max", fmt.Sprintf(`r.db("%s").table("items").max({index:"score"})`, dbName), "2"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var doc map[string]interface{}
+			if err := json.Unmarshal(parseRunAtom(t, exec, tc.expr), &doc); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if doc["id"] != tc.want {
+				t.Errorf("%s returned id=%v, want %v (full doc %v)", tc.name, doc["id"], tc.want, doc)
+			}
+		})
+	}
+}
+
+func TestParserAggregateNestedFieldLambda(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "accounts")
+	seedTable(t, exec, dbName, "accounts", []map[string]interface{}{
+		{"id": "1", "balance": map[string]interface{}{"amount": 5}},
+		{"id": "2", "balance": map[string]interface{}{"amount": 7}},
+		{"id": "3", "balance": map[string]interface{}{"amount": 13}},
+	})
+
+	expr := fmt.Sprintf(`r.db("%s").table("accounts").sum(x => x("balance")("amount"))`, dbName)
+	var got float64
+	if err := json.Unmarshal(parseRunAtom(t, exec, expr), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 25 {
+		t.Errorf("sum = %v, want 25", got)
+	}
+}
+
 func TestParserFixesCLI(t *testing.T) {
 	t.Parallel()
 	qexec := newExecutor(t)

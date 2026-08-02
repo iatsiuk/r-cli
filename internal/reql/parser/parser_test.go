@@ -1806,6 +1806,108 @@ func TestParse_Group_Errors(t *testing.T) {
 	}
 }
 
+func TestParse_Aggregate(t *testing.T) {
+	t.Parallel()
+	tbl := reql.Table("t")
+	runParseTests(t, []parseTest{
+		{
+			"sum_single_string_field",
+			`r.table("t").sum("f")`,
+			tbl.Sum("f"),
+		},
+		{
+			"avg_single_string_field",
+			`r.table("t").avg("f")`,
+			tbl.Avg("f"),
+		},
+		{
+			"min_single_string_field",
+			`r.table("t").min("f")`,
+			tbl.Min("f"),
+		},
+		{
+			"max_single_string_field",
+			`r.table("t").max("f")`,
+			tbl.Max("f"),
+		},
+		{
+			"min_no_args",
+			`r.table("t").min()`,
+			tbl.Min(),
+		},
+		{
+			"max_no_args",
+			`r.table("t").max()`,
+			tbl.Max(),
+		},
+		{
+			"sum_no_args",
+			`r.table("t").sum()`,
+			tbl.Sum(),
+		},
+		{
+			"avg_no_args",
+			`r.table("t").avg()`,
+			tbl.Avg(),
+		},
+		{
+			"max_index_optargs",
+			`r.table("t").max({index:"createdAt"})`,
+			tbl.Max(reql.OptArgs{"index": "createdAt"}),
+		},
+		{
+			"max_index_optargs_bracket_chain",
+			`r.table("t").max({index:"createdAt"})("createdAt")`,
+			tbl.Max(reql.OptArgs{"index": "createdAt"}).Bracket("createdAt"),
+		},
+		{
+			"min_row_nested_bracket",
+			`r.table("t").min(r.row("prices")("USD"))`,
+			tbl.Min(reql.Func(reql.Var(1).Bracket("prices").Bracket("USD"), 1)),
+		},
+		{
+			"sum_lambda_in_grouped_stream",
+			`r.table("t").group("c").sum(x => x("balance")("amount"))`,
+			tbl.Group("c").Sum(reql.Func(reql.Var(1).Bracket("balance").Bracket("amount"), 1)),
+		},
+		{
+			"min_after_map",
+			`r.table("t").map(function(t){ return t("date") }).min()`,
+			tbl.Map(reql.Func(reql.Var(1).Bracket("date"), 1)).Min(),
+		},
+		{
+			"min_field_with_index_optargs",
+			`r.table("t").min("f",{index:"i"})`,
+			tbl.Min("f", reql.OptArgs{"index": "i"}),
+		},
+	})
+}
+
+func TestParse_Aggregate_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"avg_two_fields", `r.table("t").avg("a","b")`, "at most one field argument"},
+		{"sum_two_fields", `r.table("t").sum("a","b")`, "at most one field argument"},
+		{"min_trailing_comma", `r.table("t").min("a",)`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
 func TestCamelToSnake(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
