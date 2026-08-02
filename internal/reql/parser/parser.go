@@ -33,6 +33,7 @@ type parser struct {
 	pos         int
 	depth       int
 	paramsStack []map[string]int
+	localsStack []map[string]reql.Term
 	nextVarID   int
 }
 
@@ -47,6 +48,21 @@ func (p *parser) lookupParam(name string) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+// lookupLocal resolves a var/let/const binding, innermost scope first.
+func (p *parser) lookupLocal(name string) (reql.Term, bool) {
+	for i := len(p.localsStack) - 1; i >= 0; i-- {
+		if t, ok := p.localsStack[i][name]; ok {
+			return t, true
+		}
+	}
+	return reql.Term{}, false
+}
+
+// setLocal binds name in the innermost scope, shadowing a parameter of the same name.
+func (p *parser) setLocal(name string, t reql.Term) {
+	p.localsStack[len(p.localsStack)-1][name] = t
 }
 
 // pushScope allocates IDs for names, pushes a new scope, and returns the IDs.
@@ -64,6 +80,7 @@ func (p *parser) pushScope(names []string) []int {
 		ids[i] = p.nextVarID
 	}
 	p.paramsStack = append(p.paramsStack, scope)
+	p.localsStack = append(p.localsStack, map[string]reql.Term{})
 	return ids
 }
 
@@ -71,6 +88,9 @@ func (p *parser) pushScope(names []string) []int {
 func (p *parser) popScope() {
 	if len(p.paramsStack) > 0 {
 		p.paramsStack = p.paramsStack[:len(p.paramsStack)-1]
+	}
+	if len(p.localsStack) > 0 {
+		p.localsStack = p.localsStack[:len(p.localsStack)-1]
 	}
 	if len(p.paramsStack) == 0 {
 		p.nextVarID = 0
@@ -213,8 +233,12 @@ func (p *parser) parsePrimary() (reql.Term, error) {
 
 // parseIdentPrimary handles identifiers: r.* expressions, param vars, bare arrow lambdas, and datum fallback.
 func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
-	// param lookup takes priority over r.* dispatch when inside a lambda
+	// locals and params take priority over r.* dispatch when inside a lambda
 	if p.inLambda() {
+		if local, ok := p.lookupLocal(tok.Value); ok {
+			p.advance()
+			return local, nil
+		}
 		if id, ok := p.lookupParam(tok.Value); ok {
 			p.advance()
 			return reql.Var(id), nil
@@ -254,22 +278,36 @@ func (p *parser) parseBareArrowLambda(tok token) (reql.Term, error) {
 	return reql.Func(body, ids...), nil
 }
 
-// parseFunctionExpr parses function(params){ return? body ;? } and returns a FUNC term.
+// parseFunctionExpr parses function(params){ locals* return? body ;? } and returns a FUNC term.
 // The "function" keyword has already been consumed by the caller.
 func (p *parser) parseFunctionExpr() (reql.Term, error) {
 	names, err := p.parseLambdaParams()
 	if err != nil {
 		return reql.Term{}, err
 	}
+	ids := p.pushScope(names)
+	defer p.popScope()
+	body, err := p.parseBlockBody()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	return reql.Func(body, ids...), nil
+}
+
+// parseBlockBody parses { locals* return? body ;? } and returns the body term.
+// The caller must have pushed the enclosing scope, so that parameters are visible
+// to the local bindings.
+func (p *parser) parseBlockBody() (reql.Term, error) {
 	if _, err := p.expect(tokenLBrace); err != nil {
+		return reql.Term{}, err
+	}
+	if err := p.parseLocalBindings(); err != nil {
 		return reql.Term{}, err
 	}
 	// optional "return" keyword
 	if p.peek().Type == tokenIdent && p.peek().Value == "return" {
 		p.advance()
 	}
-	ids := p.pushScope(names)
-	defer p.popScope()
 	body, err := p.parseExpr()
 	if err != nil {
 		return reql.Term{}, err
@@ -280,7 +318,53 @@ func (p *parser) parseFunctionExpr() (reql.Term, error) {
 	if _, err := p.expect(tokenRBrace); err != nil {
 		return reql.Term{}, err
 	}
-	return reql.Func(body, ids...), nil
+	return body, nil
+}
+
+// localKeywords introduce a local binding statement inside a block body.
+var localKeywords = map[string]bool{"var": true, "let": true, "const": true}
+
+// reservedLocalNames cannot be bound by a local binding statement.
+var reservedLocalNames = map[string]bool{
+	"var": true, "let": true, "const": true, "return": true, "function": true,
+	"true": true, "false": true, "null": true,
+}
+
+// parseLocalBindings parses `var|let|const <ident> = <expr> ;` statements into the
+// innermost scope. The bound term is inlined at every use site, so referencing a
+// local twice duplicates its subtree in the query.
+func (p *parser) parseLocalBindings() error {
+	for p.peek().Type == tokenIdent && localKeywords[p.peek().Value] {
+		p.advance()
+		name := p.peek()
+		if err := validateLocalName(name); err != nil {
+			return err
+		}
+		p.advance()
+		if _, err := p.expect(tokenAssign); err != nil {
+			return err
+		}
+		value, err := p.parseExpr()
+		if err != nil {
+			return err
+		}
+		if _, err := p.expect(tokenSemicolon); err != nil {
+			return err
+		}
+		p.setLocal(name.Value, value)
+	}
+	return nil
+}
+
+// validateLocalName checks that tok can name a local binding.
+func validateLocalName(tok token) error {
+	if reservedLocalNames[tok.Value] {
+		return fmt.Errorf("reserved word %q cannot be used as variable name at position %d", tok.Value, tok.Pos)
+	}
+	if tok.Type != tokenIdent {
+		return fmt.Errorf("expected identifier in variable declaration, got %q at position %d", tok.Value, tok.Pos)
+	}
+	return nil
 }
 
 func (p *parser) parseRExpr() (reql.Term, error) {
@@ -1906,6 +1990,9 @@ func (p *parser) tryTrailingOptArgs() (reql.OptArgs, bool) {
 	p.pos = savePos
 	if len(p.paramsStack) > saveScopes {
 		p.paramsStack = p.paramsStack[:saveScopes]
+	}
+	if len(p.localsStack) > saveScopes {
+		p.localsStack = p.localsStack[:saveScopes]
 	}
 	p.nextVarID = saveVarID
 	p.depth = saveDepth

@@ -2340,6 +2340,124 @@ func TestParse_InfixArithmetic_Errors(t *testing.T) {
 	}
 }
 
+func TestParse_FunctionLocals(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"string_local_inlined_into_match",
+			`r.table("t").filter(function(p){ var re = "x"; return p("id").match(re) })`,
+			reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("id").Match("x"), 1)),
+		},
+		{
+			"local_bound_to_parameter_expression",
+			`function(a){ var b = a("x"); return b.add(1) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(1), 1),
+		},
+		{
+			"local_used_twice_duplicates_subtree",
+			`function(a){ var b = a("x"); return b.add(b) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(reql.Var(1).Bracket("x")), 1),
+		},
+		{
+			"multiple_bindings",
+			`function(a){ var b = 1; var c = 2; return a("x").add(b).add(c) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(1).Add(2), 1),
+		},
+		{
+			"let_keyword",
+			`function(a){ let b = a("x"); return b.add(1) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(1), 1),
+		},
+		{
+			"const_keyword",
+			`function(a){ const b = a("x"); return b.add(1) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(1), 1),
+		},
+		{
+			"lambda_bound_to_local",
+			`function(a){ var b = function(c){ return c }; return a.map(b) }`,
+			reql.Func(reql.Var(1).Map(reql.Func(reql.Var(2), 2)), 1),
+		},
+		{
+			"local_shadows_parameter",
+			`function(a){ var a = 1; return a }`,
+			reql.Func(reql.Datum(1), 1),
+		},
+		{
+			"local_visible_in_nested_lambda",
+			`function(a){ var b = a("x"); return a.map(function(c){ return c.add(b) }) }`,
+			reql.Func(reql.Var(1).Map(reql.Func(reql.Var(2).Add(reql.Var(1).Bracket("x")), 2)), 1),
+		},
+		{
+			"local_out_of_scope_after_function",
+			`r.table("t").filter(function(p){ var b = 1; return p("a").eq(b) }).map(function(b){ return b("c") })`,
+			reql.Table("t").
+				Filter(reql.Func(reql.Var(1).Bracket("a").Eq(1), 1)).
+				Map(reql.Func(reql.Var(1).Bracket("c"), 1)),
+		},
+		{
+			"body_without_locals_unchanged",
+			`function(a){ return a("x") }`,
+			reql.Func(reql.Var(1).Bracket("x"), 1),
+		},
+	})
+}
+
+func TestParse_FunctionLocals_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"missing_semicolon", `function(a){ var b = 1 return b }`, "expected ';'"},
+		{"reserved_name", `function(a){ var true = 1; return a }`, "reserved word"},
+		{"reserved_keyword_name", `function(a){ var const = 1; return a }`, "reserved word"},
+		{"missing_assign", `function(a){ var b; return b }`, "expected '='"},
+		{"missing_value", `function(a){ var b = ; return b }`, "unexpected token"},
+		{"missing_name", `function(a){ var = 1; return a }`, "expected identifier"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}
+
+// TestParse_FunctionLocals_ProductionExpression parses the route-switcher expression
+// recorded in the parser error log, whose concatMap body opens with a var binding.
+func TestParse_FunctionLocals_ProductionExpression(t *testing.T) {
+	t.Parallel()
+	const expr = `
+r.db("restored").table("routes")
+  .getAll("/games/wow/coaching", {index: "url.en"})
+  .concatMap(function(route){
+    var sw = route("pageConfiguration").default([])
+      .filter(function(p){ return p("type").default("").eq("routeSwitcher") })
+      .nth(0).default(null);
+    return r.branch(
+      sw.eq(null),
+      [],
+      sw("data").default([]).map(function(id){
+        return { parentId: route("id"), parentUrl: route("url")("en"), linkedId: id }
+      })
+    );
+  })`
+	if _, err := Parse(expr); err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+}
+
 func TestParse_AssignToken_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

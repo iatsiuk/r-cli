@@ -928,3 +928,60 @@ func TestParserArithmeticNowFilter(t *testing.T) {
 		t.Errorf("ids = %v, want %v", got, want)
 	}
 }
+
+func TestParserFunctionLocalInFilter(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "name": "alice"},
+		{"id": "2", "name": "amy"},
+		{"id": "3", "name": "bob"},
+	})
+
+	expr := fmt.Sprintf(
+		`r.db("%s").table("docs").filter(function(p){ var re = "^a"; return p("name").match(re) })`, dbName)
+	got := rowIDs(t, parseRunRows(t, exec, expr))
+	sort.Strings(got)
+	want := []string{"1", "2"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ids = %v, want %v", got, want)
+	}
+}
+
+func TestParserFunctionLocalUsedTwice(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "score": 10},
+		{"id": "2", "score": 20},
+		{"id": "3", "score": 30},
+	})
+
+	// a local bound to a subquery and referenced twice must match the hand-inlined form
+	local := fmt.Sprintf(
+		`r.db("%s").table("docs").map(function(d){ var n = r.db("%s").table("docs").count(); return d("score").add(n).add(n) }).sum()`,
+		dbName, dbName)
+	inlined := fmt.Sprintf(
+		`r.db("%s").table("docs").map(function(d){ return d("score").add(r.db("%s").table("docs").count()).add(r.db("%s").table("docs").count()) }).sum()`,
+		dbName, dbName, dbName)
+
+	var gotLocal, gotInlined float64
+	if err := json.Unmarshal(parseRunAtom(t, exec, local), &gotLocal); err != nil {
+		t.Fatalf("unmarshal local: %v", err)
+	}
+	if err := json.Unmarshal(parseRunAtom(t, exec, inlined), &gotInlined); err != nil {
+		t.Fatalf("unmarshal inlined: %v", err)
+	}
+	if gotLocal != gotInlined {
+		t.Errorf("local form = %v, inlined form = %v", gotLocal, gotInlined)
+	}
+	if gotLocal != 78 {
+		t.Errorf("sum = %v, want 78", gotLocal)
+	}
+}
