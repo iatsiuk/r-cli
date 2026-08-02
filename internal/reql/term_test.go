@@ -326,6 +326,82 @@ func TestGroupBuilder(t *testing.T) {
 	}
 }
 
+func TestAggregateBuilders(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	tests := []struct {
+		name        string
+		term        Term
+		want        string
+		errContains string
+	}{
+		{name: "min_single_field", term: table.Min("f"), want: `[147,[[15,["t"]],"f"]]`},
+		{name: "max_single_field", term: table.Max("f"), want: `[148,[[15,["t"]],"f"]]`},
+		{name: "sum_single_field", term: table.Sum("f"), want: `[145,[[15,["t"]],"f"]]`},
+		{name: "avg_single_field", term: table.Avg("f"), want: `[146,[[15,["t"]],"f"]]`},
+		{name: "min_no_args", term: table.Min(), want: `[147,[[15,["t"]]]]`},
+		{name: "max_no_args", term: table.Max(), want: `[148,[[15,["t"]]]]`},
+		{name: "sum_no_args", term: table.Sum(), want: `[145,[[15,["t"]]]]`},
+		{name: "avg_no_args", term: table.Avg(), want: `[146,[[15,["t"]]]]`},
+		{
+			name: "max_optargs_only",
+			term: table.Max(OptArgs{"index": "d"}),
+			want: `[148,[[15,["t"]]],{"index":"d"}]`,
+		},
+		{
+			name: "min_field_with_optargs",
+			term: table.Min("f", OptArgs{"index": "d"}),
+			want: `[147,[[15,["t"]],"f"],{"index":"d"}]`,
+		},
+		{
+			name: "min_implicit_var_wrapped",
+			term: table.Min(Row().Bracket("p")),
+			want: `[147,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"p"]]]]]]`,
+		},
+		{
+			name: "sum_explicit_func",
+			term: table.Sum(Func(Var(1).Bracket("v"), 1)),
+			want: `[145,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"v"]]]]]]`,
+		},
+		{
+			name:        "avg_two_fields",
+			term:        table.Avg("a", "b"),
+			errContains: "at most one field argument",
+		},
+		{
+			name:        "min_two_fields",
+			term:        table.Min("a", "b"),
+			errContains: "at most one field argument",
+		},
+		{
+			name:        "sum_implicit_var_in_nested_func",
+			term:        table.Sum(Func(Row(), 1)),
+			errContains: "IMPLICIT_VAR",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.errContains != "" {
+				if err == nil {
+					t.Fatalf("expected error, got %s", got)
+				}
+				if !strings.Contains(err.Error(), tc.errContains) {
+					t.Errorf("expected error containing %q, got: %v", tc.errContains, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestIndexOperations(t *testing.T) {
 	t.Parallel()
 	table := DB("test").Table("users")

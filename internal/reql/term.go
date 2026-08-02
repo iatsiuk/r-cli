@@ -383,24 +383,44 @@ func (t Term) Ungroup() Term {
 	return Term{termType: proto.TermUngroup, args: []Term{t}}
 }
 
-// Sum creates a SUM term ([145, [term, field]]).
-func (t Term) Sum(field string) Term {
-	return Term{termType: proto.TermSum, args: []Term{t, Datum(field)}}
+// aggregate builds an aggregation term ([tt, [term, field?]], opts?).
+// A trailing OptArgs becomes the term options; at most one field argument is
+// allowed and is auto-wrapped in FUNC when it contains IMPLICIT_VAR (Row()).
+func (t Term) aggregate(tt proto.TermType, args []interface{}) Term {
+	fields, opts := splitOptArgs(args)
+	if len(fields) > 1 {
+		return errTerm(errors.New("reql: aggregation takes at most one field argument"))
+	}
+	terms := make([]Term, 1, 2)
+	terms[0] = t
+	for _, f := range fields {
+		wrapped, err := wrapImplicitVar(toTerm(f))
+		if err != nil {
+			return errTerm(err)
+		}
+		terms = append(terms, wrapped)
+	}
+	return Term{termType: tt, args: terms, opts: opts}
 }
 
-// Avg creates an AVG term ([146, [term, field]]).
-func (t Term) Avg(field string) Term {
-	return Term{termType: proto.TermAvg, args: []Term{t, Datum(field)}}
+// Sum creates a SUM term ([145, [term, field?]], opts?).
+func (t Term) Sum(args ...interface{}) Term {
+	return t.aggregate(proto.TermSum, args)
 }
 
-// Min creates a MIN term ([147, [term, field]]).
-func (t Term) Min(field string) Term {
-	return Term{termType: proto.TermMin, args: []Term{t, Datum(field)}}
+// Avg creates an AVG term ([146, [term, field?]], opts?).
+func (t Term) Avg(args ...interface{}) Term {
+	return t.aggregate(proto.TermAvg, args)
 }
 
-// Max creates a MAX term ([148, [term, field]]).
-func (t Term) Max(field string) Term {
-	return Term{termType: proto.TermMax, args: []Term{t, Datum(field)}}
+// Min creates a MIN term ([147, [term, field?]], opts?).
+func (t Term) Min(args ...interface{}) Term {
+	return t.aggregate(proto.TermMin, args)
+}
+
+// Max creates a MAX term ([148, [term, field?]], opts?).
+func (t Term) Max(args ...interface{}) Term {
+	return t.aggregate(proto.TermMax, args)
 }
 
 // Eq creates an EQ term ([17, [term, value]]).
