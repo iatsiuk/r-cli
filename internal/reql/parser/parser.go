@@ -361,6 +361,7 @@ func (p *parser) parseLambda() (reql.Term, error) {
 
 // parseLambdaParams parses (ident, ...) and returns the parameter names.
 // Validates identifiers, reserved names, and duplicates.
+// An empty list is allowed: FUNC with no parameters is valid ReQL.
 func (p *parser) parseLambdaParams() ([]string, error) {
 	if _, err := p.expect(tokenLParen); err != nil {
 		return nil, err
@@ -384,9 +385,6 @@ func (p *parser) parseLambdaParams() ([]string, error) {
 	}
 	if _, err := p.expect(tokenRParen); err != nil {
 		return nil, err
-	}
-	if len(names) == 0 {
-		return nil, fmt.Errorf("lambda requires at least one parameter")
 	}
 	return names, nil
 }
@@ -503,6 +501,13 @@ func parseRDBList(p *parser) (reql.Term, error) {
 		return reql.Term{}, err
 	}
 	return reql.DBList(), nil
+}
+
+func parseRTableList(p *parser) (reql.Term, error) {
+	if err := p.parseNoArgs(); err != nil {
+		return reql.Term{}, err
+	}
+	return reql.TableList(), nil
 }
 
 func parseRNow(p *parser) (reql.Term, error) {
@@ -1044,11 +1049,34 @@ func chainBetween(p *parser, t reql.Term) (reql.Term, error) {
 }
 
 func chainSlice(p *parser, t reql.Term) (reql.Term, error) {
-	start, end, err := p.parseTwoInts()
+	pos := p.peek().Pos
+	bounds, err := p.parseIntArgs()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return t.Slice(start, end), nil
+	if len(bounds) == 0 || len(bounds) > 2 {
+		return reql.Term{}, fmt.Errorf("slice requires 1 or 2 integer bounds at position %d, got %d", pos, len(bounds))
+	}
+	return t.Slice(bounds...), nil
+}
+
+// chainBranch parses .branch(val1, val2, ...) with the receiver as the condition.
+// The receiver counts as the first BRANCH argument, so the branches must be even in number.
+func chainBranch(p *parser, t reql.Term) (reql.Term, error) {
+	pos := p.peek().Pos
+	args, err := p.parseArgList()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if len(args) < 2 || len(args)%2 != 0 {
+		return reql.Term{}, fmt.Errorf(
+			"branch requires an even number of arguments (at least 2) at position %d, got %d", pos, len(args))
+	}
+	branches := make([]interface{}, len(args))
+	for i, a := range args {
+		branches[i] = a
+	}
+	return t.Branch(branches...), nil
 }
 
 func chainIndexRename(p *parser, t reql.Term) (reql.Term, error) {
@@ -1485,6 +1513,7 @@ func buildRBuilders() map[string]rBuilderFn {
 		"dbCreate":  parseRDBCreate,
 		"dbDrop":    parseRDBDrop,
 		"dbList":    parseRDBList,
+		"tableList": parseRTableList,
 		"now":       parseRNow,
 		"uuid":      parseRUUID,
 		"json":      parseRJSON,
@@ -1528,6 +1557,7 @@ func registerCoreChain(m map[string]chainFn) {
 	m["delete"] = chainDelete
 	m["replace"] = oneArgChain(func(t, doc reql.Term) reql.Term { return t.Replace(doc) })
 	m["between"] = chainBetween
+	m["branch"] = chainBranch
 	m["orderBy"] = chainOrderBy
 	m["limit"] = chainLimit
 	m["skip"] = intArgChain(func(t reql.Term, n int) reql.Term { return t.Skip(n) })
@@ -2231,38 +2261,31 @@ func (p *parser) parseStringThenArg() (string, reql.Term, error) {
 	return tok.Value, t, nil
 }
 
-// parseTwoInts parses (n1, n2) for methods like slice.
-func (p *parser) parseTwoInts() (n1, n2 int, err error) {
-	var tok1, tok2 token
-	_, err = p.expect(tokenLParen)
-	if err != nil {
-		return 0, 0, err
+// parseIntArgs parses (n1, n2, ...) for methods taking a variable number of integers.
+// The caller checks how many values are acceptable.
+func (p *parser) parseIntArgs() ([]int, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return nil, err
 	}
-	tok1, err = p.expect(tokenNumber)
-	if err != nil {
-		return 0, 0, err
+	var nums []int
+	for p.peek().Type != tokenRParen && p.peek().Type != tokenEOF {
+		n, err := p.expectIntArg()
+		if err != nil {
+			return nil, err
+		}
+		nums = append(nums, n)
+		if p.peek().Type != tokenComma {
+			break
+		}
+		p.advance()
+		if p.peek().Type == tokenRParen {
+			return nil, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
+		}
 	}
-	_, err = p.expect(tokenComma)
-	if err != nil {
-		return 0, 0, err
+	if _, err := p.expect(tokenRParen); err != nil {
+		return nil, err
 	}
-	tok2, err = p.expect(tokenNumber)
-	if err != nil {
-		return 0, 0, err
-	}
-	_, err = p.expect(tokenRParen)
-	if err != nil {
-		return 0, 0, err
-	}
-	n1, err = strconv.Atoi(tok1.Value)
-	if err != nil {
-		return n1, n2, fmt.Errorf("expected integer, got %q", tok1.Value)
-	}
-	n2, err = strconv.Atoi(tok2.Value)
-	if err != nil {
-		return n1, n2, fmt.Errorf("expected integer, got %q", tok2.Value)
-	}
-	return n1, n2, nil
+	return nums, nil
 }
 
 // parseTwoFloatArgs parses (f1, f2) for r.point.

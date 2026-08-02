@@ -482,7 +482,6 @@ func TestParseLambda_MultiParam_Errors(t *testing.T) {
 		wantMsg string
 	}{
 		{`(x, x) => x`, "duplicate parameter name"},
-		{`() => 1`, "at least one parameter"},
 		{`(a,) => a`, "trailing comma"},
 	}
 	for _, tc := range cases {
@@ -850,7 +849,6 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		input   string
 		wantMsg string
 	}{
-		{`function(){ return 1 }`, "at least one parameter"},
 		{`function(x, x){ return x }`, "duplicate parameter name"},
 		{`function(x){ }`, "unexpected token"},
 		{`function(x){ return }`, "unexpected token"},
@@ -2147,5 +2145,132 @@ func TestParse_ObjectLiteralWriteDetection(t *testing.T) {
 	}
 	if !term.ContainsWrite() {
 		t.Fatal("ContainsWrite() = false for write hidden in filter's object-literal predicate, want true")
+	}
+}
+
+func TestParse_TableListTopLevel(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"top_level_no_args", `r.tableList()`, `[62,[]]`},
+		{"db_scoped", `r.db("d").tableList()`, `[62,[[14,["d"]]]]`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_BranchChain(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"count_gt_zero",
+			`r.table("t").count().gt(0).branch([1],[])`,
+			`[65,[[21,[[43,[[15,["t"]]]],0]],[2,[1]],[2,[]]]]`,
+		},
+		{
+			"receiver_is_the_test",
+			`r.row("a").branch("yes","no")`,
+			`[65,[[170,[[13,[]],"a"]],"yes","no"]]`,
+		},
+		{
+			"multi_condition",
+			`r.row("a").branch("x", r.row("b"), "y", "z")`,
+			`[65,[[170,[[13,[]],"a"]],"x",[170,[[13,[]],"b"]],"y","z"]]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_SliceVariadic(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"one_bound", `r.table("t").slice(-2)`, `[30,[[15,["t"]],-2]]`},
+		{"two_bounds", `r.table("t").slice(0,2)`, `[30,[[15,["t"]],0,2]]`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_EmptyParamLambda(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"function_no_params",
+			`r.table("t").group(function(){ return true })`,
+			`[144,[[15,["t"]],[69,[[2,[]],true]]]]`,
+		},
+		{
+			"arrow_no_params",
+			`r.table("t").map(() => 1)`,
+			`[38,[[15,["t"]],[69,[[2,[]],1]]]]`,
+		},
+		{
+			"single_param_unchanged",
+			`r.table("t").filter(x => x("a"))`,
+			`[39,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_TableListBranchSlice_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"table_list_with_arg", `r.tableList("x")`, "expected ')'"},
+		{"branch_even_total", `r.row("a").branch("only")`, "even number of arguments"},
+		{"branch_no_args", `r.row("a").branch()`, "even number of arguments"},
+		{"slice_no_args", `r.table("t").slice()`, "1 or 2 integer bounds"},
+		{"slice_three_bounds", `r.table("t").slice(0,1,2)`, "1 or 2 integer bounds"},
+		{"slice_trailing_comma", `r.table("t").slice(0,)`, "trailing comma"},
+		{"slice_non_integer", `r.table("t").slice(0.5)`, "expected integer"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
 	}
 }

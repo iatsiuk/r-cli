@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
 	"r-cli/internal/query"
+	"r-cli/internal/reql"
 	"r-cli/internal/reql/parser"
 )
 
@@ -732,5 +734,111 @@ func TestParserFixesCLI(t *testing.T) {
 	}
 	if len(result) != 3 {
 		t.Errorf("got %d items, want 3", len(result))
+	}
+}
+
+func TestParserTableListTopLevel(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "alpha")
+	createTestTable(t, exec, dbName, "beta")
+
+	stdout, stderr, code := cliRun(t, "", cliArgs("-d", dbName, "-f", "json", "r.tableList()")...)
+	if code != 0 {
+		t.Fatalf("exit code %d, stderr: %s", code, stderr)
+	}
+	var tables []string
+	if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &tables); err != nil {
+		t.Fatalf("unmarshal output: %v\noutput: %q", err, stdout)
+	}
+	sort.Strings(tables)
+	want := []string{"alpha", "beta"}
+	if !reflect.DeepEqual(tables, want) {
+		t.Errorf("tables = %v, want %v", tables, want)
+	}
+}
+
+func TestParserBranchChain(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "val": 1},
+		{"id": "2", "val": 2},
+	})
+
+	cases := []struct {
+		name string
+		expr string
+		want string
+	}{
+		{
+			"true_side",
+			fmt.Sprintf(`r.db("%s").table("docs").count().gt(0).branch("yes","no")`, dbName),
+			"yes",
+		},
+		{
+			"false_side",
+			fmt.Sprintf(`r.db("%s").table("docs").count().gt(100).branch("yes","no")`, dbName),
+			"no",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got string
+			if err := json.Unmarshal(parseRunAtom(t, exec, tc.expr), &got); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("branch = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParserSliceSingleBound(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "vals": reql.Array(1, 2, 3, 4)},
+	})
+
+	expr := fmt.Sprintf(`r.db("%s").table("docs").get("1")("vals").slice(-2)`, dbName)
+	var got []float64
+	if err := json.Unmarshal(parseRunAtom(t, exec, expr), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	want := []float64{3, 4}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("slice(-2) = %v, want %v", got, want)
+	}
+}
+
+func TestParserGroupZeroParamFunction(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "dept": "eng"},
+		{"id": "2", "dept": "hr"},
+		{"id": "3", "dept": "eng"},
+	})
+
+	expr := fmt.Sprintf(`r.db("%s").table("docs").group(function(){ return true }).count().ungroup()`, dbName)
+	counts := ungroupedCounts(t, exec, expr)
+	if len(counts) != 1 {
+		t.Fatalf("got %d groups (%v), want 1", len(counts), counts)
+	}
+	if counts["true"] != 3 {
+		t.Errorf("single group count = %v, want 3", counts["true"])
 	}
 }
