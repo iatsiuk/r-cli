@@ -1650,6 +1650,102 @@ func TestParse_OptArgs_CamelCaseConversion(t *testing.T) {
 	})
 }
 
+// assertWireJSON compares the marshalled term against an exact wire JSON string.
+func assertWireJSON(t *testing.T, got reql.Term, want string) {
+	t.Helper()
+	b, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if string(b) != want {
+		t.Errorf("wire JSON mismatch:\ngot:  %s\nwant: %s", b, want)
+	}
+}
+
+func TestParse_OptArgs_TermValued(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"orderBy_index_desc_lands_in_optargs_slot",
+			`r.table("t").orderBy({index: r.desc("d")})`,
+			`[41,[[15,["t"]]],{"index":[74,["d"]]}]`,
+		},
+		{
+			"orderBy_index_string",
+			`r.table("t").orderBy({index:"d"})`,
+			`[41,[[15,["t"]]],{"index":"d"}]`,
+		},
+		{
+			"between_index_desc",
+			`r.table("t").between(1, 2, {index: r.desc("d")})`,
+			`[182,[[15,["t"]],1,2],{"index":[74,["d"]]}]`,
+		},
+		{
+			"between_minval_maxval_camel_key",
+			`r.table("t").between(r.minval, r.maxval, {index:"d", rightBound:"open"})`,
+			`[182,[[15,["t"]],[180,[]],[181,[]]],{"index":"d","right_bound":"open"}]`,
+		},
+		{
+			"changes_datum_optarg",
+			`r.table("t").changes({includeInitial: true})`,
+			`[152,[[15,["t"]]],{"include_initial":true}]`,
+		},
+		{
+			"getAll_index_expression",
+			`r.table("t").getAll("a",{index: r.row("i")})`,
+			`[78,[[15,["t"]],"a"],{"index":[170,[[13,[]],"i"]]}]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_OptArgs_MissingValue(t *testing.T) {
+	t.Parallel()
+	_, err := Parse(`r.table("t").orderBy({index: })`)
+	if err == nil {
+		t.Fatal("expected error for an optarg without a value")
+	}
+	if !strings.Contains(err.Error(), "at position") {
+		t.Errorf("error %q does not report a byte position", err)
+	}
+}
+
+func TestParse_OptArgsBacktrack_VarIDs(t *testing.T) {
+	t.Parallel()
+	t.Run("lambda_before_optargs", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map(x => x("a")).orderBy({index:"d"})`)
+		want := reql.Table("t").Map(reql.Func(reql.Var(1).Bracket("a"), 1)).OrderBy(reql.OptArgs{"index": "d"})
+		assertTermEqual(t, got, want)
+	})
+	t.Run("sibling_lambdas_reuse_var1", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").filter(x => x("a")).orderBy(y => y("b"))`)
+		want := reql.Table("t").
+			Filter(reql.Func(reql.Var(1).Bracket("a"), 1)).
+			OrderBy(reql.Func(reql.Var(1).Bracket("b"), 1))
+		assertTermEqual(t, got, want)
+	})
+	// a failed trailing-optargs attempt parses the inner lambda, then backtracks;
+	// the re-parse must allocate the same VAR id, not the next free one
+	t.Run("failed_attempt_restores_var_counter", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map(x => x("a").orderBy({index: y => y("b")}, "c"))`)
+		inner := reql.Datum(map[string]interface{}{"index": reql.Func(reql.Var(2).Bracket("b"), 2)})
+		want := reql.Table("t").Map(reql.Func(reql.Var(1).Bracket("a").OrderBy(inner, "c"), 1))
+		assertTermEqual(t, got, want)
+	})
+}
+
 func TestParse_FieldSelectorChains(t *testing.T) {
 	t.Parallel()
 	db := `r.db("test").table("users")`

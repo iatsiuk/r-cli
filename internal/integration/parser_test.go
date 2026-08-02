@@ -612,6 +612,103 @@ func TestParserBracketLambdaParamKey(t *testing.T) {
 	}
 }
 
+// parseRunRows runs expr and collects every row the cursor yields, preserving order.
+func parseRunRows(t *testing.T, exec *query.Executor, expr string) []json.RawMessage {
+	t.Helper()
+	term, err := parser.Parse(expr)
+	if err != nil {
+		t.Fatalf("parse %q: %v", expr, err)
+	}
+	_, cur, err := exec.Run(context.Background(), term, nil)
+	if err != nil {
+		t.Fatalf("run %q: %v", expr, err)
+	}
+	defer closeCursor(cur)
+	rows, err := cur.All()
+	if err != nil {
+		t.Fatalf("cursor all: %v", err)
+	}
+	return rows
+}
+
+// rowIDs extracts the "id" field of each row.
+func rowIDs(t *testing.T, rows []json.RawMessage) []string {
+	t.Helper()
+	ids := make([]string, len(rows))
+	for i, raw := range rows {
+		var doc struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatalf("unmarshal row %d: %v", i, err)
+		}
+		ids[i] = doc.ID
+	}
+	return ids
+}
+
+func TestParserOrderByIndexOptArgs(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "a", "score": 10},
+		{"id": "b", "score": 30},
+		{"id": "c", "score": 20},
+	})
+	waitForIndex(t, exec, dbName, "docs", "score")
+
+	cases := []struct {
+		name string
+		expr string
+		want []string
+	}{
+		{
+			"desc_term_optarg",
+			fmt.Sprintf(`r.db("%s").table("docs").orderBy({index: r.desc("score")})`, dbName),
+			[]string{"b", "c", "a"},
+		},
+		{
+			"asc_string_optarg",
+			fmt.Sprintf(`r.db("%s").table("docs").orderBy({index: "score"})`, dbName),
+			[]string{"a", "c", "b"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := rowIDs(t, parseRunRows(t, exec, tc.expr))
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("ids = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParserGetAllIndexOptArgs(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "1", "dept": "eng"},
+		{"id": "2", "dept": "hr"},
+		{"id": "3", "dept": "eng"},
+	})
+	waitForIndex(t, exec, dbName, "docs", "dept")
+
+	expr := fmt.Sprintf(`r.db("%s").table("docs").getAll("eng", {index: "dept"}).count()`, dbName)
+	var got float64
+	if err := json.Unmarshal(parseRunAtom(t, exec, expr), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got != 2 {
+		t.Errorf("count = %v, want 2", got)
+	}
+}
+
 func TestParserFixesCLI(t *testing.T) {
 	t.Parallel()
 	qexec := newExecutor(t)

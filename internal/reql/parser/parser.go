@@ -1810,18 +1810,25 @@ func (p *parser) parseArgList() ([]reql.Term, error) {
 }
 
 // tryTrailingOptArgs attempts to parse '{...}' as trailing OptArgs when followed by ')'.
-// Returns (opts, true) on success, or (nil, false) with pos restored on failure.
-// Safe to backtrack: parseOptArgs only accepts datum literals, never mutates paramsStack.
+// Returns (opts, true) on success, or (nil, false) with the parser state restored on failure.
+// Optarg values are full expressions, so a failed attempt can have parsed a lambda and
+// advanced the scope state; pos, scope depth, var counter and nesting depth are all rolled back
+// so that the re-parse allocates the same VAR ids.
 func (p *parser) tryTrailingOptArgs() (reql.OptArgs, bool) {
 	if p.peek().Type != tokenLBrace {
 		return nil, false
 	}
-	save := p.pos
+	savePos, saveScopes, saveVarID, saveDepth := p.pos, len(p.paramsStack), p.nextVarID, p.depth
 	o, err := p.parseOptArgs()
 	if err == nil && p.peek().Type == tokenRParen {
 		return o, true
 	}
-	p.pos = save
+	p.pos = savePos
+	if len(p.paramsStack) > saveScopes {
+		p.paramsStack = p.paramsStack[:saveScopes]
+	}
+	p.nextVarID = saveVarID
+	p.depth = saveDepth
 	return nil, false
 }
 
@@ -1879,7 +1886,8 @@ func (p *parser) parseArgListBody() ([]reql.Term, reql.OptArgs, error) {
 
 // parseArgListWithOpts parses (arg1, ..., {opts}?) returning terms and optional trailing OptArgs.
 // After consuming a comma, if '{' follows, attempts parseOptArgs; if succeeded and ')' follows,
-// treats it as trailing OptArgs. Otherwise backtracks (safe: parseOptArgs only accepts datums).
+// treats it as trailing OptArgs. Otherwise tryTrailingOptArgs rolls the parser state back and
+// the object is re-parsed as a positional argument.
 // Also handles opts-only case: ({opts}) with no positional args.
 func (p *parser) parseArgListWithOpts() ([]reql.Term, reql.OptArgs, error) {
 	if _, err := p.expect(tokenLParen); err != nil {
@@ -1946,11 +1954,13 @@ func (p *parser) parseObjectBody(valueParser func() (interface{}, error)) (reql.
 }
 
 // parseOptArgs parses {key: val, ...} into a reql.OptArgs.
-// Values are restricted to datum literals: string, number, bool, null.
 func (p *parser) parseOptArgs() (reql.OptArgs, error) {
 	return p.parseObjectBody(p.parseOptArgValue)
 }
 
+// parseOptArgValue parses one optarg value: a datum literal on the fast path,
+// any expression otherwise (e.g. {index: r.desc("d")}). Terms marshal correctly
+// because OptArgs is a map[string]interface{} and Term implements MarshalJSON.
 func (p *parser) parseOptArgValue() (interface{}, error) {
 	tok := p.peek()
 	switch tok.Type {
@@ -1967,7 +1977,7 @@ func (p *parser) parseOptArgValue() (interface{}, error) {
 		p.advance()
 		return nil, nil
 	}
-	return nil, fmt.Errorf("expected datum literal in optargs at position %d, got %q", tok.Pos, tok.Value)
+	return p.parseExpr()
 }
 
 // parseStringList parses ("s1", "s2", ...) and returns the string values.
