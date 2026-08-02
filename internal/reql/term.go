@@ -101,6 +101,60 @@ func funcWrap(v interface{}) (Term, error) {
 	return wrapImplicitVar(toTerm(v))
 }
 
+// ContainsImplicitVar reports whether t contains a bare IMPLICIT_VAR (r.row)
+// anywhere in its term tree, including inside object/array literals and any
+// other native Go datum value (map[string]interface{}, []interface{}, an
+// embedded Term) that field selectors, bracket keys and optarg values store
+// as a raw Datum. Used to reject r.row in positions that are never
+// funcWrap-ped because the server never binds an implicit row there and
+// rejects the query.
+func ContainsImplicitVar(t Term) bool {
+	if t.err != nil {
+		return false
+	}
+	if t.termType == proto.TermImplicitVar {
+		return true
+	}
+	if t.termType == 0 {
+		return datumContainsImplicitVar(t.datum)
+	}
+	for _, a := range t.args {
+		if ContainsImplicitVar(a) {
+			return true
+		}
+	}
+	for _, v := range t.opts {
+		if datumContainsImplicitVar(v) {
+			return true
+		}
+	}
+	return false
+}
+
+// datumContainsImplicitVar scans a datum value for an embedded bare r.row,
+// mirroring datumContainsWrite in readonly.go: object/array literals from the
+// parser can hold full expressions, so a value can be a Term or a slice/map
+// containing one.
+func datumContainsImplicitVar(datum interface{}) bool {
+	switch v := datum.(type) {
+	case Term:
+		return ContainsImplicitVar(v)
+	case []interface{}:
+		for _, item := range v {
+			if datumContainsImplicitVar(item) {
+				return true
+			}
+		}
+	case map[string]interface{}:
+		for _, item := range v {
+			if datumContainsImplicitVar(item) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // splitOptArgs separates a trailing OptArgs value from positional arguments.
 func splitOptArgs(args []interface{}) (positional []interface{}, opts map[string]interface{}) {
 	if len(args) == 0 {

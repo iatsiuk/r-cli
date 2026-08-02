@@ -473,6 +473,26 @@ func TestLexer_NegativeNumberLiterals(t *testing.T) {
 				{tokenEOF, ""},
 			},
 		},
+		{
+			"after_bool",
+			`true-1`,
+			[]tv{
+				{tokenBool, "true"},
+				{tokenMinus, "-"},
+				{tokenNumber, "1"},
+				{tokenEOF, ""},
+			},
+		},
+		{
+			"after_null",
+			`null-1`,
+			[]tv{
+				{tokenNull, "null"},
+				{tokenMinus, "-"},
+				{tokenNumber, "1"},
+				{tokenEOF, ""},
+			},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

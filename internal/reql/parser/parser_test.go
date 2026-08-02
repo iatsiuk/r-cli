@@ -858,6 +858,10 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		{`function(return){ return return }`, "reserved word"}, //nolint:dupword
 		{`function(function){ return function }`, "reserved word"},
 		{`(return) => return`, "reserved word"},
+		{`function(var){ return var }`, "reserved word"},
+		{`function(let){ return let }`, "reserved word"},
+		{`function(const){ return const }`, "reserved word"},
+		{`(var) => var`, "reserved word"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
@@ -910,6 +914,21 @@ func TestParse_BracketNumericIndex(t *testing.T) {
 			"row_nth",
 			`r.row(0)`,
 			reql.Row().Nth(0),
+		},
+		{
+			"literal_led_expression_falls_through_to_bracket",
+			`r.table("t")("a".add("b"))`,
+			reql.Table("t").Bracket(reql.Datum("a").Add(reql.Datum("b"))),
+		},
+		{
+			"bool_literal_led_expression_falls_through_to_bracket",
+			`r.table("t")(true.branch("a","b"))`,
+			reql.Table("t").Bracket(reql.Datum(true).Branch("a", "b")),
+		},
+		{
+			"null_literal_led_expression_falls_through_to_bracket",
+			`r.table("t")(null.default("a"))`,
+			reql.Table("t").Bracket(reql.Datum(nil).Default(reql.Datum("a"))),
 		},
 	})
 }
@@ -1588,6 +1607,18 @@ func TestParse_OptArgs_IndexCreate(t *testing.T) {
 	assertTermEqual(t, got, want)
 }
 
+// TestParse_OptArgs_LiteralLedExpression guards against the literal fast path
+// in parseOptArgValue returning before checking for a trailing chain/operator:
+// without the parseExpr fallback, "true.eq(true)" would stop at "true", fail to
+// close the optargs object, and silently backtrack to a positional MAKE_OBJ
+// argument instead of an optarg -- a parse success with the wrong wire shape.
+func TestParse_OptArgs_LiteralLedExpression(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").table("t").indexCreate("idx", {multi: true.eq(true)})`)
+	want := reql.DB("d").Table("t").IndexCreate("idx", reql.OptArgs{"multi": reql.Datum(true).Eq(reql.Datum(true))})
+	assertTermEqual(t, got, want)
+}
+
 func TestParse_OptArgs_Changes(t *testing.T) {
 	t.Parallel()
 	got := mustParse(t, `r.db("d").table("t").changes({include_initial: true})`)
@@ -1692,11 +1723,6 @@ func TestParse_OptArgs_TermValued(t *testing.T) {
 			`r.table("t").changes({includeInitial: true})`,
 			`[152,[[15,["t"]]],{"include_initial":true}]`,
 		},
-		{
-			"getAll_index_expression",
-			`r.table("t").getAll("a",{index: r.row("i")})`,
-			`[78,[[15,["t"]],"a"],{"index":[170,[[13,[]],"i"]]}]`,
-		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1714,6 +1740,27 @@ func TestParse_OptArgs_MissingValue(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "at position") {
 		t.Errorf("error %q does not report a byte position", err)
+	}
+}
+
+func TestParse_OptArgValue_BareRow_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []string{
+		`r.table("t").getAll("a",{index: r.row("i")})`,
+		`r.table("t").orderBy({index: r.row("i")})`,
+		`r.table("t").orderBy({index: {a: r.row("i")}})`,
+	}
+	for _, input := range cases {
+		t.Run(input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", input)
+			}
+			if !strings.Contains(err.Error(), "r.row has no meaning here") {
+				t.Errorf("Parse(%q): error %q does not mention the r.row restriction", input, err)
+			}
+		})
 	}
 }
 
@@ -1773,6 +1820,37 @@ func TestParse_FieldSelectorChains(t *testing.T) {
 			"withFields_mixed",
 			db + `.withFields("id", {stats: true})`,
 			dbterm.WithFields("id", map[string]interface{}{"stats": true}),
+		},
+		{
+			"hasFields_literal_led_expression_falls_through",
+			db + `.hasFields("a".add("b"))`,
+			dbterm.HasFields(reql.Datum("a").Add(reql.Datum("b"))),
+		},
+		{
+			"hasFields_array_literal_led_expression_falls_through",
+			db + `.hasFields(["a"].nth(0))`,
+			dbterm.HasFields(reql.Array("a").Nth(0)),
+		},
+		{
+			"hasFields_null_literal_led_expression_falls_through",
+			db + `.hasFields(null.default("a"))`,
+			dbterm.HasFields(reql.Datum(nil).Default(reql.Datum("a"))),
+		},
+		{
+			"hasFields_object_literal_led_expression_falls_through",
+			db + `.hasFields({a: 1}.merge({b: 2}))`,
+			dbterm.HasFields(reql.Datum(map[string]interface{}{"a": reql.Datum(int64(1))}).Merge(
+				reql.Datum(map[string]interface{}{"b": reql.Datum(int64(2))}))),
+		},
+		{
+			"hasFields_object_with_nested_expression_value",
+			db + `.hasFields({a: r.expr(true)})`,
+			dbterm.HasFields(map[string]interface{}{"a": reql.Datum(true)}),
+		},
+		{
+			"hasFields_array_with_nested_expression_element_chain_falls_through",
+			db + `.hasFields([r.expr("a")].nth(0))`,
+			dbterm.HasFields(reql.Array(reql.Datum("a")).Nth(0)),
 		},
 	})
 }
@@ -1885,6 +1963,7 @@ func TestParse_Group_Errors(t *testing.T) {
 		wantMsg string
 	}{
 		{"no_args", `r.table("t").group()`, "group: requires at least one key or an optargs object"},
+		{"empty_optargs_object", `r.table("t").group({})`, "group: requires at least one key or an optargs object"},
 		{"trailing_comma", `r.table("t").group("a",)`, "trailing comma"},
 	}
 	for _, tc := range cases {
@@ -2064,9 +2143,9 @@ func TestParse_TermValuedArguments(t *testing.T) {
 			tbl.Pluck("a"),
 		},
 		{
-			"without_expression_selector",
-			`r.table("t").without(r.row("a"))`,
-			tbl.Without(reql.Row().Bracket("a")),
+			"without_lambda_param_selector",
+			`r.table("t").map(function(f){ return r.table("u").without(f) })`,
+			tbl.Map(reql.Func(reql.Table("u").Without(reql.Var(1)), 1)),
 		},
 		{
 			"withFields_array_selector",
@@ -2087,6 +2166,12 @@ func TestParse_TermValuedArguments_Errors(t *testing.T) {
 		{"bracket_empty", `r.table("t")()`, "position"},
 		{"getField_no_arg", `r.table("t").getField()`, "position"},
 		{"hasFields_trailing_comma", `r.table("t").hasFields("a",)`, "trailing comma"},
+		{"without_bare_row", `r.table("t").without(r.row("a"))`, "r.row has no meaning here"},
+		{"pluck_bare_row", `r.table("t").pluck(r.row("a"))`, "r.row has no meaning here"},
+		{"bracket_bare_row", `r.table("t")(r.row("a"))`, "r.row has no meaning here"},
+		{"getField_bare_row", `r.table("t").getField(r.row("a"))`, "r.row has no meaning here"},
+		{"match_bare_row", `r.table("t").getField("a").match(r.row("b"))`, "r.row has no meaning here"},
+		{"hasFields_bare_row_nested_in_object", `r.table("t").hasFields({a: r.row("x")})`, "r.row has no meaning here"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -2389,6 +2474,11 @@ func TestParse_FunctionLocals(t *testing.T) {
 			reql.Func(reql.Var(1).Map(reql.Func(reql.Var(2).Add(reql.Var(1).Bracket("x")), 2)), 1),
 		},
 		{
+			"nested_parameter_not_shadowed_by_outer_local_of_same_name",
+			`function(doc){ var name = doc; return doc.map(function(name){ return name }) }`,
+			reql.Func(reql.Var(1).Map(reql.Func(reql.Var(2), 2)), 1),
+		},
+		{
 			"local_out_of_scope_after_function",
 			`r.table("t").filter(function(p){ var b = 1; return p("a").eq(b) }).map(function(b){ return b("c") })`,
 			reql.Table("t").
@@ -2499,6 +2589,16 @@ func TestParse_ArrowBlockBody(t *testing.T) {
 			"block_body_without_return_keyword",
 			`r.table("t").map(g => { var x = g("b"); x })`,
 			`[38,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"b"]]]]]]`,
+		},
+		{
+			"object_literal_with_return_key_unchanged",
+			`r.table("t").map(g => {return: g("b")})`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"return":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"object_literal_with_var_key_unchanged",
+			`r.table("t").map(g => {var: g("b")})`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"var":[170,[[10,[1]],"b"]]}]]]]`,
 		},
 	}
 	for _, tc := range cases {

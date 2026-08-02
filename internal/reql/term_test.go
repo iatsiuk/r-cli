@@ -681,6 +681,31 @@ func TestImplicitVarWrapping(t *testing.T) {
 	}
 }
 
+func TestContainsImplicitVarInDatumLiteral(t *testing.T) {
+	t.Parallel()
+	// mirrors what the string parser produces for an object literal like
+	// hasFields({a: r.row("x")}): a native map/slice datum (not t.opts, not a
+	// MAKE_ARRAY term) holding an embedded IMPLICIT_VAR Term.
+	rowInMap := Datum(map[string]interface{}{"a": Row().Bracket("x")})
+	if !ContainsImplicitVar(rowInMap) {
+		t.Errorf("ContainsImplicitVar() = false for r.row nested in object-literal datum, want true")
+	}
+	rowInSlice := Datum([]interface{}{Row().Bracket("a")})
+	if !ContainsImplicitVar(rowInSlice) {
+		t.Errorf("ContainsImplicitVar() = false for r.row nested in array-literal datum, want true")
+	}
+	plain := Datum(map[string]interface{}{"a": 1})
+	if ContainsImplicitVar(plain) {
+		t.Errorf("ContainsImplicitVar() = true for plain object-literal datum, want false")
+	}
+	nestedTwoLevels := Datum(map[string]interface{}{
+		"a": map[string]interface{}{"b": Row().Bracket("c")},
+	})
+	if !ContainsImplicitVar(nestedTwoLevels) {
+		t.Errorf("ContainsImplicitVar() = false for r.row nested two levels deep, want true")
+	}
+}
+
 func TestFuncCall(t *testing.T) {
 	t.Parallel()
 	fn := Func(Var(1).Add(Var(2)), 1, 2)

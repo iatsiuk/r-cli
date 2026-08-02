@@ -1,12 +1,21 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"unicode"
 
 	"r-cli/internal/reql"
 )
+
+// errBareRowInStaticValue marks a parse error caused by r.row appearing in a
+// position with no per-row context (a field selector, bracket key or optarg
+// value). tryTrailingOptArgs must not silently reinterpret such an error as
+// "not optargs, retry as a positional argument": the object still parses as a
+// datum either way, and the resulting query would still be rejected by the
+// server, just without the actionable error message.
+var errBareRowInStaticValue = errors.New("r.row has no meaning here; it is only bound inside a function argument such as filter or map")
 
 // Parse tokenizes input and builds a reql.Term.
 func Parse(input string) (reql.Term, error) {
@@ -45,20 +54,17 @@ func (p *parser) inLambda() bool {
 	return len(p.paramsStack) > 0
 }
 
-func (p *parser) lookupParam(name string) (int, bool) {
+// resolveName resolves an identifier to a local binding or a parameter, scope by
+// scope from innermost to outermost. A local shadows a parameter only within the
+// same scope level, so a nested lambda's own parameter is never hidden by an
+// outer local or parameter sharing its name.
+func (p *parser) resolveName(name string) (reql.Term, bool) {
 	for i := len(p.paramsStack) - 1; i >= 0; i-- {
-		if id, ok := p.paramsStack[i][name]; ok {
-			return id, true
-		}
-	}
-	return 0, false
-}
-
-// lookupLocal resolves a var/let/const binding, innermost scope first.
-func (p *parser) lookupLocal(name string) (reql.Term, bool) {
-	for i := len(p.localsStack) - 1; i >= 0; i-- {
 		if t, ok := p.localsStack[i][name]; ok {
 			return t, true
+		}
+		if id, ok := p.paramsStack[i][name]; ok {
+			return reql.Var(id), true
 		}
 	}
 	return reql.Term{}, false
@@ -247,13 +253,9 @@ func (p *parser) parsePrimary() (reql.Term, error) {
 func (p *parser) parseIdentPrimary(tok token) (reql.Term, error) {
 	// locals and params take priority over r.* dispatch when inside a lambda
 	if p.inLambda() {
-		if local, ok := p.lookupLocal(tok.Value); ok {
+		if t, ok := p.resolveName(tok.Value); ok {
 			p.advance()
-			return local, nil
-		}
-		if id, ok := p.lookupParam(tok.Value); ok {
-			p.advance()
-			return reql.Var(id), nil
+			return t, nil
 		}
 	}
 	// detect function(params){ ... } syntax
@@ -316,14 +318,17 @@ func (p *parser) parseArrowBody() (reql.Term, error) {
 }
 
 // blockBodyAhead reports whether the current '{' opens a statement block rather than
-// an object literal. Only a following statement keyword makes it a block, so that
-// `x => {a: 1}` keeps returning an object.
+// an object literal. Only a following statement keyword makes it a block, and only when
+// that keyword isn't itself an object key (`x => {return: 1}` stays an object literal).
 func (p *parser) blockBodyAhead() bool {
-	if p.peek().Type != tokenLBrace || p.pos+1 >= len(p.tokens) {
+	if p.peek().Type != tokenLBrace {
 		return false
 	}
-	next := p.tokens[p.pos+1]
-	return next.Type == tokenIdent && (next.Value == "return" || localKeywords[next.Value])
+	next := p.peekAt(1)
+	if next.Type != tokenIdent || (next.Value != "return" && !localKeywords[next.Value]) {
+		return false
+	}
+	return p.peekAt(2).Type != tokenColon
 }
 
 // parseFunctionExpr parses function(params){ locals* return? body ;? } and returns a FUNC term.
@@ -576,7 +581,7 @@ func validateLambdaParam(tok token, seen []string) error {
 	if tok.Type != tokenIdent {
 		return fmt.Errorf("expected identifier in lambda parameter, got %q at position %d", tok.Value, tok.Pos)
 	}
-	if tok.Value == "return" || tok.Value == "function" {
+	if reservedLocalNames[tok.Value] {
 		return fmt.Errorf("reserved word %q cannot be used as parameter name at position %d", tok.Value, tok.Pos)
 	}
 	for _, existing := range seen {
@@ -1130,7 +1135,7 @@ func chainGroup(p *parser, t reql.Term) (reql.Term, error) {
 	if err != nil {
 		return reql.Term{}, err
 	}
-	if len(args) == 0 && opts == nil {
+	if len(args) == 0 && len(opts) == 0 {
 		return reql.Term{}, fmt.Errorf("group: requires at least one key or an optargs object at position %d", pos)
 	}
 	return t.Group(argsWithOpts(args, opts)...), nil
@@ -1500,7 +1505,7 @@ func chainFold(p *parser, t reql.Term) (reql.Term, error) {
 	}
 	if p.peek().Type == tokenComma {
 		p.advance()
-		opts, err := p.parseFoldOpts()
+		opts, err := p.parseOptArgs()
 		if err != nil {
 			return reql.Term{}, err
 		}
@@ -1523,14 +1528,6 @@ func chainDo(p *parser, t reql.Term) (reql.Term, error) {
 		return reql.Term{}, err
 	}
 	return t.Do(fn), nil
-}
-
-// parseFoldOpts parses {key: expr, ...} where values are full expressions (for lambdas in emit/finalEmit).
-func (p *parser) parseFoldOpts() (reql.OptArgs, error) {
-	return p.parseObjectBody(func() (interface{}, error) {
-		v, err := p.parseExpr()
-		return v, err
-	})
 }
 
 func chainGrant(p *parser, t reql.Term) (reql.Term, error) {
@@ -1558,6 +1555,31 @@ func oneArgChain(fn func(reql.Term, reql.Term) reql.Term) chainFn {
 	return func(p *parser, t reql.Term) (reql.Term, error) {
 		arg, err := p.parseOneArg()
 		if err != nil {
+			return reql.Term{}, err
+		}
+		return fn(t, arg), nil
+	}
+}
+
+// oneArgChainNoRow creates a chain builder for single-Term-argument methods
+// whose argument names or matches something (a field, a pattern) rather than
+// computing a per-document value, so it is never funcWrap-ped -- a bare r.row
+// there is rejected the same way as bracket keys, field selectors and optarg
+// values.
+func oneArgChainNoRow(label string, fn func(reql.Term, reql.Term) reql.Term) chainFn {
+	return func(p *parser, t reql.Term) (reql.Term, error) {
+		if _, err := p.expect(tokenLParen); err != nil {
+			return reql.Term{}, err
+		}
+		tok := p.peek()
+		arg, err := p.parseExpr()
+		if err != nil {
+			return reql.Term{}, err
+		}
+		if reql.ContainsImplicitVar(arg) {
+			return reql.Term{}, fmt.Errorf("%w (%s at position %d)", errBareRowInStaticValue, label, tok.Pos)
+		}
+		if _, err := p.expect(tokenRParen); err != nil {
 			return reql.Term{}, err
 		}
 		return fn(t, arg), nil
@@ -1763,7 +1785,7 @@ func registerCoreChain(m map[string]chainFn) {
 func registerFieldChain(m map[string]chainFn) {
 	m["pluck"] = chainPluck
 	m["without"] = chainWithout
-	m["getField"] = oneArgChain(func(t, field reql.Term) reql.Term { return t.GetField(field) })
+	m["getField"] = oneArgChainNoRow("getField argument", func(t, field reql.Term) reql.Term { return t.GetField(field) })
 	m["hasFields"] = chainHasFields
 	m["merge"] = oneArgChain(func(t, obj reql.Term) reql.Term { return t.Merge(obj) })
 	m["withFields"] = chainWithFields
@@ -1814,7 +1836,7 @@ func registerArithChain(m map[string]chainFn) {
 }
 
 func registerStringChain(m map[string]chainFn) {
-	m["match"] = oneArgChain(func(t, re reql.Term) reql.Term { return t.Match(re) })
+	m["match"] = oneArgChainNoRow("match pattern", func(t, re reql.Term) reql.Term { return t.Match(re) })
 	m["split"] = chainSplit
 	m["upcase"] = noArgChain(func(t reql.Term) reql.Term { return t.Upcase() })
 	m["downcase"] = noArgChain(func(t reql.Term) reql.Term { return t.Downcase() })
@@ -1904,6 +1926,11 @@ func (p *parser) parseOneArg() (reql.Term, error) {
 // parseBracketArg parses term("field"), term(0) or term(expr) bracket notation.
 // String arg -> Bracket(field); integer arg -> Nth(n); float -> error;
 // anything else -> Bracket(expr), which covers lambda parameters used as field keys.
+// The string/integer fast path only fires when the literal is the whole argument
+// (immediately followed by ')'); a literal continued by a chain or operator, e.g.
+// "a".add("b") or true.branch("a","b"), falls through to the general expression
+// path below. A bare bool/null argument (nothing else follows) is rejected
+// immediately since neither can name a field or an index on its own.
 func (p *parser) parseBracketArg(t reql.Term) (reql.Term, error) {
 	if _, err := p.expect(tokenLParen); err != nil {
 		return reql.Term{}, err
@@ -1911,20 +1938,27 @@ func (p *parser) parseBracketArg(t reql.Term) (reql.Term, error) {
 	tok := p.peek()
 	switch tok.Type {
 	case tokenString, tokenNumber:
-		return p.parseBracketLiteral(t, tok)
-	case tokenRParen, tokenBool, tokenNull:
-		// a bool or null can name neither a field nor an index
+		if p.peekAt(1).Type == tokenRParen {
+			return p.parseBracketLiteral(t, tok)
+		}
+	case tokenBool, tokenNull:
+		if p.peekAt(1).Type == tokenRParen {
+			return reql.Term{}, fmt.Errorf("expected string, integer or expression in bracket notation at position %d", tok.Pos)
+		}
+	case tokenRParen:
 		return reql.Term{}, fmt.Errorf("expected string, integer or expression in bracket notation at position %d", tok.Pos)
-	default:
-		field, err := p.parseExpr()
-		if err != nil {
-			return reql.Term{}, err
-		}
-		if _, err := p.expect(tokenRParen); err != nil {
-			return reql.Term{}, err
-		}
-		return t.Bracket(field), nil
 	}
+	field, err := p.parseExpr()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if reql.ContainsImplicitVar(field) {
+		return reql.Term{}, fmt.Errorf("%w (bracket notation at position %d)", errBareRowInStaticValue, tok.Pos)
+	}
+	if _, err := p.expect(tokenRParen); err != nil {
+		return reql.Term{}, err
+	}
+	return t.Bracket(field), nil
 }
 
 // parseBracketLiteral consumes a string or number bracket key already peeked as tok.
@@ -2022,29 +2056,32 @@ func (p *parser) parseArgList() ([]reql.Term, error) {
 }
 
 // tryTrailingOptArgs attempts to parse '{...}' as trailing OptArgs when followed by ')'.
-// Returns (opts, true) on success, or (nil, false) with the parser state restored on failure.
-// Optarg values are full expressions, so a failed attempt can have parsed a lambda and
-// advanced the scope state; pos, scope depth, var counter and nesting depth are all rolled back
-// so that the re-parse allocates the same VAR ids.
-func (p *parser) tryTrailingOptArgs() (reql.OptArgs, bool) {
+// Returns (opts, true, nil) on success, or (nil, false, nil) with the parser state restored
+// on failure. Optarg values are full expressions, so a failed attempt can have parsed a lambda
+// and advanced nextVarID; every pushScope call site defers popScope, so paramsStack/localsStack
+// are already back to their pre-attempt depth by the time parseOptArgs returns -- only pos,
+// nextVarID and nesting depth need an explicit rollback here.
+//
+// A failure tagged with errBareRowInStaticValue is not backtracked: the object parsed fine as
+// optargs syntax, it just holds a value the server can never bind, and re-parsing it as a
+// positional datum argument would not fix that -- it would silently drop the optargs semantics
+// and produce a different, equally broken query. That case is returned as a hard error instead.
+func (p *parser) tryTrailingOptArgs() (reql.OptArgs, bool, error) {
 	if p.peek().Type != tokenLBrace {
-		return nil, false
+		return nil, false, nil
 	}
-	savePos, saveScopes, saveVarID, saveDepth := p.pos, len(p.paramsStack), p.nextVarID, p.depth
+	savePos, saveVarID, saveDepth := p.pos, p.nextVarID, p.depth
 	o, err := p.parseOptArgs()
 	if err == nil && p.peek().Type == tokenRParen {
-		return o, true
+		return o, true, nil
+	}
+	if errors.Is(err, errBareRowInStaticValue) {
+		return nil, false, err
 	}
 	p.pos = savePos
-	if len(p.paramsStack) > saveScopes {
-		p.paramsStack = p.paramsStack[:saveScopes]
-	}
-	if len(p.localsStack) > saveScopes {
-		p.localsStack = p.localsStack[:saveScopes]
-	}
 	p.nextVarID = saveVarID
 	p.depth = saveDepth
-	return nil, false
+	return nil, false, nil
 }
 
 // parseArgAndSep parses one expression then the following separator.
@@ -2067,7 +2104,11 @@ func (p *parser) parseArgAndSep() (reql.Term, reql.OptArgs, bool, error) {
 	if p.peek().Type == tokenRParen {
 		return reql.Term{}, nil, false, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
 	}
-	if opts, ok := p.tryTrailingOptArgs(); ok {
+	opts, ok, err := p.tryTrailingOptArgs()
+	if err != nil {
+		return reql.Term{}, nil, false, err
+	}
+	if ok {
 		return arg, opts, true, nil
 	}
 	return arg, nil, false, nil
@@ -2109,7 +2150,11 @@ func (p *parser) parseArgListWithOpts() ([]reql.Term, reql.OptArgs, error) {
 		return nil, nil, err
 	}
 	// opts-only: ({key: val}) with no positional args; tryTrailingOptArgs verified ')' follows
-	if opts, ok := p.tryTrailingOptArgs(); ok {
+	opts, ok, err := p.tryTrailingOptArgs()
+	if err != nil {
+		return nil, nil, err
+	}
+	if ok {
 		p.advance()
 		return nil, opts, nil
 	}
@@ -2173,26 +2218,21 @@ func (p *parser) parseOptArgs() (reql.OptArgs, error) {
 	return p.parseObjectBody(p.parseOptArgValue)
 }
 
-// parseOptArgValue parses one optarg value: a datum literal on the fast path,
-// any expression otherwise (e.g. {index: r.desc("d")}). Terms marshal correctly
-// because OptArgs is a map[string]interface{} and Term implements MarshalJSON.
+// parseOptArgValue parses one optarg value as a full expression (e.g. a plain
+// literal, {index: r.desc("d")}, or a literal-led expression like {multi: true.eq(true)}).
+// A datum literal parses through parseExpr into a Term with termType 0, which
+// marshals to the same raw value as a native Go literal would, because OptArgs
+// is a map[string]interface{} and Term implements MarshalJSON.
 func (p *parser) parseOptArgValue() (interface{}, error) {
 	tok := p.peek()
-	switch tok.Type {
-	case tokenString:
-		p.advance()
-		return tok.Value, nil
-	case tokenNumber:
-		p.advance()
-		return parseNumberValue(tok.Value)
-	case tokenBool:
-		p.advance()
-		return tok.Value == "true", nil
-	case tokenNull:
-		p.advance()
-		return nil, nil
+	v, err := p.parseExpr()
+	if err != nil {
+		return nil, err
 	}
-	return p.parseExpr()
+	if reql.ContainsImplicitVar(v) {
+		return nil, fmt.Errorf("%w (optarg value at position %d)", errBareRowInStaticValue, tok.Pos)
+	}
+	return v, nil
 }
 
 // parseStringList parses ("s1", "s2", ...) and returns the string values.
@@ -2259,22 +2299,71 @@ func (p *parser) parseFieldSelectors() ([]interface{}, error) {
 // parseOneFieldSelector parses one pluck/without/hasFields/withFields argument:
 // a string literal, a {...} object, a [...] array, or any expression (a lambda
 // parameter holding the field name). Scalar literals other than strings can never
-// name a field, so they stay an error.
+// name a field on their own, so a bare number/bool/null is rejected immediately.
+// Every literal fast path (string, object, array) only fires when the literal is
+// the whole argument (immediately followed by ',' or ')'); a literal continued
+// by a chain or operator, e.g. "a".add("b"), null.default("a") or
+// ["a"].nth(0), falls through to the general expression path below.
 func (p *parser) parseOneFieldSelector() (interface{}, error) {
 	tok := p.peek()
+	if v, ok, err := p.tryFieldSelectorLiteral(tok); ok || err != nil {
+		return v, err
+	}
+	v, err := p.parseExpr()
+	if err != nil {
+		return nil, err
+	}
+	if reql.ContainsImplicitVar(v) {
+		return nil, fmt.Errorf("%w (field selector at position %d)", errBareRowInStaticValue, tok.Pos)
+	}
+	return v, nil
+}
+
+// tryFieldSelectorLiteral consumes tok as a self-contained field selector literal
+// (string, object or array) or rejects it outright (a bare number/bool/null, which can
+// never name a field). Returns ok=false, err=nil when tok does not start a literal fast
+// path, or when the literal is followed by a chain/operator continuation and should be
+// reparsed as a general expression instead (parser position is restored in that case).
+func (p *parser) tryFieldSelectorLiteral(tok token) (v interface{}, ok bool, err error) {
 	switch tok.Type {
 	case tokenString:
-		p.advance()
-		return tok.Value, nil
-	case tokenLBrace:
-		return p.parseDatumObject()
-	case tokenLBracket:
-		return p.parseDatumArray()
+		if next := p.peekAt(1).Type; next == tokenComma || next == tokenRParen {
+			p.advance()
+			return tok.Value, true, nil
+		}
 	case tokenNumber, tokenBool, tokenNull:
-		return nil, fmt.Errorf("expected string, object, array or expression in field selector at position %d, got %q", tok.Pos, tok.Value)
-	default:
-		return p.parseExpr()
+		if next := p.peekAt(1).Type; next == tokenComma || next == tokenRParen {
+			return nil, true, fmt.Errorf("expected string, object, array or expression in field selector at position %d, got %q", tok.Pos, tok.Value)
+		}
+	case tokenLBrace:
+		return p.tryDatumSelectorLiteral(func() (interface{}, error) { return p.parseDatumObject() })
+	case tokenLBracket:
+		return p.tryDatumSelectorLiteral(func() (interface{}, error) { return p.parseDatumArray() })
 	}
+	return nil, false, nil
+}
+
+// tryDatumSelectorLiteral parses an object or array literal via parse as a static field
+// selector (raw map/array), committing only when not followed by a chain or infix
+// operator continuation (next token is ',' or ')'). Otherwise it restores the parser
+// position so the caller can reparse the same tokens as a general expression, e.g.
+// ["a"].nth(0) or {a: 1}.merge({b: 2}). A nested expression inside the literal, e.g.
+// {a: r.expr(true)} or [r.expr("a")].nth(0), makes parse itself fail (parseDatumValue
+// has no expression fallback); position is restored the same way so the caller falls
+// back to the general expression parser, which does support expression-valued
+// object/array elements via parseObjectTerm/parseArrayTerm.
+func (p *parser) tryDatumSelectorLiteral(parse func() (interface{}, error)) (v interface{}, ok bool, err error) {
+	savePos := p.pos
+	v, err = parse()
+	if err != nil {
+		p.pos = savePos
+		return nil, false, nil //nolint:nilerr // parse failure means "not a literal here"; caller falls back to parseExpr, not a hard error
+	}
+	if next := p.peek().Type; next == tokenComma || next == tokenRParen {
+		return v, true, nil
+	}
+	p.pos = savePos
+	return nil, false, nil
 }
 
 // parseDatumValue parses a JSON-like datum literal into a native Go value.
