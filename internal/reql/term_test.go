@@ -276,6 +276,254 @@ func TestAggregationOperations(t *testing.T) {
 	}
 }
 
+func TestGroupBuilder(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	tests := []struct {
+		name    string
+		term    Term
+		want    string
+		wantErr bool
+	}{
+		{"single_field", table.Group("a"), `[144,[[15,["t"]],"a"]]`, false},
+		{"multiple_fields", table.Group("a", "b"), `[144,[[15,["t"]],"a","b"]]`, false},
+		{
+			"implicit_var_wrapped",
+			table.Group(Row().Bracket("a")),
+			`[144,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]`,
+			false,
+		},
+		{
+			"explicit_func",
+			table.Group(Func(Var(1).Bracket("a"), 1)),
+			`[144,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]`,
+			false,
+		},
+		{"field_with_optargs", table.Group("a", OptArgs{"index": "i"}), `[144,[[15,["t"]],"a"],{"index":"i"}]`, false},
+		{"optargs_only", table.Group(OptArgs{"multi": true}), `[144,[[15,["t"]]],{"multi":true}]`, false},
+		{"implicit_var_in_nested_func", table.Group(Func(Row(), 1)), "", true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), "IMPLICIT_VAR") {
+					t.Errorf("expected IMPLICIT_VAR error, got: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAggregateBuilders(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	tests := []struct {
+		name        string
+		term        Term
+		want        string
+		errContains string
+	}{
+		{name: "min_single_field", term: table.Min("f"), want: `[147,[[15,["t"]],"f"]]`},
+		{name: "max_single_field", term: table.Max("f"), want: `[148,[[15,["t"]],"f"]]`},
+		{name: "sum_single_field", term: table.Sum("f"), want: `[145,[[15,["t"]],"f"]]`},
+		{name: "avg_single_field", term: table.Avg("f"), want: `[146,[[15,["t"]],"f"]]`},
+		{name: "min_no_args", term: table.Min(), want: `[147,[[15,["t"]]]]`},
+		{name: "max_no_args", term: table.Max(), want: `[148,[[15,["t"]]]]`},
+		{name: "sum_no_args", term: table.Sum(), want: `[145,[[15,["t"]]]]`},
+		{name: "avg_no_args", term: table.Avg(), want: `[146,[[15,["t"]]]]`},
+		{
+			name: "max_optargs_only",
+			term: table.Max(OptArgs{"index": "d"}),
+			want: `[148,[[15,["t"]]],{"index":"d"}]`,
+		},
+		{
+			name: "min_field_with_optargs",
+			term: table.Min("f", OptArgs{"index": "d"}),
+			want: `[147,[[15,["t"]],"f"],{"index":"d"}]`,
+		},
+		{
+			name: "min_implicit_var_wrapped",
+			term: table.Min(Row().Bracket("p")),
+			want: `[147,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"p"]]]]]]`,
+		},
+		{
+			name: "sum_explicit_func",
+			term: table.Sum(Func(Var(1).Bracket("v"), 1)),
+			want: `[145,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"v"]]]]]]`,
+		},
+		{
+			name:        "avg_two_fields",
+			term:        table.Avg("a", "b"),
+			errContains: "at most one field argument",
+		},
+		{
+			name:        "min_two_fields",
+			term:        table.Min("a", "b"),
+			errContains: "at most one field argument",
+		},
+		{
+			name:        "sum_implicit_var_in_nested_func",
+			term:        table.Sum(Func(Row(), 1)),
+			errContains: "IMPLICIT_VAR",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.errContains != "" {
+				if err == nil {
+					t.Fatalf("expected error, got %s", got)
+				}
+				if !strings.Contains(err.Error(), tc.errContains) {
+					t.Errorf("expected error containing %q, got: %v", tc.errContains, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFuncWrapBuilders(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	rowField := Row().Bracket("a")
+	funcBody := `[69,[[2,[1]],[170,[[10,[1]],"a"]]]]`
+	tests := []struct {
+		name        string
+		term        Term
+		want        string
+		errContains string
+	}{
+		{name: "map", term: table.Map(rowField), want: `[38,[[15,["t"]],` + funcBody + `]]`},
+		{name: "concat_map", term: table.ConcatMap(rowField), want: `[40,[[15,["t"]],` + funcBody + `]]`},
+		{name: "for_each", term: table.ForEach(rowField), want: `[68,[[15,["t"]],` + funcBody + `]]`},
+		{name: "reduce", term: table.Reduce(Row()), want: `[37,[[15,["t"]],[69,[[2,[1]],[10,[1]]]]]]`},
+		{name: "contains", term: table.Contains(rowField), want: `[93,[[15,["t"]],` + funcBody + `]]`},
+		{name: "offsets_of", term: table.OffsetsOf(rowField), want: `[87,[[15,["t"]],` + funcBody + `]]`},
+		{name: "order_by", term: table.OrderBy(rowField), want: `[41,[[15,["t"]],` + funcBody + `]]`},
+		{name: "update", term: table.Update(rowField), want: `[53,[[15,["t"]],` + funcBody + `]]`},
+		{name: "replace", term: table.Replace(rowField), want: `[55,[[15,["t"]],` + funcBody + `]]`},
+		{
+			name: "explicit_func_unchanged",
+			term: table.Map(Func(Var(1), 1)),
+			want: `[38,[[15,["t"]],[69,[[2,[1]],[10,[1]]]]]]`,
+		},
+		{name: "plain_datum_unchanged", term: table.Map(Datum("a")), want: `[38,[[15,["t"]],"a"]]`},
+		{name: "implicit_var_in_nested_func", term: table.Map(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "order_by_nested_func", term: table.OrderBy(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "contains_nested_func", term: table.Contains(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "update_nested_func", term: table.Update(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "replace_nested_func", term: table.Replace(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "offsets_of_nested_func", term: table.OffsetsOf(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "concat_map_nested_func", term: table.ConcatMap(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "for_each_nested_func", term: table.ForEach(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+		{name: "reduce_nested_func", term: table.Reduce(Func(Row(), 1)), errContains: "IMPLICIT_VAR"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.errContains != "" {
+				if err == nil {
+					t.Fatalf("expected error, got %s", got)
+				}
+				if !strings.Contains(err.Error(), tc.errContains) {
+					t.Errorf("expected error containing %q, got: %v", tc.errContains, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTermValuedArguments(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{"get_field_string", table.GetField("a"), `[31,[[15,["t"]],"a"]]`},
+		{"get_field_var", table.GetField(Var(1)), `[31,[[15,["t"]],[10,[1]]]]`},
+		{"bracket_string", table.Bracket("a"), `[170,[[15,["t"]],"a"]]`},
+		{"bracket_var", table.Bracket(Var(1)), `[170,[[15,["t"]],[10,[1]]]]`},
+		{"match_string", Datum("x").Match(`\w+`), `[97,["x","\\w+"]]`},
+		{"match_var", Datum("x").Match(Var(1)), `[97,["x",[10,[1]]]]`},
+	})
+}
+
+func TestSliceTableListBranchChain(t *testing.T) {
+	t.Parallel()
+	table := Table("t")
+	tests := []struct {
+		name        string
+		term        Term
+		want        string
+		errContains string
+	}{
+		{name: "slice_two_bounds", term: table.Slice(0, 2), want: `[30,[[15,["t"]],0,2]]`},
+		{name: "slice_one_bound", term: table.Slice(-2), want: `[30,[[15,["t"]],-2]]`},
+		{name: "slice_no_bounds", term: table.Slice(), errContains: "Slice"},
+		{name: "slice_three_bounds", term: table.Slice(1, 2, 3), errContains: "Slice"},
+		{name: "table_list_top_level", term: TableList(), want: `[62,[]]`},
+		{name: "table_list_on_db", term: DB("d").TableList(), want: `[62,[[14,["d"]]]]`},
+		{name: "branch_chain", term: Datum(true).Branch(1, 2), want: `[65,[true,1,2]]`},
+		{
+			name: "branch_chain_on_expression",
+			term: table.Count().Gt(0).Branch(Array(1), Array()),
+			want: `[65,[[21,[[43,[[15,["t"]]]],0]],[2,[1]],[2,[]]]]`,
+		},
+		{name: "branch_chain_one_branch", term: Datum(true).Branch(1), errContains: "Branch"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := json.Marshal(tc.term)
+			if tc.errContains != "" {
+				if err == nil {
+					t.Fatalf("expected error, got %s", got)
+				}
+				if !strings.Contains(err.Error(), tc.errContains) {
+					t.Errorf("expected error containing %q, got: %v", tc.errContains, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestIndexOperations(t *testing.T) {
 	t.Parallel()
 	table := DB("test").Table("users")
@@ -430,6 +678,31 @@ func TestImplicitVarWrapping(t *testing.T) {
 				t.Errorf("got %s, want %s", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestContainsImplicitVarInDatumLiteral(t *testing.T) {
+	t.Parallel()
+	// mirrors what the string parser produces for an object literal like
+	// hasFields({a: r.row("x")}): a native map/slice datum (not t.opts, not a
+	// MAKE_ARRAY term) holding an embedded IMPLICIT_VAR Term.
+	rowInMap := Datum(map[string]interface{}{"a": Row().Bracket("x")})
+	if !ContainsImplicitVar(rowInMap) {
+		t.Errorf("ContainsImplicitVar() = false for r.row nested in object-literal datum, want true")
+	}
+	rowInSlice := Datum([]interface{}{Row().Bracket("a")})
+	if !ContainsImplicitVar(rowInSlice) {
+		t.Errorf("ContainsImplicitVar() = false for r.row nested in array-literal datum, want true")
+	}
+	plain := Datum(map[string]interface{}{"a": 1})
+	if ContainsImplicitVar(plain) {
+		t.Errorf("ContainsImplicitVar() = true for plain object-literal datum, want false")
+	}
+	nestedTwoLevels := Datum(map[string]interface{}{
+		"a": map[string]interface{}{"b": Row().Bracket("c")},
+	})
+	if !ContainsImplicitVar(nestedTwoLevels) {
+		t.Errorf("ContainsImplicitVar() = false for r.row nested two levels deep, want true")
 	}
 }
 

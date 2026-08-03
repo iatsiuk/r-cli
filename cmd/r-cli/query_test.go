@@ -160,6 +160,34 @@ func TestRunQueryExprReadOnlyAllowsParsedRead(t *testing.T) {
 	}
 }
 
+func TestRunQueryExprActionableHints(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		expr    string
+		wantMsg string
+	}{
+		{"new_date", `new Date()`, "r.iso8601"},
+		{"missing_r_prefix", `table("x")`, "did you mean r.table(...)"},
+		{"multiple_statements", `r.now(); r.now()`, "one query at a time"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := &cobra.Command{}
+			cmd.SetContext(context.Background())
+			cfg := &rootConfig{}
+			err := runQueryExpr(cmd, cfg, tc.expr)
+			if err == nil {
+				t.Fatalf("expected error for %q, got nil", tc.expr)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("expr %q: error %q does not contain %q", tc.expr, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
 func TestRunQueryExprLogsParseError(t *testing.T) {
 	dir := t.TempDir()
 	parselog.SetDir(dir)

@@ -482,7 +482,6 @@ func TestParseLambda_MultiParam_Errors(t *testing.T) {
 		wantMsg string
 	}{
 		{`(x, x) => x`, "duplicate parameter name"},
-		{`() => 1`, "at least one parameter"},
 		{`(a,) => a`, "trailing comma"},
 	}
 	for _, tc := range cases {
@@ -850,7 +849,6 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		input   string
 		wantMsg string
 	}{
-		{`function(){ return 1 }`, "at least one parameter"},
 		{`function(x, x){ return x }`, "duplicate parameter name"},
 		{`function(x){ }`, "unexpected token"},
 		{`function(x){ return }`, "unexpected token"},
@@ -860,6 +858,10 @@ func TestParseFunctionExpr_Errors(t *testing.T) {
 		{`function(return){ return return }`, "reserved word"}, //nolint:dupword
 		{`function(function){ return function }`, "reserved word"},
 		{`(return) => return`, "reserved word"},
+		{`function(var){ return var }`, "reserved word"},
+		{`function(let){ return let }`, "reserved word"},
+		{`function(const){ return const }`, "reserved word"},
+		{`(var) => var`, "reserved word"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
@@ -912,6 +914,21 @@ func TestParse_BracketNumericIndex(t *testing.T) {
 			"row_nth",
 			`r.row(0)`,
 			reql.Row().Nth(0),
+		},
+		{
+			"literal_led_expression_falls_through_to_bracket",
+			`r.table("t")("a".add("b"))`,
+			reql.Table("t").Bracket(reql.Datum("a").Add(reql.Datum("b"))),
+		},
+		{
+			"bool_literal_led_expression_falls_through_to_bracket",
+			`r.table("t")(true.branch("a","b"))`,
+			reql.Table("t").Bracket(reql.Datum(true).Branch("a", "b")),
+		},
+		{
+			"null_literal_led_expression_falls_through_to_bracket",
+			`r.table("t")(null.default("a"))`,
+			reql.Table("t").Bracket(reql.Datum(nil).Default(reql.Datum("a"))),
 		},
 	})
 }
@@ -1161,7 +1178,8 @@ func TestParse_BracketNumericIndex_Errors(t *testing.T) {
 		wantMsg string
 	}{
 		{`r.table("t")(0.5)`, "bracket index must be an integer"},
-		{`r.table("t")(true)`, "expected string or integer in bracket notation"},
+		{`r.table("t")(true)`, "expected string, integer or expression in bracket notation"},
+		{`r.table("t")(null)`, "expected string, integer or expression in bracket notation"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
@@ -1589,6 +1607,18 @@ func TestParse_OptArgs_IndexCreate(t *testing.T) {
 	assertTermEqual(t, got, want)
 }
 
+// TestParse_OptArgs_LiteralLedExpression guards against the literal fast path
+// in parseOptArgValue returning before checking for a trailing chain/operator:
+// without the parseExpr fallback, "true.eq(true)" would stop at "true", fail to
+// close the optargs object, and silently backtrack to a positional MAKE_OBJ
+// argument instead of an optarg -- a parse success with the wrong wire shape.
+func TestParse_OptArgs_LiteralLedExpression(t *testing.T) {
+	t.Parallel()
+	got := mustParse(t, `r.db("d").table("t").indexCreate("idx", {multi: true.eq(true)})`)
+	want := reql.DB("d").Table("t").IndexCreate("idx", reql.OptArgs{"multi": reql.Datum(true).Eq(reql.Datum(true))})
+	assertTermEqual(t, got, want)
+}
+
 func TestParse_OptArgs_Changes(t *testing.T) {
 	t.Parallel()
 	got := mustParse(t, `r.db("d").table("t").changes({include_initial: true})`)
@@ -1649,6 +1679,118 @@ func TestParse_OptArgs_CamelCaseConversion(t *testing.T) {
 	})
 }
 
+// assertWireJSON compares the marshalled term against an exact wire JSON string.
+func assertWireJSON(t *testing.T, got reql.Term, want string) {
+	t.Helper()
+	b, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if string(b) != want {
+		t.Errorf("wire JSON mismatch:\ngot:  %s\nwant: %s", b, want)
+	}
+}
+
+func TestParse_OptArgs_TermValued(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"orderBy_index_desc_lands_in_optargs_slot",
+			`r.table("t").orderBy({index: r.desc("d")})`,
+			`[41,[[15,["t"]]],{"index":[74,["d"]]}]`,
+		},
+		{
+			"orderBy_index_string",
+			`r.table("t").orderBy({index:"d"})`,
+			`[41,[[15,["t"]]],{"index":"d"}]`,
+		},
+		{
+			"between_index_desc",
+			`r.table("t").between(1, 2, {index: r.desc("d")})`,
+			`[182,[[15,["t"]],1,2],{"index":[74,["d"]]}]`,
+		},
+		{
+			"between_minval_maxval_camel_key",
+			`r.table("t").between(r.minval, r.maxval, {index:"d", rightBound:"open"})`,
+			`[182,[[15,["t"]],[180,[]],[181,[]]],{"index":"d","right_bound":"open"}]`,
+		},
+		{
+			"changes_datum_optarg",
+			`r.table("t").changes({includeInitial: true})`,
+			`[152,[[15,["t"]]],{"include_initial":true}]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_OptArgs_MissingValue(t *testing.T) {
+	t.Parallel()
+	_, err := Parse(`r.table("t").orderBy({index: })`)
+	if err == nil {
+		t.Fatal("expected error for an optarg without a value")
+	}
+	if !strings.Contains(err.Error(), "at position") {
+		t.Errorf("error %q does not report a byte position", err)
+	}
+}
+
+func TestParse_OptArgValue_BareRow_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []string{
+		`r.table("t").getAll("a",{index: r.row("i")})`,
+		`r.table("t").orderBy({index: r.row("i")})`,
+		`r.table("t").orderBy({index: {a: r.row("i")}})`,
+	}
+	for _, input := range cases {
+		t.Run(input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", input)
+			}
+			if !strings.Contains(err.Error(), "r.row has no meaning here") {
+				t.Errorf("Parse(%q): error %q does not mention the r.row restriction", input, err)
+			}
+		})
+	}
+}
+
+func TestParse_OptArgsBacktrack_VarIDs(t *testing.T) {
+	t.Parallel()
+	t.Run("lambda_before_optargs", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map(x => x("a")).orderBy({index:"d"})`)
+		want := reql.Table("t").Map(reql.Func(reql.Var(1).Bracket("a"), 1)).OrderBy(reql.OptArgs{"index": "d"})
+		assertTermEqual(t, got, want)
+	})
+	t.Run("sibling_lambdas_reuse_var1", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").filter(x => x("a")).orderBy(y => y("b"))`)
+		want := reql.Table("t").
+			Filter(reql.Func(reql.Var(1).Bracket("a"), 1)).
+			OrderBy(reql.Func(reql.Var(1).Bracket("b"), 1))
+		assertTermEqual(t, got, want)
+	})
+	// a failed trailing-optargs attempt parses the inner lambda, then backtracks;
+	// the re-parse must allocate the same VAR id, not the next free one
+	t.Run("failed_attempt_restores_var_counter", func(t *testing.T) {
+		t.Parallel()
+		got := mustParse(t, `r.table("t").map(x => x("a").orderBy({index: y => y("b")}, "c"))`)
+		inner := reql.Datum(map[string]interface{}{"index": reql.Func(reql.Var(2).Bracket("b"), 2)})
+		want := reql.Table("t").Map(reql.Func(reql.Var(1).Bracket("a").OrderBy(inner, "c"), 1))
+		assertTermEqual(t, got, want)
+	})
+}
+
 func TestParse_FieldSelectorChains(t *testing.T) {
 	t.Parallel()
 	db := `r.db("test").table("users")`
@@ -1678,6 +1820,37 @@ func TestParse_FieldSelectorChains(t *testing.T) {
 			"withFields_mixed",
 			db + `.withFields("id", {stats: true})`,
 			dbterm.WithFields("id", map[string]interface{}{"stats": true}),
+		},
+		{
+			"hasFields_literal_led_expression_falls_through",
+			db + `.hasFields("a".add("b"))`,
+			dbterm.HasFields(reql.Datum("a").Add(reql.Datum("b"))),
+		},
+		{
+			"hasFields_array_literal_led_expression_falls_through",
+			db + `.hasFields(["a"].nth(0))`,
+			dbterm.HasFields(reql.Array("a").Nth(0)),
+		},
+		{
+			"hasFields_null_literal_led_expression_falls_through",
+			db + `.hasFields(null.default("a"))`,
+			dbterm.HasFields(reql.Datum(nil).Default(reql.Datum("a"))),
+		},
+		{
+			"hasFields_object_literal_led_expression_falls_through",
+			db + `.hasFields({a: 1}.merge({b: 2}))`,
+			dbterm.HasFields(reql.Datum(map[string]interface{}{"a": reql.Datum(int64(1))}).Merge(
+				reql.Datum(map[string]interface{}{"b": reql.Datum(int64(2))}))),
+		},
+		{
+			"hasFields_object_with_nested_expression_value",
+			db + `.hasFields({a: r.expr(true)})`,
+			dbterm.HasFields(map[string]interface{}{"a": reql.Datum(true)}),
+		},
+		{
+			"hasFields_array_with_nested_expression_element_chain_falls_through",
+			db + `.hasFields([r.expr("a")].nth(0))`,
+			dbterm.HasFields(reql.Array(reql.Datum("a")).Nth(0)),
 		},
 	})
 }
@@ -1710,6 +1883,295 @@ func TestParse_FieldSelectorErrors(t *testing.T) {
 		{"without_bool_arg", `r.table("t").without(true)`, "expected"},
 		// trailing comma rejected
 		{"pluck_trailing_comma", `r.table("t").pluck("a",)`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParse_Group(t *testing.T) {
+	t.Parallel()
+	tbl := reql.Table("t")
+	runParseTests(t, []parseTest{
+		{
+			"single_string_key",
+			`r.table("t").group("a")`,
+			tbl.Group("a"),
+		},
+		{
+			"multiple_string_keys",
+			`r.table("t").group("a","b","c")`,
+			tbl.Group("a", "b", "c"),
+		},
+		{
+			"row_key_func_wrapped",
+			`r.table("t").group(r.row("a"))`,
+			tbl.Group(reql.Func(reql.Var(1).Bracket("a"), 1)),
+		},
+		{
+			"arrow_lambda_key",
+			`r.table("t").group(t => t("a"))`,
+			tbl.Group(reql.Func(reql.Var(1).Bracket("a"), 1)),
+		},
+		{
+			"function_returning_array",
+			`r.table("t").group(function(t){ return [t("a"), t("b")] })`,
+			tbl.Group(reql.Func(reql.Array(reql.Var(1).Bracket("a"), reql.Var(1).Bracket("b")), 1)),
+		},
+		{
+			"array_of_row_keys",
+			`r.table("t").group([r.row("a"), r.row("b")])`,
+			tbl.Group(reql.Func(reql.Array(reql.Var(1).Bracket("a"), reql.Var(1).Bracket("b")), 1)),
+		},
+		{
+			"lambda_and_string_key",
+			`r.table("t").group(t => t("a"), "b")`,
+			tbl.Group(reql.Func(reql.Var(1).Bracket("a"), 1), "b"),
+		},
+		{
+			"key_with_index_optargs",
+			`r.table("t").group("a",{index:"i"})`,
+			tbl.Group("a", reql.OptArgs{"index": "i"}),
+		},
+		{
+			"optargs_only",
+			`r.table("t").group({multi:true})`,
+			tbl.Group(reql.OptArgs{"multi": true}),
+		},
+		{
+			"group_count_ungroup_orderby",
+			`r.table("t").group("a").count().ungroup().orderBy(r.desc("reduction"))`,
+			tbl.Group("a").Count().Ungroup().OrderBy(reql.Desc("reduction")),
+		},
+	})
+}
+
+func TestParse_Group_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"no_args", `r.table("t").group()`, "group: requires at least one key or an optargs object"},
+		{"empty_optargs_object", `r.table("t").group({})`, "group: requires at least one key or an optargs object"},
+		{"trailing_comma", `r.table("t").group("a",)`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParse_Aggregate(t *testing.T) {
+	t.Parallel()
+	tbl := reql.Table("t")
+	runParseTests(t, []parseTest{
+		{
+			"sum_single_string_field",
+			`r.table("t").sum("f")`,
+			tbl.Sum("f"),
+		},
+		{
+			"avg_single_string_field",
+			`r.table("t").avg("f")`,
+			tbl.Avg("f"),
+		},
+		{
+			"min_single_string_field",
+			`r.table("t").min("f")`,
+			tbl.Min("f"),
+		},
+		{
+			"max_single_string_field",
+			`r.table("t").max("f")`,
+			tbl.Max("f"),
+		},
+		{
+			"min_no_args",
+			`r.table("t").min()`,
+			tbl.Min(),
+		},
+		{
+			"max_no_args",
+			`r.table("t").max()`,
+			tbl.Max(),
+		},
+		{
+			"sum_no_args",
+			`r.table("t").sum()`,
+			tbl.Sum(),
+		},
+		{
+			"avg_no_args",
+			`r.table("t").avg()`,
+			tbl.Avg(),
+		},
+		{
+			"max_index_optargs",
+			`r.table("t").max({index:"createdAt"})`,
+			tbl.Max(reql.OptArgs{"index": "createdAt"}),
+		},
+		{
+			"max_index_optargs_bracket_chain",
+			`r.table("t").max({index:"createdAt"})("createdAt")`,
+			tbl.Max(reql.OptArgs{"index": "createdAt"}).Bracket("createdAt"),
+		},
+		{
+			"min_row_nested_bracket",
+			`r.table("t").min(r.row("prices")("USD"))`,
+			tbl.Min(reql.Func(reql.Var(1).Bracket("prices").Bracket("USD"), 1)),
+		},
+		{
+			"sum_lambda_in_grouped_stream",
+			`r.table("t").group("c").sum(x => x("balance")("amount"))`,
+			tbl.Group("c").Sum(reql.Func(reql.Var(1).Bracket("balance").Bracket("amount"), 1)),
+		},
+		{
+			"min_after_map",
+			`r.table("t").map(function(t){ return t("date") }).min()`,
+			tbl.Map(reql.Func(reql.Var(1).Bracket("date"), 1)).Min(),
+		},
+		{
+			"min_field_with_index_optargs",
+			`r.table("t").min("f",{index:"i"})`,
+			tbl.Min("f", reql.OptArgs{"index": "i"}),
+		},
+	})
+}
+
+func TestParse_Aggregate_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"avg_two_fields", `r.table("t").avg("a","b")`, "at most one field argument"},
+		{"sum_two_fields", `r.table("t").sum("a","b")`, "at most one field argument"},
+		{"min_trailing_comma", `r.table("t").min("a",)`, "trailing comma"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParse_TermValuedArguments(t *testing.T) {
+	t.Parallel()
+	tbl := reql.Table("t")
+	runParseTests(t, []parseTest{
+		{
+			"bracket_string_key",
+			`r.table("t")("field")`,
+			tbl.Bracket("field"),
+		},
+		{
+			"bracket_integer_index",
+			`r.table("t")(0)`,
+			tbl.Nth(0),
+		},
+		{
+			"bracket_lambda_param_key",
+			`r.table("t").map(function(f){ return f(f) })`,
+			tbl.Map(reql.Func(reql.Var(1).Bracket(reql.Var(1)), 1)),
+		},
+		{
+			"hasFields_lambda_param",
+			`r.expr(["a","b"]).map(function(f){ return r.table("t").filter(function(o){ return o.hasFields(f) }).count() })`,
+			reql.Array("a", "b").Map(reql.Func(
+				tbl.Filter(reql.Func(reql.Var(2).HasFields(reql.Var(1)), 2)).Count(), 1)),
+		},
+		{
+			"getField_lambda_param",
+			`r.table("t").map(function(f){ return r.table("u").get(f).getField(f) })`,
+			tbl.Map(reql.Func(reql.Table("u").Get(reql.Var(1)).GetField(reql.Var(1)), 1)),
+		},
+		{
+			"match_lambda_param",
+			`r.table("t").map(function(f){ return f.match(f) })`,
+			tbl.Map(reql.Func(reql.Var(1).Match(reql.Var(1)), 1)),
+		},
+		{
+			"getField_string_key",
+			`r.table("t").getField("a")`,
+			tbl.GetField("a"),
+		},
+		{
+			"match_string_pattern",
+			`r.table("t")("name").match("^a")`,
+			tbl.Bracket("name").Match("^a"),
+		},
+		{
+			"hasFields_array_selector",
+			`r.table("t").filter(f => f.hasFields(["a","b"]))`,
+			tbl.Filter(reql.Func(reql.Var(1).HasFields(reql.Array("a", "b")), 1)),
+		},
+		{
+			"pluck_nested_object_selector",
+			`r.table("t").pluck("a",{"p":["b","c"]})`,
+			tbl.Pluck("a", map[string]interface{}{"p": reql.Array("b", "c")}),
+		},
+		{
+			"pluck_plain_string",
+			`r.table("t").pluck("a")`,
+			tbl.Pluck("a"),
+		},
+		{
+			"without_lambda_param_selector",
+			`r.table("t").map(function(f){ return r.table("u").without(f) })`,
+			tbl.Map(reql.Func(reql.Table("u").Without(reql.Var(1)), 1)),
+		},
+		{
+			"withFields_array_selector",
+			`r.table("t").withFields(["a","b"])`,
+			tbl.WithFields(reql.Array("a", "b")),
+		},
+	})
+}
+
+func TestParse_TermValuedArguments_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"bracket_float_index", `r.table("t")(0.5)`, "bracket index must be an integer"},
+		{"bracket_empty", `r.table("t")()`, "position"},
+		{"getField_no_arg", `r.table("t").getField()`, "position"},
+		{"hasFields_trailing_comma", `r.table("t").hasFields("a",)`, "trailing comma"},
+		{"without_bare_row", `r.table("t").without(r.row("a"))`, "r.row has no meaning here"},
+		{"pluck_bare_row", `r.table("t").pluck(r.row("a"))`, "r.row has no meaning here"},
+		{"bracket_bare_row", `r.table("t")(r.row("a"))`, "r.row has no meaning here"},
+		{"getField_bare_row", `r.table("t").getField(r.row("a"))`, "r.row has no meaning here"},
+		{"match_bare_row", `r.table("t").getField("a").match(r.row("b"))`, "r.row has no meaning here"},
+		{"hasFields_bare_row_nested_in_object", `r.table("t").hasFields({a: r.row("x")})`, "r.row has no meaning here"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1768,5 +2230,512 @@ func TestParse_ObjectLiteralWriteDetection(t *testing.T) {
 	}
 	if !term.ContainsWrite() {
 		t.Fatal("ContainsWrite() = false for write hidden in filter's object-literal predicate, want true")
+	}
+}
+
+func TestParse_TableListTopLevel(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"top_level_no_args", `r.tableList()`, `[62,[]]`},
+		{"db_scoped", `r.db("d").tableList()`, `[62,[[14,["d"]]]]`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_BranchChain(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"count_gt_zero",
+			`r.table("t").count().gt(0).branch([1],[])`,
+			`[65,[[21,[[43,[[15,["t"]]]],0]],[2,[1]],[2,[]]]]`,
+		},
+		{
+			"receiver_is_the_test",
+			`r.row("a").branch("yes","no")`,
+			`[65,[[170,[[13,[]],"a"]],"yes","no"]]`,
+		},
+		{
+			"multi_condition",
+			`r.row("a").branch("x", r.row("b"), "y", "z")`,
+			`[65,[[170,[[13,[]],"a"]],"x",[170,[[13,[]],"b"]],"y","z"]]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_SliceVariadic(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"one_bound", `r.table("t").slice(-2)`, `[30,[[15,["t"]],-2]]`},
+		{"two_bounds", `r.table("t").slice(0,2)`, `[30,[[15,["t"]],0,2]]`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_EmptyParamLambda(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"function_no_params",
+			`r.table("t").group(function(){ return true })`,
+			`[144,[[15,["t"]],[69,[[2,[]],true]]]]`,
+		},
+		{
+			"arrow_no_params",
+			`r.table("t").map(() => 1)`,
+			`[38,[[15,["t"]],[69,[[2,[]],1]]]]`,
+		},
+		{
+			"single_param_unchanged",
+			`r.table("t").filter(x => x("a"))`,
+			`[39,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_TableListBranchSlice_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"table_list_with_arg", `r.tableList("x")`, "expected ')'"},
+		{"branch_even_total", `r.row("a").branch("only")`, "even number of arguments"},
+		{"branch_no_args", `r.row("a").branch()`, "even number of arguments"},
+		{"slice_no_args", `r.table("t").slice()`, "1 or 2 integer bounds"},
+		{"slice_three_bounds", `r.table("t").slice(0,1,2)`, "1 or 2 integer bounds"},
+		{"slice_trailing_comma", `r.table("t").slice(0,)`, "trailing comma"},
+		{"slice_non_integer", `r.table("t").slice(0.5)`, "expected integer"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestParse_InfixArithmetic(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"add", `r.expr(1+2)`, `[24,[1,2]]`},
+		{"sub", `r.expr(1-2)`, `[25,[1,2]]`},
+		{"mul_chain_left_associative", `r.expr(60*60*24)`, `[26,[[26,[60,60]],24]]`},
+		{"mul_binds_tighter_than_add", `r.expr(1+2*3)`, `[24,[1,[26,[2,3]]]]`},
+		{"parentheses_win_over_precedence", `r.expr((1+2)*3)`, `[26,[[24,[1,2]],3]]`},
+		{"sub_left_associative", `r.expr(10-2-3)`, `[25,[[25,[10,2]],3]]`},
+		{"div_then_mod_left_associative", `r.expr(10/2%3)`, `[28,[[27,[10,2]],3]]`},
+		{"negative_literal_after_operator", `r.expr(1 - -2)`, `[25,[1,-2]]`},
+		{"folded_mul_chain_as_method_argument", `r.now().sub(60*60*24*30)`, `[25,[[103,[]],[26,[[26,[[26,[60,60]],24]],30]]]]`},
+		{
+			"between_arithmetic_upper_bound",
+			`r.table("t").between(1779222884700, 1779222884700+1, {index:"d"})`,
+			`[182,[[15,["t"]],1779222884700,[24,[1779222884700,1]]],{"index":"d"}]`,
+		},
+		{
+			"method_form_add_unchanged",
+			`r.table("t").filter(x => x("a").add(1))`,
+			`[39,[[15,["t"]],[69,[[2,[1]],[24,[[170,[[10,[1]],"a"]],1]]]]]]`,
+		},
+		{
+			"operands_are_chained_terms",
+			`r.table("t").count()+1`,
+			`[24,[[43,[[15,["t"]]]],1]]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_InfixArithmetic_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+	}{
+		{"missing_right_operand", `r.expr(1+)`},
+		{"missing_multiplicative_operand", `r.expr(60*)`},
+		{"missing_left_operand", `r.expr(*2)`},
+		{"dangling_operator_at_eof", `r.expr(1) +`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}
+
+func TestParse_FunctionLocals(t *testing.T) {
+	t.Parallel()
+	runParseTests(t, []parseTest{
+		{
+			"string_local_inlined_into_match",
+			`r.table("t").filter(function(p){ var re = "x"; return p("id").match(re) })`,
+			reql.Table("t").Filter(reql.Func(reql.Var(1).Bracket("id").Match("x"), 1)),
+		},
+		{
+			"local_bound_to_parameter_expression",
+			`function(a){ var b = a("x"); return b.add(1) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(1), 1),
+		},
+		{
+			"local_used_twice_duplicates_subtree",
+			`function(a){ var b = a("x"); return b.add(b) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(reql.Var(1).Bracket("x")), 1),
+		},
+		{
+			"multiple_bindings",
+			`function(a){ var b = 1; var c = 2; return a("x").add(b).add(c) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(1).Add(2), 1),
+		},
+		{
+			"let_keyword",
+			`function(a){ let b = a("x"); return b.add(1) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(1), 1),
+		},
+		{
+			"const_keyword",
+			`function(a){ const b = a("x"); return b.add(1) }`,
+			reql.Func(reql.Var(1).Bracket("x").Add(1), 1),
+		},
+		{
+			"lambda_bound_to_local",
+			`function(a){ var b = function(c){ return c }; return a.map(b) }`,
+			reql.Func(reql.Var(1).Map(reql.Func(reql.Var(2), 2)), 1),
+		},
+		{
+			"local_shadows_parameter",
+			`function(a){ var a = 1; return a }`,
+			reql.Func(reql.Datum(1), 1),
+		},
+		{
+			"local_visible_in_nested_lambda",
+			`function(a){ var b = a("x"); return a.map(function(c){ return c.add(b) }) }`,
+			reql.Func(reql.Var(1).Map(reql.Func(reql.Var(2).Add(reql.Var(1).Bracket("x")), 2)), 1),
+		},
+		{
+			"nested_parameter_not_shadowed_by_outer_local_of_same_name",
+			`function(doc){ var name = doc; return doc.map(function(name){ return name }) }`,
+			reql.Func(reql.Var(1).Map(reql.Func(reql.Var(2), 2)), 1),
+		},
+		{
+			"local_out_of_scope_after_function",
+			`r.table("t").filter(function(p){ var b = 1; return p("a").eq(b) }).map(function(b){ return b("c") })`,
+			reql.Table("t").
+				Filter(reql.Func(reql.Var(1).Bracket("a").Eq(1), 1)).
+				Map(reql.Func(reql.Var(1).Bracket("c"), 1)),
+		},
+		{
+			"body_without_locals_unchanged",
+			`function(a){ return a("x") }`,
+			reql.Func(reql.Var(1).Bracket("x"), 1),
+		},
+	})
+}
+
+func TestParse_FunctionLocals_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"missing_semicolon", `function(a){ var b = 1 return b }`, "expected ';'"},
+		{"reserved_name", `function(a){ var true = 1; return a }`, "reserved word"},
+		{"reserved_keyword_name", `function(a){ var const = 1; return a }`, "reserved word"},
+		{"missing_assign", `function(a){ var b; return b }`, "expected '='"},
+		{"missing_value", `function(a){ var b = ; return b }`, "unexpected token"},
+		{"missing_name", `function(a){ var = 1; return a }`, "expected identifier"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}
+
+// TestParse_FunctionLocals_ProductionExpression parses the route-switcher expression
+// recorded in the parser error log, whose concatMap body opens with a var binding.
+func TestParse_FunctionLocals_ProductionExpression(t *testing.T) {
+	t.Parallel()
+	const expr = `
+r.db("restored").table("routes")
+  .getAll("/games/wow/coaching", {index: "url.en"})
+  .concatMap(function(route){
+    var sw = route("pageConfiguration").default([])
+      .filter(function(p){ return p("type").default("").eq("routeSwitcher") })
+      .nth(0).default(null);
+    return r.branch(
+      sw.eq(null),
+      [],
+      sw("data").default([]).map(function(id){
+        return { parentId: route("id"), parentUrl: route("url")("en"), linkedId: id }
+      })
+    );
+  })`
+	if _, err := Parse(expr); err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+}
+
+func TestParse_ArrowBlockBody(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"block_body_returns_object",
+			`r.table("t").map(g => { return {a: g("b")} })`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"a":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"block_body_with_local",
+			`r.table("t").map(g => { var x = g("b"); return {a: x} })`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"a":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"object_literal_body_unchanged",
+			`r.table("t").map(g => {a: g("b")})`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"a":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"parenthesized_object_literal_unchanged",
+			`r.table("t").map(g => ({a: g("b")}))`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"a":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"multi_parameter_arrow_with_block_body",
+			`r.table("t").map((x, y) => { return x.add(y) })`,
+			`[38,[[15,["t"]],[69,[[2,[1,2]],[24,[[10,[1]],[10,[2]]]]]]]]`,
+		},
+		{
+			"single_parenthesized_parameter_with_block_body",
+			`r.table("t").map((g) => { return g("b") })`,
+			`[38,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"b"]]]]]]`,
+		},
+		{
+			"block_body_without_return_keyword",
+			`r.table("t").map(g => { var x = g("b"); x })`,
+			`[38,[[15,["t"]],[69,[[2,[1]],[170,[[10,[1]],"b"]]]]]]`,
+		},
+		{
+			"object_literal_with_return_key_unchanged",
+			`r.table("t").map(g => {return: g("b")})`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"return":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+		{
+			"object_literal_with_var_key_unchanged",
+			`r.table("t").map(g => {var: g("b")})`,
+			`[38,[[15,["t"]],[69,[[2,[1]],{"var":[170,[[10,[1]],"b"]]}]]]]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_ArrowBlockBody_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+	}{
+		{"empty_return", `r.table("t").map(g => { return })`},
+		{"unterminated_block", `r.table("t").map(g => { return g("b") )`},
+		{"local_without_body", `r.table("t").map(g => { var x = 1; })`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}
+
+func TestParse_UnsupportedInputHints(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name     string
+		input    string
+		wantMsgs []string
+	}{
+		{
+			"new_date_in_between_bound",
+			`r.table("t").between(["A", new Date("2026-06-19T07:40:13.981Z").getTime()], ["A", r.maxval], {index:"i"})`,
+			[]string{"new Date()", "r.iso8601", "r.epochTime"},
+		},
+		{
+			"new_date_standalone",
+			`new Date()`,
+			[]string{"new Date()", "r.iso8601", "r.epochTime"},
+		},
+		{
+			"table_without_r_prefix",
+			`table("x").count()`,
+			[]string{`unknown identifier "table"`, "r.table(...)"},
+		},
+		{
+			"db_without_r_prefix",
+			`db("x").tableList()`,
+			[]string{`unknown identifier "db"`, "r.db(...)"},
+		},
+		{
+			"multiple_statements",
+			`r.table("x").count(); r.table("y").count()`,
+			[]string{"multiple statements", "one query at a time", "--file", "---"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			for _, want := range tc.wantMsgs {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), want)
+				}
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}
+
+// TestParse_UnknownIdentifier_Generic keeps the generic message for names that are not
+// builders, so only a missing r. prefix gets the suggestion.
+func TestParse_UnknownIdentifier_Generic(t *testing.T) {
+	t.Parallel()
+	_, err := Parse(`notAKnownName("x")`)
+	if err == nil {
+		t.Fatal("Parse: expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), `unexpected token "notAKnownName"`) {
+		t.Errorf("error %q is not the generic unexpected-token error", err.Error())
+	}
+	if strings.Contains(err.Error(), "did you mean") {
+		t.Errorf("error %q must not suggest an r.* builder", err.Error())
+	}
+}
+
+// TestParse_ArrowBlockBody_ProductionExpression parses the account-balance report
+// recorded in the parser error log, whose map body is an arrow lambda block.
+func TestParse_ArrowBlockBody_ProductionExpression(t *testing.T) {
+	t.Parallel()
+	const expr = `r.table("accounts").filter(t => t("balance")("amount").gt(0)).group("currency").ungroup().` +
+		`map(g => {return {currency:g("group"), accounts:g("reduction").count(), ` +
+		`total:g("reduction").sum(x=>x("balance")("amount"))}}).orderBy(r.desc("accounts"))`
+	if _, err := Parse(expr); err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+}
+
+func TestParse_AssignToken_Errors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"equality_operator", `r.expr(1==2)`, `expected ')', got "="`},
+		{"bare_assign", `=`, `unexpected token "="`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
 	}
 }

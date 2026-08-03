@@ -27,6 +27,12 @@ const (
 	tokenNull
 	tokenArrow
 	tokenSemicolon
+	tokenPlus
+	tokenMinus
+	tokenStar
+	tokenSlash
+	tokenPercent
+	tokenAssign
 )
 
 // token is a single lexical unit with its type, raw value, and rune index.
@@ -40,6 +46,7 @@ type token struct {
 type lexer struct {
 	input []rune
 	pos   int
+	prev  token // last emitted token, disambiguates '-' as sign or operator
 }
 
 // newLexer creates a lexer for the given input string.
@@ -70,28 +77,79 @@ func (l *lexer) skipWhitespace() {
 }
 
 func (l *lexer) next() (token, error) {
+	tok, err := l.scan()
+	if err != nil {
+		return token{}, err
+	}
+	l.prev = tok
+	return tok, nil
+}
+
+func (l *lexer) scan() (token, error) {
 	l.skipWhitespace()
 	if l.pos >= len(l.input) {
 		return token{Type: tokenEOF, Pos: l.pos}, nil
 	}
 	ch := l.input[l.pos]
 	if ch == '=' {
-		return l.readArrow()
+		return l.readArrow(), nil
 	}
 	if tok, ok := l.punctToken(ch); ok {
+		return tok, nil
+	}
+	if tok, ok := l.operatorToken(ch); ok {
 		return tok, nil
 	}
 	return l.readValue(ch)
 }
 
-func (l *lexer) readArrow() (token, error) {
+func (l *lexer) readArrow() token {
 	start := l.pos
 	l.pos++ // consume '='
 	if l.pos < len(l.input) && l.input[l.pos] == '>' {
 		l.pos++ // consume '>'
-		return token{Type: tokenArrow, Value: "=>", Pos: start}, nil
+		return token{Type: tokenArrow, Value: "=>", Pos: start}
 	}
-	return token{}, fmt.Errorf("unexpected character '=' at position %d", start)
+	return token{Type: tokenAssign, Value: "=", Pos: start}
+}
+
+// operatorTypes maps arithmetic operator characters to their token type.
+var operatorTypes = map[rune]tokenType{
+	'+': tokenPlus,
+	'-': tokenMinus,
+	'*': tokenStar,
+	'/': tokenSlash,
+	'%': tokenPercent,
+}
+
+// keywords that cannot end an expression, so a following '-' is a sign.
+var stmtKeywords = map[string]bool{"return": true, "var": true, "let": true, "const": true}
+
+// operatorToken returns an arithmetic operator token if ch matches. A '-' is an
+// operator only after a token that can end an expression; otherwise it is the
+// sign of a number literal and is left to readNumber.
+func (l *lexer) operatorToken(ch rune) (token, bool) {
+	typ, ok := operatorTypes[ch]
+	if !ok {
+		return token{}, false
+	}
+	if ch == '-' && !l.prevEndsExpr() {
+		return token{}, false
+	}
+	start := l.pos
+	l.pos++
+	return token{Type: typ, Value: string(ch), Pos: start}, true
+}
+
+func (l *lexer) prevEndsExpr() bool {
+	switch l.prev.Type {
+	case tokenIdent:
+		return !stmtKeywords[l.prev.Value]
+	case tokenNumber, tokenString, tokenBool, tokenNull, tokenRParen, tokenRBracket, tokenRBrace:
+		return true
+	default:
+		return false
+	}
 }
 
 // punctTypes maps single-character punctuation to its token type.
