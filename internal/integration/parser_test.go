@@ -1055,3 +1055,116 @@ func TestParserArrowBlockBodyGroupPipeline(t *testing.T) {
 		t.Errorf("second row = %+v, want EUR/1/5", got[1])
 	}
 }
+
+func TestParserOrderBySortKeyExpression(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "accounts")
+	seedTable(t, exec, dbName, "accounts", []map[string]interface{}{
+		{"id": "a", "balance": map[string]interface{}{"express": 10, "amount": 4}},
+		{"id": "b", "balance": map[string]interface{}{"express": 30, "amount": 1}},
+		{"id": "c", "balance": map[string]interface{}{"express": 20, "amount": 15}},
+	})
+
+	cases := []struct {
+		name string
+		expr string
+		want []string
+	}{
+		{
+			"desc_lambda_key",
+			fmt.Sprintf(`r.db("%s").table("accounts").orderBy(r.desc(acc => acc("balance")("express").sub(acc("balance")("amount"))))`, dbName),
+			[]string{"b", "a", "c"},
+		},
+		{
+			"asc_function_key",
+			fmt.Sprintf(`r.db("%s").table("accounts").orderBy(r.asc(function(acc){ return acc("balance")("express") }))`, dbName),
+			[]string{"a", "c", "b"},
+		},
+		{
+			"desc_bare_row_key",
+			fmt.Sprintf(`r.db("%s").table("accounts").orderBy(r.desc(r.row("balance")("amount")))`, dbName),
+			[]string{"c", "a", "b"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// a function sort key is sorted in memory, so the server answers
+			// with a single atom holding the ordered array
+			var rows []json.RawMessage
+			if err := json.Unmarshal(parseRunAtom(t, exec, tc.expr), &rows); err != nil {
+				t.Fatalf("unmarshal atom array: %v", err)
+			}
+			got := rowIDs(t, rows)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("ids = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestParserIndexCreateFunction creates functional secondary indexes through the
+// parser and queries them, proving the server accepts the emitted term shape.
+func TestParserIndexCreateFunction(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "a", "first": "ali", "last": "one", "tags": reql.Array("x", "y")},
+		{"id": "b", "first": "bob", "last": "two", "tags": reql.Array("y", "z")},
+	})
+
+	createExprs := []string{
+		fmt.Sprintf(`r.db("%s").table("docs").indexCreate("full", function(d){ return d("first").add(d("last")) })`, dbName),
+		fmt.Sprintf(`r.db("%s").table("docs").indexCreate("tag", r.row("tags"), {multi: true})`, dbName),
+	}
+	for _, expr := range createExprs {
+		term, err := parser.Parse(expr)
+		if err != nil {
+			t.Fatalf("parse %q: %v", expr, err)
+		}
+		_, cur, err := exec.Run(ctx, term, nil)
+		closeCursor(cur)
+		if err != nil {
+			t.Fatalf("run %q: %v", expr, err)
+		}
+	}
+	for _, idx := range []string{"full", "tag"} {
+		_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").IndexWait(idx), nil)
+		closeCursor(cur)
+		if err != nil {
+			t.Fatalf("indexWait %s: %v", idx, err)
+		}
+	}
+
+	cases := []struct {
+		name string
+		expr string
+		want []string
+	}{
+		{
+			"function_index_lookup",
+			fmt.Sprintf(`r.db("%s").table("docs").getAll("alione", {index: "full"})`, dbName),
+			[]string{"a"},
+		},
+		{
+			"multi_index_lookup",
+			fmt.Sprintf(`r.db("%s").table("docs").getAll("y", {index: "tag"})`, dbName),
+			[]string{"a", "b"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := rowIDs(t, parseRunRows(t, exec, tc.expr))
+			sort.Strings(got)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("ids = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

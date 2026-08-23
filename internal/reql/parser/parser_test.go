@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -2722,6 +2723,210 @@ func TestParse_AssignToken_Errors(t *testing.T) {
 	}{
 		{"equality_operator", `r.expr(1==2)`, `expected ')', got "="`},
 		{"bare_assign", `=`, `unexpected token "="`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}
+
+func TestParse_SortKeyExpressions(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"desc_string_literal_unchanged",
+			`r.table("t").orderBy(r.desc("a"))`,
+			`[41,[[15,["t"]],[74,["a"]]]]`,
+		},
+		{
+			"asc_string_literal_unchanged",
+			`r.table("t").orderBy(r.asc("a"))`,
+			`[41,[[15,["t"]],[73,["a"]]]]`,
+		},
+		{
+			"desc_index_optarg_unchanged",
+			`r.table("t").orderBy({index: r.desc("d")})`,
+			`[41,[[15,["t"]]],{"index":[74,["d"]]}]`,
+		},
+		{
+			"desc_arrow_lambda",
+			`r.table("t").orderBy(r.desc(d => d("a")))`,
+			`[41,[[15,["t"]],[74,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"desc_bare_row",
+			`r.table("t").orderBy(r.desc(r.row("a")))`,
+			`[41,[[15,["t"]],[74,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"asc_function_body",
+			`r.table("t").orderBy(r.asc(function(d){ return d("a") }))`,
+			`[41,[[15,["t"]],[73,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"desc_nested_field_arithmetic",
+			`r.table("t").orderBy(r.desc(acc => acc("balance")("express").sub(acc("balance")("amount"))))`,
+			`[41,[[15,["t"]],[74,[[69,[[2,[1]],[25,[[170,[[170,[[10,[1]],"balance"]],"express"]],[170,[[170,[[10,[1]],"balance"]],"amount"]]]]]]]]]]`,
+		},
+		{
+			// funcWrap leaves no IMPLICIT_VAR behind, so a bare r.row inside
+			// r.desc reaches the optargs slot instead of being rejected
+			"desc_bare_row_in_index_optarg",
+			`r.table("t").orderBy({index: r.desc(r.row("a"))})`,
+			`[41,[[15,["t"]]],{"index":[74,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]}]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_SortKeyErrors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.table("t").orderBy(r.desc())`, "position 28"},
+		{`r.table("t").orderBy(r.desc("a","b"))`, "expected ')'"},
+		{`r.table("t").orderBy(r.asc())`, "position 27"},
+		{`r.table("t").orderBy(r.asc("a","b"))`, "expected ')'"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+// TestParse_AbsHint pins the actionable message for .abs(), which has no ReQL term.
+func TestParse_AbsHint(t *testing.T) {
+	t.Parallel()
+	_, err := Parse(`r.expr(-5).abs()`)
+	if err == nil {
+		t.Fatal("Parse: expected error, got nil")
+	}
+	want := ".abs() is not a ReQL term, use r.branch(x.lt(0), x.mul(-1), x) at position 11"
+	if err.Error() != want {
+		t.Errorf("error %q, want %q", err.Error(), want)
+	}
+}
+
+// TestParse_AbsHint_InChain reports the hint at the position of the method name,
+// not the start of the expression.
+func TestParse_AbsHint_InChain(t *testing.T) {
+	t.Parallel()
+	expr := `r.table("t").map(d => d("a").sub(d("b")).abs())`
+	_, err := Parse(expr)
+	if err == nil {
+		t.Fatal("Parse: expected error, got nil")
+	}
+	pos := strings.Index(expr, "abs")
+	want := fmt.Sprintf(".abs() is not a ReQL term, use r.branch(x.lt(0), x.mul(-1), x) at position %d", pos)
+	if err.Error() != want {
+		t.Errorf("error %q, want %q", err.Error(), want)
+	}
+}
+
+// TestParse_UnknownMethod_Generic keeps the generic message for method names that
+// have no dedicated hint.
+func TestParse_UnknownMethod_Generic(t *testing.T) {
+	t.Parallel()
+	cases := []string{"notAMethod", "absolute", "abs2"}
+	for _, name := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			expr := fmt.Sprintf(`r.table("t").%s()`, name)
+			_, err := Parse(expr)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", expr)
+			}
+			want := fmt.Sprintf("unknown method .%s at position %d", name, strings.Index(expr, name))
+			if err.Error() != want {
+				t.Errorf("error %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
+func TestParse_IndexCreateExpressions(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"name_only_unchanged",
+			`r.table("t").indexCreate("i")`,
+			`[75,[[15,["t"]],"i"]]`,
+		},
+		{
+			"name_and_opts_unchanged",
+			`r.table("t").indexCreate("i",{multi:true})`,
+			`[75,[[15,["t"]],"i"],{"multi":true}]`,
+		},
+		{
+			"index_function",
+			`r.table("t").indexCreate("full", function(d){ return d("a").add(d("b")) })`,
+			`[75,[[15,["t"]],"full",[69,[[2,[1]],[24,[[170,[[10,[1]],"a"]],[170,[[10,[1]],"b"]]]]]]]]`,
+		},
+		{
+			"bare_row_with_opts",
+			`r.table("t").indexCreate("m", r.row("a"), {multi:true})`,
+			`[75,[[15,["t"]],"m",[69,[[2,[1]],[170,[[10,[1]],"a"]]]]],{"multi":true}]`,
+		},
+		{
+			"arrow_lambda_with_geo_opts",
+			`r.table("t").indexCreate("g", d => d("loc"), {geo:true})`,
+			`[75,[[15,["t"]],"g",[69,[[2,[1]],[170,[[10,[1]],"loc"]]]]],{"geo":true}]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_IndexCreateErrors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"non_string_name", `r.table("t").indexCreate(1)`, `expected string`},
+		{"lambda_name", `r.table("t").indexCreate(d => d("a"))`, `expected string`},
+		{"no_args", `r.table("t").indexCreate()`, `expected string`},
+		{"trailing_comma", `r.table("t").indexCreate("i",)`, `trailing comma`},
+		{"two_index_functions", `r.table("t").indexCreate("i", d => d("a"), d => d("b"))`, `at most one index function`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

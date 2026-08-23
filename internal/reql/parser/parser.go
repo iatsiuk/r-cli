@@ -447,6 +447,12 @@ var rBuilders map[string]rBuilderFn
 // chainBuilders maps chained method names to builder functions.
 var chainBuilders map[string]chainFn
 
+// unsupportedChainHints maps method names that look like ReQL but have no term in the
+// wire protocol to an actionable rewrite, replacing the generic unknown-method message.
+var unsupportedChainHints = map[string]string{
+	"abs": ".abs() is not a ReQL term, use r.branch(x.lt(0), x.mul(-1), x)",
+}
+
 func (p *parser) parseChain(t reql.Term) (reql.Term, error) {
 	for {
 		switch p.peek().Type {
@@ -458,6 +464,9 @@ func (p *parser) parseChain(t reql.Term) (reql.Term, error) {
 			}
 			fn, ok := chainBuilders[method.Value]
 			if !ok {
+				if hint, has := unsupportedChainHints[method.Value]; has {
+					return reql.Term{}, fmt.Errorf("%s at position %d", hint, method.Pos)
+				}
 				return reql.Term{}, fmt.Errorf("unknown method .%s at position %d", method.Value, method.Pos)
 			}
 			t, err = fn(p, t)
@@ -592,20 +601,22 @@ func validateLambdaParam(tok token, seen []string) error {
 	return nil
 }
 
+// parseRDesc parses r.desc(expr); the argument is funcWrap-ped by the builder,
+// so a lambda or a bare r.row is as valid as a field name.
 func parseRDesc(p *parser) (reql.Term, error) {
-	name, err := p.parseOneStringArg()
+	field, err := p.parseOneArg()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return reql.Desc(name), nil
+	return reql.Desc(field), nil
 }
 
 func parseRAsc(p *parser) (reql.Term, error) {
-	name, err := p.parseOneStringArg()
+	field, err := p.parseOneArg()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return reql.Asc(name), nil
+	return reql.Asc(field), nil
 }
 
 func parseRMinVal(p *parser) (reql.Term, error) {
@@ -1155,6 +1166,45 @@ func chainAggregate(name string, build func(reql.Term, ...interface{}) reql.Term
 		}
 		return build(t, argsWithOpts(args, opts)...), nil
 	}
+}
+
+// chainIndexCreate parses indexCreate("name") with an optional index function
+// and an optional trailing OptArgs, in that order.
+func chainIndexCreate(p *parser, t reql.Term) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	nameTok, err := p.expect(tokenString)
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenRParen {
+		p.advance()
+		return t.IndexCreate(nameTok.Value), nil
+	}
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenRParen {
+		return reql.Term{}, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
+	}
+	pos := p.peek().Pos
+	opts, ok, err := p.tryTrailingOptArgs()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if ok {
+		p.advance()
+		return t.IndexCreate(nameTok.Value, opts), nil
+	}
+	args, opts, err := p.parseArgListBody()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if len(args) > 1 {
+		return reql.Term{}, fmt.Errorf("indexCreate: takes at most one index function at position %d", pos)
+	}
+	return t.IndexCreate(nameTok.Value, argsWithOpts(args, opts)...), nil
 }
 
 func chainLimit(p *parser, t reql.Term) (reql.Term, error) {
@@ -1882,7 +1932,7 @@ func registerAdminChain(m map[string]chainFn) {
 	m["tableCreate"] = strArgChainWithOpts(func(t reql.Term, s string, opts ...reql.OptArgs) reql.Term { return t.TableCreate(s, opts...) })
 	m["tableDrop"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.TableDrop(s) })
 	m["tableList"] = noArgChain(func(t reql.Term) reql.Term { return t.TableList() })
-	m["indexCreate"] = strArgChainWithOpts(func(t reql.Term, s string, opts ...reql.OptArgs) reql.Term { return t.IndexCreate(s, opts...) })
+	m["indexCreate"] = chainIndexCreate
 	m["indexDrop"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.IndexDrop(s) })
 	m["indexList"] = noArgChain(func(t reql.Term) reql.Term { return t.IndexList() })
 	m["indexWait"] = chainIndexWait

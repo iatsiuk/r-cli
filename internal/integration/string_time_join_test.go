@@ -344,9 +344,9 @@ func TestSplit(t *testing.T) {
 	ctx := context.Background()
 
 	cases := []struct {
-		name  string
-		term  reql.Term
-		want  []string
+		name string
+		term reql.Term
+		want []string
 	}{
 		{
 			name: "delimiter",
@@ -555,7 +555,7 @@ func TestOuterJoin(t *testing.T) {
 	unmatched := 0
 	for _, raw := range rows {
 		var pair struct {
-			Left  map[string]interface{} `json:"left"`
+			Left  map[string]interface{}  `json:"left"`
 			Right *map[string]interface{} `json:"right"`
 		}
 		if err := json.Unmarshal(raw, &pair); err != nil {

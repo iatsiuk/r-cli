@@ -328,13 +328,25 @@ func (t Term) Between(lower, upper interface{}, opts ...OptArgs) Term {
 }
 
 // Asc creates an ASC term ([73, [field]]) for use with OrderBy.
-func Asc(field string) Term {
-	return Term{termType: proto.TermAsc, args: []Term{Datum(field)}}
+// The field may be a name or any expression; an expression containing Row()
+// is wrapped in FUNC like the official drivers do.
+func Asc(field interface{}) Term {
+	return sortKey(proto.TermAsc, field)
 }
 
 // Desc creates a DESC term ([74, [field]]) for use with OrderBy.
-func Desc(field string) Term {
-	return Term{termType: proto.TermDesc, args: []Term{Datum(field)}}
+// The field may be a name or any expression; an expression containing Row()
+// is wrapped in FUNC like the official drivers do.
+func Desc(field interface{}) Term {
+	return sortKey(proto.TermDesc, field)
+}
+
+func sortKey(tt proto.TermType, field interface{}) Term {
+	wrapped, err := funcWrap(field)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: tt, args: []Term{wrapped}}
 }
 
 // OrderBy creates an ORDERBY term ([41, [term, fields...]], opts?).
@@ -585,12 +597,22 @@ func (t Term) Round() Term {
 }
 
 // IndexCreate creates an INDEX_CREATE term ([75, [table, name]], opts?).
-// Optional OptArgs can specify options like {"geo": true, "multi": true}.
-func (t Term) IndexCreate(name string, opts ...OptArgs) Term {
-	term := Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
-	if len(opts) > 0 {
-		term.opts = opts[0]
+// An optional index function may follow the name, and a trailing OptArgs can
+// specify options like {"geo": true, "multi": true}.
+func (t Term) IndexCreate(name string, args ...interface{}) Term {
+	positional, opts := splitOptArgs(args)
+	if len(positional) > 1 {
+		return errTerm(errors.New("reql: IndexCreate takes at most one index function"))
 	}
+	term := Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
+	if len(positional) == 1 {
+		wrapped, err := funcWrap(positional[0])
+		if err != nil {
+			return errTerm(err)
+		}
+		term.args = append(term.args, wrapped)
+	}
+	term.opts = opts
 	return term
 }
 

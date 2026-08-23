@@ -53,13 +53,23 @@ func buildCLIBinary() (string, error) {
 }
 
 // cliRun executes r-cli with args and optional stdin. Returns stdout, stderr, exit code.
+// HOME points at a per-test directory so the spawned binary writes its parser error log
+// and repl history into the sandbox instead of the developer's real ~/.r-cli.
 func cliRun(t *testing.T, stdin string, args ...string) (string, string, int) {
+	t.Helper()
+	return cliRunIn(t, t.TempDir(), stdin, args...)
+}
+
+// cliRunIn is cliRun with an explicit HOME, for tests that inspect what the binary
+// wrote there.
+func cliRunIn(t *testing.T, home, stdin string, args ...string) (string, string, int) {
 	t.Helper()
 	bin, err := buildCLIBinary()
 	if err != nil {
 		t.Fatalf("build cli: %v", err)
 	}
 	cmd := exec.Command(bin, args...)
+	cmd.Env = append(os.Environ(), "HOME="+home)
 	if stdin != "" {
 		cmd.Stdin = strings.NewReader(stdin)
 	}
@@ -293,5 +303,30 @@ func TestCLITableRoundtrip(t *testing.T) {
 	_, _, code = cliRun(t, "", cliArgs("table", "drop", tableName, "-d", dbName, "-y")...)
 	if code != 0 {
 		t.Fatalf("table drop exit code %d", code)
+	}
+}
+
+// TestCLIAbsHint checks that .abs(), which has no ReQL term, is rejected at the CLI
+// boundary with an actionable hint pointing at the r.branch rewrite. It also pins the
+// parser error log to the sandbox HOME: a parse error is exactly what makes the binary
+// write that log, so an un-isolated run would append to the developer's real one.
+func TestCLIAbsHint(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+	_, stderr, code := cliRunIn(t, home, "", cliArgs(`r.expr(-5).abs()`)...)
+	if code != 2 {
+		t.Errorf("exit code %d, want 2", code)
+	}
+	for _, want := range []string{".abs() is not a ReQL term", "r.branch(x.lt(0), x.mul(-1), x)", "position 11"} {
+		if !strings.Contains(stderr, want) {
+			t.Errorf("stderr %q does not contain %q", stderr, want)
+		}
+	}
+	logged, err := os.ReadFile(filepath.Join(home, ".r-cli", "parser-errors.log"))
+	if err != nil {
+		t.Fatalf("parser error log not written under the sandbox HOME: %v", err)
+	}
+	if !strings.Contains(string(logged), `r.expr(-5).abs()`) {
+		t.Errorf("sandbox parser error log %q does not hold the failed expression", logged)
 	}
 }

@@ -1584,3 +1584,125 @@ func TestFieldSelectorOperations(t *testing.T) {
 		},
 	})
 }
+
+func TestAscDescExpressionArguments(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"desc_string",
+			table.OrderBy(Desc("a")),
+			`[41,[[15,[[14,["test"]],"users"]],[74,["a"]]]]`,
+		},
+		{
+			"desc_row",
+			table.OrderBy(Desc(Row().Bracket("a"))),
+			`[41,[[15,[[14,["test"]],"users"]],[74,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"desc_func",
+			table.OrderBy(Desc(Func(Var(1).Bracket("a"), 1))),
+			`[41,[[15,[[14,["test"]],"users"]],[74,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"asc_string",
+			table.OrderBy(Asc("a")),
+			`[41,[[15,[[14,["test"]],"users"]],[73,["a"]]]]`,
+		},
+		{
+			"asc_row",
+			table.OrderBy(Asc(Row().Bracket("a"))),
+			`[41,[[15,[[14,["test"]],"users"]],[73,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"asc_func",
+			table.OrderBy(Asc(Func(Var(1).Bracket("a"), 1))),
+			`[41,[[15,[[14,["test"]],"users"]],[73,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"desc_index_optarg",
+			table.OrderBy(OptArgs{"index": Desc("d")}),
+			`[41,[[15,[[14,["test"]],"users"]]],{"index":[74,["d"]]}]`,
+		},
+	})
+}
+
+func TestDescWrapErrorPropagates(t *testing.T) {
+	t.Parallel()
+	// r.row inside an explicit function is ambiguous; the wrap error must
+	// survive as a deferred error on the Desc term itself
+	for _, tc := range []struct {
+		name string
+		term Term
+	}{
+		{"desc", Desc(Func(Row().Bracket("a"), 1))},
+		{"asc", Asc(Func(Row().Bracket("a"), 1))},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := json.Marshal(tc.term)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !strings.Contains(err.Error(), "IMPLICIT_VAR") {
+				t.Errorf("expected IMPLICIT_VAR error, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestIndexCreateExpressionArguments(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	runTermTests(t, []struct {
+		name string
+		term Term
+		want string
+	}{
+		{
+			"name_only",
+			table.IndexCreate("i"),
+			`[75,[[15,[[14,["test"]],"users"]],"i"]]`,
+		},
+		{
+			"name_and_optargs",
+			table.IndexCreate("i", OptArgs{"multi": true}),
+			`[75,[[15,[[14,["test"]],"users"]],"i"],{"multi":true}]`,
+		},
+		{
+			"index_function",
+			table.IndexCreate("full", Func(Var(1).Bracket("a").Add(Var(1).Bracket("b")), 1)),
+			`[75,[[15,[[14,["test"]],"users"]],"full",[69,[[2,[1]],[24,[[170,[[10,[1]],"a"]],[170,[[10,[1]],"b"]]]]]]]]`,
+		},
+		{
+			"row_function_and_optargs",
+			table.IndexCreate("m", Row().Bracket("a"), OptArgs{"multi": true}),
+			`[75,[[15,[[14,["test"]],"users"]],"m",[69,[[2,[1]],[170,[[10,[1]],"a"]]]]],{"multi":true}]`,
+		},
+	})
+}
+
+func TestIndexCreateTooManyArguments(t *testing.T) {
+	t.Parallel()
+	table := DB("test").Table("users")
+	term := table.IndexCreate("i", Row().Bracket("a"), Row().Bracket("b"))
+	if _, err := json.Marshal(term); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestIndexCreateWrapErrorPropagates(t *testing.T) {
+	t.Parallel()
+	term := DB("test").Table("users").IndexCreate("i", Func(Row().Bracket("a"), 1))
+	_, err := json.Marshal(term)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "IMPLICIT_VAR") {
+		t.Errorf("expected IMPLICIT_VAR error, got: %v", err)
+	}
+}
