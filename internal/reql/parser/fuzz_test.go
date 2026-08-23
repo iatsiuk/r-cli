@@ -152,6 +152,20 @@ func FuzzParse(f *testing.F) {
 		`new Date("2026-06-19T07:40:13.981Z").getTime()`,
 		`table("x").count()`,
 		`r.table("x").count(); r.table("y").count()`,
+		`r.expr(-5).abs()`,
+		// desc/asc expression argument seeds
+		`r.table("t").orderBy(r.desc(d => d("a")))`,
+		`r.table("t").orderBy(r.asc(r.row("a")))`,
+		`r.table("t").orderBy(r.desc(function(d){ return d("a").sub(d("b")) }))`,
+		`r.table("t").orderBy({index: r.desc(r.row("a"))})`,
+		`r.desc()`,
+		`r.desc("a","b")`,
+		// indexCreate index function seeds
+		`r.table("t").indexCreate("i", d => d("a"), {multi:true})`,
+		`r.table("t").indexCreate("full", function(d){ return d("a").add(d("b")) })`,
+		`r.table("t").indexCreate("m", r.row("a"), {multi:true})`,
+		`r.table("t").indexCreate(1)`,
+		`r.table("t").indexCreate("i",)`,
 	}
 	for _, s := range seeds {
 		f.Add(s)

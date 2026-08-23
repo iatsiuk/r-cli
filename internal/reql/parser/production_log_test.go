@@ -431,6 +431,17 @@ r.db("restored").table("routes")
 		entry: "9",
 		expr:  `r.db("restored").table("transactions").orderBy({index: "date"}).slice(-2).pluck("id","paymentType","paymentGateway","serviceMethod","meta")`,
 	},
+	// root cause 12: r.desc() with an expression instead of a string literal
+	{
+		name:  "desc_arrow_lambda_balance_diff",
+		entry: "2026-08-14",
+		expr:  `r.db("restored").table("tmp_edge_check").filter(acc => acc("balance")("express").default(0).gt(0)).orderBy(r.desc(acc => acc("balance")("express").sub(acc("balance")("amount")))).pluck("id")`,
+	},
+	{
+		name:  "desc_arrow_lambda_balance_diff_with_defaults",
+		entry: "2026-08-14",
+		expr:  `r.db("restored").table("tmp_edge_check").filter(acc => acc("balance")("express").default(0).gt(0)).orderBy(r.desc(acc => acc("balance")("express").default(0).sub(acc("balance")("amount").default(0)))).pluck("id")`,
+	},
 }
 
 // TestParse_ProductionLog_Accepted replays the recorded expressions behind every
@@ -496,6 +507,15 @@ var productionLogRejected = []struct {
 		entry:    "84",
 		expr:     `r.table("x").count(); r.table("y").count()`,
 		wantMsgs: []string{"multiple statements", "one query at a time", "--file", "---"},
+	},
+	// the rest of this chain -- getAll/filter/group/map/reduce/ungroup with nested
+	// r.branch and function bodies -- parses; .abs() is its only blocker, and ReQL has
+	// no ABS term to add, so the hint names the r.branch rewrite instead
+	{
+		name:     "abs_in_vat_reconciliation_chain",
+		entry:    "2026-08-17",
+		expr:     `r.db("restored").table("transactions")  .getAll("VAT_DEDUCTION","ACCOUNT_REFILL",{index:"type"})  .filter(function(t){return t("state").eq("transactions/state/completed")    .and(t("type").eq("VAT_DEDUCTION").or(t("vatAmount").default(0).gt(0)))    .and(t.hasFields("orderGroupId"))})  .group("orderGroupId")  .map(function(t){return {    vdN:  r.branch(t("type").eq("VAT_DEDUCTION"),1,0),    vdSum:r.branch(t("type").eq("VAT_DEDUCTION"),t("amountIn").default(0),0),    vdCur:r.branch(t("type").eq("VAT_DEDUCTION"),t("currencyIn").default(""),""),    lgN:  r.branch(t("type").eq("ACCOUNT_REFILL"),1,0),    lgSum:r.branch(t("type").eq("ACCOUNT_REFILL"),t("vatAmount").default(0),0),    lgCur:r.branch(t("type").eq("ACCOUNT_REFILL"),t("currencyIn").default(""),"")}})  .reduce(function(a,b){return {    vdN:a("vdN").add(b("vdN")), vdSum:a("vdSum").add(b("vdSum")),    vdCur:r.branch(a("vdCur").eq(""),b("vdCur"),a("vdCur")),    lgN:a("lgN").add(b("lgN")), lgSum:a("lgSum").add(b("lgSum")),    lgCur:r.branch(a("lgCur").eq(""),b("lgCur"),a("lgCur"))}})  .ungroup()  .map(function(g){return g("reduction").merge({cls:    r.branch(g("reduction")("vdN").eq(0), "legacy_only",    r.branch(g("reduction")("vdN").gt(1), "multi_vd",    r.branch(g("reduction")("lgN").eq(0), "vd_only",    r.branch(g("reduction")("lgN").gt(1), "vd_plus_multi_legacy",    r.branch(g("reduction")("vdCur").eq(g("reduction")("lgCur"))      .and(g("reduction")("vdSum").sub(g("reduction")("lgSum")).abs().lt(0.005)),      "agree", "conflict")))))})})  .group("cls").count() `,
+		wantMsgs: []string{".abs() is not a ReQL term", "r.branch(x.lt(0), x.mul(-1), x)"},
 	},
 }
 
