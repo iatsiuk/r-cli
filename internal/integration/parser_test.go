@@ -1055,3 +1055,52 @@ func TestParserArrowBlockBodyGroupPipeline(t *testing.T) {
 		t.Errorf("second row = %+v, want EUR/1/5", got[1])
 	}
 }
+
+func TestParserOrderBySortKeyExpression(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "accounts")
+	seedTable(t, exec, dbName, "accounts", []map[string]interface{}{
+		{"id": "a", "balance": map[string]interface{}{"express": 10, "amount": 4}},
+		{"id": "b", "balance": map[string]interface{}{"express": 30, "amount": 1}},
+		{"id": "c", "balance": map[string]interface{}{"express": 20, "amount": 15}},
+	})
+
+	cases := []struct {
+		name string
+		expr string
+		want []string
+	}{
+		{
+			"desc_lambda_key",
+			fmt.Sprintf(`r.db("%s").table("accounts").orderBy(r.desc(acc => acc("balance")("express").sub(acc("balance")("amount"))))`, dbName),
+			[]string{"b", "a", "c"},
+		},
+		{
+			"asc_function_key",
+			fmt.Sprintf(`r.db("%s").table("accounts").orderBy(r.asc(function(acc){ return acc("balance")("express") }))`, dbName),
+			[]string{"a", "c", "b"},
+		},
+		{
+			"desc_bare_row_key",
+			fmt.Sprintf(`r.db("%s").table("accounts").orderBy(r.desc(r.row("balance")("amount")))`, dbName),
+			[]string{"c", "a", "b"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// a function sort key is sorted in memory, so the server answers
+			// with a single atom holding the ordered array
+			var rows []json.RawMessage
+			if err := json.Unmarshal(parseRunAtom(t, exec, tc.expr), &rows); err != nil {
+				t.Fatalf("unmarshal atom array: %v", err)
+			}
+			got := rowIDs(t, rows)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("ids = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

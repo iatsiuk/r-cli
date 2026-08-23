@@ -592,20 +592,22 @@ func validateLambdaParam(tok token, seen []string) error {
 	return nil
 }
 
+// parseRDesc parses r.desc(expr); the argument is funcWrap-ped by the builder,
+// so a lambda or a bare r.row is as valid as a field name.
 func parseRDesc(p *parser) (reql.Term, error) {
-	name, err := p.parseOneStringArg()
+	field, err := p.parseOneArg()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return reql.Desc(name), nil
+	return reql.Desc(field), nil
 }
 
 func parseRAsc(p *parser) (reql.Term, error) {
-	name, err := p.parseOneStringArg()
+	field, err := p.parseOneArg()
 	if err != nil {
 		return reql.Term{}, err
 	}
-	return reql.Asc(name), nil
+	return reql.Asc(field), nil
 }
 
 func parseRMinVal(p *parser) (reql.Term, error) {

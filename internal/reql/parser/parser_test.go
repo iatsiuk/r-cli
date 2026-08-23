@@ -2739,3 +2739,86 @@ func TestParse_AssignToken_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestParse_SortKeyExpressions(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"desc_string_literal_unchanged",
+			`r.table("t").orderBy(r.desc("a"))`,
+			`[41,[[15,["t"]],[74,["a"]]]]`,
+		},
+		{
+			"asc_string_literal_unchanged",
+			`r.table("t").orderBy(r.asc("a"))`,
+			`[41,[[15,["t"]],[73,["a"]]]]`,
+		},
+		{
+			"desc_index_optarg_unchanged",
+			`r.table("t").orderBy({index: r.desc("d")})`,
+			`[41,[[15,["t"]]],{"index":[74,["d"]]}]`,
+		},
+		{
+			"desc_arrow_lambda",
+			`r.table("t").orderBy(r.desc(d => d("a")))`,
+			`[41,[[15,["t"]],[74,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"desc_bare_row",
+			`r.table("t").orderBy(r.desc(r.row("a")))`,
+			`[41,[[15,["t"]],[74,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"asc_function_body",
+			`r.table("t").orderBy(r.asc(function(d){ return d("a") }))`,
+			`[41,[[15,["t"]],[73,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]]]`,
+		},
+		{
+			"desc_nested_field_arithmetic",
+			`r.table("t").orderBy(r.desc(acc => acc("balance")("express").sub(acc("balance")("amount"))))`,
+			`[41,[[15,["t"]],[74,[[69,[[2,[1]],[25,[[170,[[170,[[10,[1]],"balance"]],"express"]],[170,[[170,[[10,[1]],"balance"]],"amount"]]]]]]]]]]`,
+		},
+		{
+			// funcWrap leaves no IMPLICIT_VAR behind, so a bare r.row inside
+			// r.desc reaches the optargs slot instead of being rejected
+			"desc_bare_row_in_index_optarg",
+			`r.table("t").orderBy({index: r.desc(r.row("a"))})`,
+			`[41,[[15,["t"]]],{"index":[74,[[69,[[2,[1]],[170,[[10,[1]],"a"]]]]]]}]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_SortKeyErrors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantMsg string
+	}{
+		{`r.table("t").orderBy(r.desc())`, "position 28"},
+		{`r.table("t").orderBy(r.desc("a","b"))`, "expected ')'"},
+		{`r.table("t").orderBy(r.asc())`, "position 27"},
+		{`r.table("t").orderBy(r.asc("a","b"))`, "expected ')'"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
