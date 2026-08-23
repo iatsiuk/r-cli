@@ -597,12 +597,22 @@ func (t Term) Round() Term {
 }
 
 // IndexCreate creates an INDEX_CREATE term ([75, [table, name]], opts?).
-// Optional OptArgs can specify options like {"geo": true, "multi": true}.
-func (t Term) IndexCreate(name string, opts ...OptArgs) Term {
-	term := Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
-	if len(opts) > 0 {
-		term.opts = opts[0]
+// An optional index function may follow the name, and a trailing OptArgs can
+// specify options like {"geo": true, "multi": true}.
+func (t Term) IndexCreate(name string, args ...interface{}) Term {
+	positional, opts := splitOptArgs(args)
+	if len(positional) > 1 {
+		return errTerm(errors.New("reql: IndexCreate takes at most one index function"))
 	}
+	term := Term{termType: proto.TermIndexCreate, args: []Term{t, Datum(name)}}
+	if len(positional) == 1 {
+		wrapped, err := funcWrap(positional[0])
+		if err != nil {
+			return errTerm(err)
+		}
+		term.args = append(term.args, wrapped)
+	}
+	term.opts = opts
 	return term
 }
 
