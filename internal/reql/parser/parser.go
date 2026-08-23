@@ -447,6 +447,12 @@ var rBuilders map[string]rBuilderFn
 // chainBuilders maps chained method names to builder functions.
 var chainBuilders map[string]chainFn
 
+// unsupportedChainHints maps method names that look like ReQL but have no term in the
+// wire protocol to an actionable rewrite, replacing the generic unknown-method message.
+var unsupportedChainHints = map[string]string{
+	"abs": ".abs() is not a ReQL term, use r.branch(x.lt(0), x.mul(-1), x)",
+}
+
 func (p *parser) parseChain(t reql.Term) (reql.Term, error) {
 	for {
 		switch p.peek().Type {
@@ -458,6 +464,9 @@ func (p *parser) parseChain(t reql.Term) (reql.Term, error) {
 			}
 			fn, ok := chainBuilders[method.Value]
 			if !ok {
+				if hint, has := unsupportedChainHints[method.Value]; has {
+					return reql.Term{}, fmt.Errorf("%s at position %d", hint, method.Pos)
+				}
 				return reql.Term{}, fmt.Errorf("unknown method .%s at position %d", method.Value, method.Pos)
 			}
 			t, err = fn(p, t)

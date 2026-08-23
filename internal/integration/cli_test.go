@@ -295,3 +295,18 @@ func TestCLITableRoundtrip(t *testing.T) {
 		t.Fatalf("table drop exit code %d", code)
 	}
 }
+
+// TestCLIAbsHint checks that .abs(), which has no ReQL term, is rejected at the CLI
+// boundary with an actionable hint pointing at the r.branch rewrite.
+func TestCLIAbsHint(t *testing.T) {
+	t.Parallel()
+	_, stderr, code := cliRun(t, "", cliArgs(`r.expr(-5).abs()`)...)
+	if code != 2 {
+		t.Errorf("exit code %d, want 2", code)
+	}
+	for _, want := range []string{".abs() is not a ReQL term", "r.branch(x.lt(0), x.mul(-1), x)", "position 11"} {
+		if !strings.Contains(stderr, want) {
+			t.Errorf("stderr %q does not contain %q", stderr, want)
+		}
+	}
+}

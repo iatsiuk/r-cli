@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -2818,6 +2819,56 @@ func TestParse_SortKeyErrors(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tc.wantMsg) {
 				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+		})
+	}
+}
+
+// TestParse_AbsHint pins the actionable message for .abs(), which has no ReQL term.
+func TestParse_AbsHint(t *testing.T) {
+	t.Parallel()
+	_, err := Parse(`r.expr(-5).abs()`)
+	if err == nil {
+		t.Fatal("Parse: expected error, got nil")
+	}
+	want := ".abs() is not a ReQL term, use r.branch(x.lt(0), x.mul(-1), x) at position 11"
+	if err.Error() != want {
+		t.Errorf("error %q, want %q", err.Error(), want)
+	}
+}
+
+// TestParse_AbsHint_InChain reports the hint at the position of the method name,
+// not the start of the expression.
+func TestParse_AbsHint_InChain(t *testing.T) {
+	t.Parallel()
+	expr := `r.table("t").map(d => d("a").sub(d("b")).abs())`
+	_, err := Parse(expr)
+	if err == nil {
+		t.Fatal("Parse: expected error, got nil")
+	}
+	pos := strings.Index(expr, "abs")
+	want := fmt.Sprintf(".abs() is not a ReQL term, use r.branch(x.lt(0), x.mul(-1), x) at position %d", pos)
+	if err.Error() != want {
+		t.Errorf("error %q, want %q", err.Error(), want)
+	}
+}
+
+// TestParse_UnknownMethod_Generic keeps the generic message for method names that
+// have no dedicated hint.
+func TestParse_UnknownMethod_Generic(t *testing.T) {
+	t.Parallel()
+	cases := []string{"notAMethod", "absolute", "abs2"}
+	for _, name := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			expr := fmt.Sprintf(`r.table("t").%s()`, name)
+			_, err := Parse(expr)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", expr)
+			}
+			want := fmt.Sprintf("unknown method .%s at position %d", name, strings.Index(expr, name))
+			if err.Error() != want {
+				t.Errorf("error %q, want %q", err.Error(), want)
 			}
 		})
 	}
