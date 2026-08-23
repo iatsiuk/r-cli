@@ -18,9 +18,9 @@ func TestTypeOf(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name  string
-		term  reql.Term
-		want  string
+		name string
+		term reql.Term
+		want string
 	}{
 		{"number", reql.Datum(1).TypeOf(), "NUMBER"},
 		{"string", reql.Datum("s").TypeOf(), "STRING"},
