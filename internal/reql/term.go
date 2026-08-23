@@ -328,13 +328,25 @@ func (t Term) Between(lower, upper interface{}, opts ...OptArgs) Term {
 }
 
 // Asc creates an ASC term ([73, [field]]) for use with OrderBy.
-func Asc(field string) Term {
-	return Term{termType: proto.TermAsc, args: []Term{Datum(field)}}
+// The field may be a name or any expression; an expression containing Row()
+// is wrapped in FUNC like the official drivers do.
+func Asc(field interface{}) Term {
+	return sortKey(proto.TermAsc, field)
 }
 
 // Desc creates a DESC term ([74, [field]]) for use with OrderBy.
-func Desc(field string) Term {
-	return Term{termType: proto.TermDesc, args: []Term{Datum(field)}}
+// The field may be a name or any expression; an expression containing Row()
+// is wrapped in FUNC like the official drivers do.
+func Desc(field interface{}) Term {
+	return sortKey(proto.TermDesc, field)
+}
+
+func sortKey(tt proto.TermType, field interface{}) Term {
+	wrapped, err := funcWrap(field)
+	if err != nil {
+		return errTerm(err)
+	}
+	return Term{termType: tt, args: []Term{wrapped}}
 }
 
 // OrderBy creates an ORDERBY term ([41, [term, fields...]], opts?).
