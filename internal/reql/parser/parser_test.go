@@ -2873,3 +2873,74 @@ func TestParse_UnknownMethod_Generic(t *testing.T) {
 		})
 	}
 }
+
+func TestParse_IndexCreateExpressions(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"name_only_unchanged",
+			`r.table("t").indexCreate("i")`,
+			`[75,[[15,["t"]],"i"]]`,
+		},
+		{
+			"name_and_opts_unchanged",
+			`r.table("t").indexCreate("i",{multi:true})`,
+			`[75,[[15,["t"]],"i"],{"multi":true}]`,
+		},
+		{
+			"index_function",
+			`r.table("t").indexCreate("full", function(d){ return d("a").add(d("b")) })`,
+			`[75,[[15,["t"]],"full",[69,[[2,[1]],[24,[[170,[[10,[1]],"a"]],[170,[[10,[1]],"b"]]]]]]]]`,
+		},
+		{
+			"bare_row_with_opts",
+			`r.table("t").indexCreate("m", r.row("a"), {multi:true})`,
+			`[75,[[15,["t"]],"m",[69,[[2,[1]],[170,[[10,[1]],"a"]]]]],{"multi":true}]`,
+		},
+		{
+			"arrow_lambda_with_geo_opts",
+			`r.table("t").indexCreate("g", d => d("loc"), {geo:true})`,
+			`[75,[[15,["t"]],"g",[69,[[2,[1]],[170,[[10,[1]],"loc"]]]]],{"geo":true}]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertWireJSON(t, mustParse(t, tc.input), tc.want)
+		})
+	}
+}
+
+func TestParse_IndexCreateErrors(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"non_string_name", `r.table("t").indexCreate(1)`, `expected string`},
+		{"lambda_name", `r.table("t").indexCreate(d => d("a"))`, `expected string`},
+		{"no_args", `r.table("t").indexCreate()`, `expected string`},
+		{"trailing_comma", `r.table("t").indexCreate("i",)`, `trailing comma`},
+		{"two_index_functions", `r.table("t").indexCreate("i", d => d("a"), d => d("b"))`, `at most one index function`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Parse(tc.input)
+			if err == nil {
+				t.Fatalf("Parse(%q): expected error, got nil", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantMsg) {
+				t.Errorf("Parse(%q): error %q does not contain %q", tc.input, err.Error(), tc.wantMsg)
+			}
+			if !strings.Contains(err.Error(), "position") {
+				t.Errorf("Parse(%q): error %q does not include a byte position", tc.input, err.Error())
+			}
+		})
+	}
+}

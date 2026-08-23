@@ -1104,3 +1104,67 @@ func TestParserOrderBySortKeyExpression(t *testing.T) {
 		})
 	}
 }
+
+// TestParserIndexCreateFunction creates functional secondary indexes through the
+// parser and queries them, proving the server accepts the emitted term shape.
+func TestParserIndexCreateFunction(t *testing.T) {
+	t.Parallel()
+	exec := newExecutor(t)
+	ctx := context.Background()
+	dbName := sanitizeID(t.Name())
+	setupTestDB(t, exec, dbName)
+	createTestTable(t, exec, dbName, "docs")
+	seedTable(t, exec, dbName, "docs", []map[string]interface{}{
+		{"id": "a", "first": "ali", "last": "one", "tags": reql.Array("x", "y")},
+		{"id": "b", "first": "bob", "last": "two", "tags": reql.Array("y", "z")},
+	})
+
+	createExprs := []string{
+		fmt.Sprintf(`r.db("%s").table("docs").indexCreate("full", function(d){ return d("first").add(d("last")) })`, dbName),
+		fmt.Sprintf(`r.db("%s").table("docs").indexCreate("tag", r.row("tags"), {multi: true})`, dbName),
+	}
+	for _, expr := range createExprs {
+		term, err := parser.Parse(expr)
+		if err != nil {
+			t.Fatalf("parse %q: %v", expr, err)
+		}
+		_, cur, err := exec.Run(ctx, term, nil)
+		closeCursor(cur)
+		if err != nil {
+			t.Fatalf("run %q: %v", expr, err)
+		}
+	}
+	for _, idx := range []string{"full", "tag"} {
+		_, cur, err := exec.Run(ctx, reql.DB(dbName).Table("docs").IndexWait(idx), nil)
+		closeCursor(cur)
+		if err != nil {
+			t.Fatalf("indexWait %s: %v", idx, err)
+		}
+	}
+
+	cases := []struct {
+		name string
+		expr string
+		want []string
+	}{
+		{
+			"function_index_lookup",
+			fmt.Sprintf(`r.db("%s").table("docs").getAll("alione", {index: "full"})`, dbName),
+			[]string{"a"},
+		},
+		{
+			"multi_index_lookup",
+			fmt.Sprintf(`r.db("%s").table("docs").getAll("y", {index: "tag"})`, dbName),
+			[]string{"a", "b"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := rowIDs(t, parseRunRows(t, exec, tc.expr))
+			sort.Strings(got)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("ids = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

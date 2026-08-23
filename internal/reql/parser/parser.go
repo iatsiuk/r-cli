@@ -1168,6 +1168,45 @@ func chainAggregate(name string, build func(reql.Term, ...interface{}) reql.Term
 	}
 }
 
+// chainIndexCreate parses indexCreate("name") with an optional index function
+// and an optional trailing OptArgs, in that order.
+func chainIndexCreate(p *parser, t reql.Term) (reql.Term, error) {
+	if _, err := p.expect(tokenLParen); err != nil {
+		return reql.Term{}, err
+	}
+	nameTok, err := p.expect(tokenString)
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenRParen {
+		p.advance()
+		return t.IndexCreate(nameTok.Value), nil
+	}
+	if _, err := p.expect(tokenComma); err != nil {
+		return reql.Term{}, err
+	}
+	if p.peek().Type == tokenRParen {
+		return reql.Term{}, fmt.Errorf("trailing comma in argument list at position %d", p.peek().Pos)
+	}
+	pos := p.peek().Pos
+	opts, ok, err := p.tryTrailingOptArgs()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if ok {
+		p.advance()
+		return t.IndexCreate(nameTok.Value, opts), nil
+	}
+	args, opts, err := p.parseArgListBody()
+	if err != nil {
+		return reql.Term{}, err
+	}
+	if len(args) > 1 {
+		return reql.Term{}, fmt.Errorf("indexCreate: takes at most one index function at position %d", pos)
+	}
+	return t.IndexCreate(nameTok.Value, argsWithOpts(args, opts)...), nil
+}
+
 func chainLimit(p *parser, t reql.Term) (reql.Term, error) {
 	n, err := p.parseOneIntArg()
 	if err != nil {
@@ -1893,7 +1932,7 @@ func registerAdminChain(m map[string]chainFn) {
 	m["tableCreate"] = strArgChainWithOpts(func(t reql.Term, s string, opts ...reql.OptArgs) reql.Term { return t.TableCreate(s, opts...) })
 	m["tableDrop"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.TableDrop(s) })
 	m["tableList"] = noArgChain(func(t reql.Term) reql.Term { return t.TableList() })
-	m["indexCreate"] = strArgChainWithOpts(func(t reql.Term, s string, opts ...reql.OptArgs) reql.Term { return t.IndexCreate(s, opts...) })
+	m["indexCreate"] = chainIndexCreate
 	m["indexDrop"] = strArgChain(func(t reql.Term, s string) reql.Term { return t.IndexDrop(s) })
 	m["indexList"] = noArgChain(func(t reql.Term) reql.Term { return t.IndexList() })
 	m["indexWait"] = chainIndexWait
